@@ -19,10 +19,45 @@ lógica que costó encontrar y que se perdería con un despliegue o una limpieza
 
 ## Lo que NO es obvio y hay que respetar
 
-**Guarda TROCEADO en partes de 1 GiB.** El navegador corta un fichero suelto
+**Guarda TROCEADO, en partes de 64 MiB.** El navegador corta un fichero suelto
 sobre los **1,94 GB** —medido— pase lo que pase con la cuota. Un modelo de
 3,8 GB en un solo fichero fallaba con «exceed its storage quota», que suena a
 falta de espacio y no lo es: es el tope por fichero. Con el troceado entra.
+
+Las partes eran de 1 GiB y ahora son de 64 MiB por la **recarga**: con
+`createWritable` los bytes no están en el fichero hasta `close()` —viven en un
+`.crswap` que el navegador tira al recargar—, así que solo sobrevive lo que ya
+se cerró. Con 1 GiB una recarga o un corte perdía hasta un giga; con 64 MiB,
+como mucho un tramo.
+
+**Reanuda.** Lo guardado es la suma de las partes `k.p0, k.p1…` seguidas y no
+vacías; `k.parte` guarda `{total, v}` (tamaño y ETag/Last-Modified del
+servidor). Si el fichero del servidor sigue siendo el mismo, se pide el resto
+con `Range: bytes=<guardado>-`. Un corte de red cierra la parte en curso (sus
+bytes cuentan) y el broker reintenta SOLO, con espera creciente, hasta 6 fallos
+seguidos sin avanzar. El progreso lleva `reanudadoDesde` y `reintento`.
+
+**Nunca marca completo lo que no llegó entero.** `k.done` se escribe solo si lo
+llegado mide lo que dijo el servidor. Si quien pide manda `bytes` y una copia
+guardada no mide eso (la dejaba el broker anterior con un 200 corto), se borra
+y se vuelve a bajar.
+
+**Integridad en las dos puertas.** Al escribir: antes de poner `.done` se mide
+lo que hay de verdad en las partes y se compara con el total del servidor
+(Content-Length / Content-Range) y con `bytes` si el llamador lo mandó. Corte
+limpio (llegó menos que el total) = de red, se reanuda; cualquier otra
+discrepancia = error `tipo:'integridad'`, se descarta lo bajado y NO se marca ni
+se reintenta lo mismo. Si el servidor dice un tamaño distinto del declarado se
+corta antes de bajar nada. Al leer (`get` y `has`): el marcador solo vale si
+cuadra con lo que hay en disco y con `bytes`; si no (parte corta, marcador
+antiguo de solo un número, parte que falta) se **borra marcador y partes** y se
+trata como no cacheado. Fallo visto en vivo el 30-sep: una parte de Bonsai quedó
+381 MB corta con su `.done`, y el cargador bajaba el modelo entero en cada
+arranque. Test: `tests/broker-integridad.mjs`.
+
+**Una descarga por fichero entre pestañas** (Web Locks) y **se puede cancelar**
+(`elffuss-model-cancel`): antes, al rendirse la app, el iframe seguía bajando
+por detrás mientras la app lo bajaba otra vez por la red.
 
 **El marcador `.done` guarda tamaño y número de partes.** Sin eso, un fichero
 truncado por un desalojo del navegador se lee sin error y el modelo sale con
@@ -33,11 +68,26 @@ guarda referencias a los ficheros, así que no se traga los gigabytes en memoria
 
 ## Cómo se despliega
 
+A los TRES hosts. El 27B se guarda en el broker de m1 y m2 (el de su propio
+origen), no en el de models: desplegar solo en models deja al 27B con la versión
+vieja. Pasó: el 28-sep solo se actualizó models, y m1/m2 siguieron con la de
+c4bad40, que borra lo bajado en cada intento.
+
 Los docroots se llaman como el host anterior:
 
     scp server/broker/index.html <host>:/tmp/br.html
     ssh <host> 'for h in models m1 m2; do
       sudo cp /tmp/br.html /var/www/$h.elffuss.utopiaia.com/index.html; done'
+
+Y comprobar que los tres sirven lo mismo que el repo, con el nombre nuevo y,
+mientras dure el cambio de dominio, también con el anterior (que sigue sirviendo
+sin redirigir):
+
+    for h in models m1 m2; do for d in elffuss.com elffuss.utopiaia.com; do
+      curl -s https://$h.$d/ | shasum; done; done
+    shasum server/broker/index.html
+
+La prueba local, sin producción: `node tests/resume-download.mjs`.
 
 ## Cómo se comprueba que cachea de verdad
 
