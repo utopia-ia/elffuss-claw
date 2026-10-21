@@ -85,8 +85,14 @@ c4bad40, que borra lo bajado en cada intento.
 Los docroots se llaman como el host anterior:
 
     scp server/broker/index.html <host>:/tmp/br.html
+    scp server/broker/sw.js <host>:/tmp/br-sw.js
     ssh <host> 'for h in models m1 m2; do
-      sudo cp /tmp/br.html /var/www/$h.elffuss.utopiaia.com/index.html; done'
+      sudo cp /tmp/br.html /var/www/$h.elffuss.utopiaia.com/index.html
+      sudo cp /tmp/br-sw.js /var/www/$h.elffuss.utopiaia.com/sw.js; done'
+
+`sw.js` es el service worker de la página del broker: la guarda para que abra
+sin red (sin ella no hay forma de leer los modelos de esta OPFS). Red primero;
+cambiar su `VERSION` si cambia lo que guarda.
 
 Y comprobar que los tres sirven lo mismo que el repo, con el nombre nuevo y,
 mientras dure el cambio de dominio, también con el anterior (que sigue sirviendo
@@ -95,6 +101,7 @@ sin redirigir):
     for h in models m1 m2; do for d in elffuss.com elffuss.utopiaia.com; do
       curl -s https://$h.$d/ | shasum; done; done
     shasum server/broker/index.html
+    curl -s https://models.elffuss.com/sw.js | shasum; shasum server/broker/sw.js
 
 La prueba local, sin producción: `node tests/resume-download.mjs`.
 

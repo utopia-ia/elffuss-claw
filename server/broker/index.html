@@ -562,5 +562,9 @@ addEventListener('message', async e => {
 // `puede`: lo que entiende esta versión, para que una web no espere respuesta a
 // un mensaje que un broker más viejo no conoce.
 try{ parent.postMessage({ kind:'elffuss-broker-ready', v: 2, puede: ['get', 'has', 'cancel', 'clear', 'put'] }, '*'); }catch{}
+// Sin red, sin esta página no hay modelos (solo ella lee esta OPFS): sw.js la
+// guarda para que abra también sin conexión. Si no se puede registrar, todo
+// sigue igual que antes.
+try{ navigator.serviceWorker?.register('sw.js').catch(()=>{}); }catch{}
 </script>
 </body></html>
