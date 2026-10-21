@@ -59,6 +59,15 @@ arranque. Test: `tests/broker-integridad.mjs`.
 (`elffuss-model-cancel`): antes, al rendirse la app, el iframe seguía bajando
 por detrás mientras la app lo bajaba otra vez por la red.
 
+**Acepta una copia que la web ya tiene** (`elffuss-model-put`), para que el
+Translator y el Copiloto pasen aquí lo que guardaban en su propia Cache API sin
+volver a bajarlo. Como lo que se guarda lo lee después otra web, solo se acepta
+un fichero de Hugging Face cuyos bytes casan con la huella que publica el Hub
+(SHA-256 de LFS para los pesos, SHA-1 de blob de git para los JSON), y como
+mucho de 512 MiB, porque se lee entero para comprobarlo. El aviso de listo dice
+qué mensajes entiende (`puede`), así una web no espera respuesta de un broker
+viejo que no conoce `put`.
+
 **El marcador `.done` guarda tamaño y número de partes.** Sin eso, un fichero
 truncado por un desalojo del navegador se lee sin error y el modelo sale con
 basura dentro.

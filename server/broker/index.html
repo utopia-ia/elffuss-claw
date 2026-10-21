@@ -20,6 +20,10 @@
 // {type:'elffuss-model-clear', id} → {kind:'cleared', liberado, restante}: vacia
 // este almacen. Lo necesita el boton «vaciar cache» de las webs, que sin esto
 // solo borraba lo de SU origen y dejaba aqui el modelo grande.
+// {type:'elffuss-model-put', id, url, file} → {kind:'put', size} | {kind:'error'}:
+// guarda una copia que la web YA tiene (migrar su caché vieja sin volver a
+// bajarla). Solo ficheros de Hugging Face cuya huella coincide con la del Hub.
+// El aviso de listo dice qué sabe hacer: {kind:'elffuss-broker-ready', v, puede}.
 // (Aquí ponía que la respuesta venían trozos de ArrayBuffer, que es la versión
 // ANTERIOR: ahora se manda el File de OPFS por referencia, justamente para no
 // copiar los gigabytes a la RAM del renderer. La descripción vieja hizo perder
@@ -369,6 +373,74 @@ async function enExclusiva(k, fn, latir){
   finally { clearInterval(t); }
 }
 
+// ── GUARDAR UNA COPIA QUE YA TIENE LA WEB (migrar) ─────────────────────────
+// Las webs que guardaban sus modelos en su propia Cache API (Translator,
+// Copiloto) los pasan aquí una vez, para no volver a bajarlos y para que el
+// resto de webs los vean. Como cualquier web admitida podría mandar lo que
+// quisiera bajo la URL de un modelo, y lo leería OTRA web, solo se acepta un
+// fichero de Hugging Face cuyos bytes casan con la huella que publica el Hub:
+// SHA-256 de LFS para los pesos, SHA-1 de blob de git para los JSON. Lo que no
+// se puede comprobar no se guarda (la web sigue con su copia, o lo baja).
+const HUB = /^https:\/\/huggingface\.co\/([\w.\-]+\/[\w.\-]+)\/resolve\/([\w.\-]+)\/([^?#]+)$/;
+const COPIA_MAX = 512 * 1024 * 1024;     // se lee entera para la huella
+const listados = new Map();              // repo@rev/carpeta → Promise<Map(ruta → entrada del Hub)>
+async function entradaHub(url){
+  const m = HUB.exec(String(url).replace(/[?#].*$/, ''));
+  if (!m) return null;
+  const [, repo, rev, ruta] = m;
+  const carpeta = ruta.includes('/') ? ruta.slice(0, ruta.lastIndexOf('/')) : '';
+  const clave = repo + '@' + rev + '/' + carpeta;
+  if (!listados.has(clave)) {
+    const p = fetch(`https://huggingface.co/api/models/${repo}/tree/${encodeURIComponent(rev)}${carpeta ? '/' + carpeta : ''}`, { cache: 'no-store' })
+      .then(r => { if (!r.ok) throw Object.assign(new Error('el Hub no dio la lista: HTTP ' + r.status), { http: r.status }); return r.json(); })
+      .then(l => new Map(l.filter(x => x.type === 'file').map(x => [x.path, x])));
+    p.catch(() => listados.delete(clave));
+    listados.set(clave, p);
+  }
+  return (await listados.get(clave)).get(ruta) || null;
+}
+const hex = b => Array.from(new Uint8Array(b), x => x.toString(16).padStart(2, '0')).join('');
+async function comprobarHuella(url, blob){
+  const e = await entradaHub(url);
+  const mal = motivo => Object.assign(new Error('copia rechazada: ' + motivo), { tipo: 'integridad' });
+  if (!e) throw mal('no es un fichero conocido del Hub');
+  if (blob.size > COPIA_MAX) throw mal('demasiado grande para comprobarla');
+  const datos = await blob.arrayBuffer();
+  if (e.lfs) {
+    if (datos.byteLength !== e.lfs.size) throw mal(`mide ${datos.byteLength} y el Hub dice ${e.lfs.size}`);
+    if (hex(await crypto.subtle.digest('SHA-256', datos)) !== e.lfs.oid) throw mal('la huella SHA-256 no coincide');
+  } else {
+    if (datos.byteLength !== e.size) throw mal(`mide ${datos.byteLength} y el Hub dice ${e.size}`);
+    const cab = new TextEncoder().encode(`blob ${datos.byteLength}\0`);
+    const todo = new Uint8Array(cab.length + datos.byteLength); todo.set(cab); todo.set(new Uint8Array(datos), cab.length);
+    if (hex(await crypto.subtle.digest('SHA-1', todo)) !== e.oid) throw mal('la huella de git no coincide');
+  }
+}
+// Se escribe con las mismas partes y el mismo marcador que una descarga, así que
+// se lee igual. En exclusiva con una descarga del mismo fichero (Web Locks).
+async function guardarCopia(url, blob){
+  await requestPersist();
+  const d = await dir(); const k = keyFor(url);
+  return enExclusiva(k, async () => {
+    const ya = await cachedFile(url, blob.size); if (ya) return ya;
+    await borrarPartes(d, k);
+    let n = 0;
+    try {
+      for (let off = 0; off < blob.size; off += TRAMO, n++) {
+        const w = await (await d.getFileHandle(k + '.p' + n, { create:true })).createWritable();
+        const r = blob.slice(off, off + TRAMO).stream().getReader();
+        try { for (;;) { const { done, value } = await r.read(); if (done) break; await w.write(value); } await w.close(); }
+        catch (e) { try { await w.abort(); } catch {} throw e; }
+      }
+    } catch (e) { await borrarPartes(d, k); throw Object.assign(e instanceof Error ? e : new Error(String(e)), { tipo: e?.tipo || tipoDe(e) }); }
+    const hay = await guardado(d, k);
+    const motivo = motivoIncompleto({ escrito: hay.bytes, total: blob.size });
+    if (motivo) { await invalidar(d, k); throw Object.assign(new Error('copia incompleta: ' + motivo), { tipo: 'integridad' }); }
+    await escribirJSON(d, k + '.done', { size: blob.size, total: blob.size, parts: n });
+    return juntar(d, k, n);
+  }, () => {});
+}
+
 let inflight = new Map();   // url → Promise<File> (colapsa descargas simultáneas)
 const controles = new Map(); // url → AbortController (para poder cancelar)
 async function getFile(url, onProgress, esperado = 0){
@@ -464,6 +536,16 @@ addEventListener('message', async e => {
   // Quien pidió la descarga se rindió (timeout): sin esto el iframe seguía
   // bajando por detrás mientras la app lo bajaba OTRA VEZ por la red.
   if (type === 'elffuss-model-cancel') { controles.get(url)?.abort(); post({ kind:'cancelled' }); return; }
+  if (type === 'elffuss-model-put') {
+    try {
+      const f = d.file;
+      if (!(f instanceof Blob)) throw new Error('falta el fichero');
+      await comprobarHuella(url, f);
+      const g = await guardarCopia(url, f);
+      post({ kind:'put', size: g.size });
+    } catch (err) { post({ kind:'error', message: String(err?.message || err), tipo: err?.tipo || tipoDe(err) }); }
+    return;
+  }
   if (type === 'elffuss-model-get') {
     try{
       const file = await getFile(url, p => post({ kind:'progress', ...p }), +d.bytes || 0);
@@ -477,6 +559,8 @@ addEventListener('message', async e => {
   }
 });
 // avisar a quien nos embebe que estamos listos
-try{ parent.postMessage({ kind:'elffuss-broker-ready' }, '*'); }catch{}
+// `puede`: lo que entiende esta versión, para que una web no espere respuesta a
+// un mensaje que un broker más viejo no conoce.
+try{ parent.postMessage({ kind:'elffuss-broker-ready', v: 2, puede: ['get', 'has', 'cancel', 'clear', 'put'] }, '*'); }catch{}
 </script>
 </body></html>

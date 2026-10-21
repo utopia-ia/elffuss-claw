@@ -88,17 +88,18 @@ function nuevoBroker(fetch, raiz = new Dir()) {
     navigator: { storage: { getDirectory: async () => raiz, persist: async () => true, persisted: async () => true, estimate: async () => ({}) } },
     location: { search: '', origin: 'http://localhost' }, URLSearchParams, URL, fetch, Blob, Response, ReadableStream,
     TextEncoder, TextDecoder, AbortController, DOMException, console, setTimeout, clearTimeout, setInterval, clearInterval, Date, Math, JSON,
-    Uint8Array, Promise, Error, parent: { postMessage() {} },
+    Uint8Array, Promise, Error, crypto: globalThis.crypto, parent: { postMessage() {} },
     addEventListener: (t, h) => { if (t === 'message') oyentes.push(h); },
   });
   vm.runInContext(codigo, ctx);
   const store = raiz.sub.get('elffuss-models') ?? (raiz.sub.set('elffuss-models', new Dir()), raiz.sub.get('elffuss-models'));
   const hablar = (data) => new Promise(res => {
     const msgs = [];
-    const source = { postMessage: m => { msgs.push(m); if (['file', 'error', 'has', 'cancelled'].includes(m.kind)) res(msgs); } };
+    const source = { postMessage: m => { msgs.push(m); if (['file', 'error', 'has', 'cancelled', 'put'].includes(m.kind)) res(msgs); } };
     for (const h of oyentes) h({ origin: 'http://localhost', data, source });
   });
-  return { store, get: (url, bytes) => hablar({ type: 'elffuss-model-get', id: 1, url, bytes }), has: (url, bytes) => hablar({ type: 'elffuss-model-has', id: 2, url, bytes }) };
+  return { store, get: (url, bytes) => hablar({ type: 'elffuss-model-get', id: 1, url, bytes }), has: (url, bytes) => hablar({ type: 'elffuss-model-has', id: 2, url, bytes }),
+           put: (url, file) => hablar({ type: 'elffuss-model-put', id: 3, url, file }) };
 }
 const url = 'https://m1.elffuss.com/modelo.part1.bin';
 const contenido = n => { const b = Buffer.alloc(n); let x = 12345; for (let i = 0; i < n; i++) { x = (x * 1103515245 + 12345) & 0x7fffffff; b[i] = x >> 16; } return b; };
@@ -206,6 +207,56 @@ const K = 'https_m1.elffuss.com_modelo.part1.bin';
 
 // (Las comprobaciones del cliente —qué broker usa Claw para cada fichero— van con el
 // cambio del SDK en la rama resume-fix; aquí solo se prueba la página del broker.)
+
+// 6) COPIA desde la web (migrar su caché vieja): solo si casa con la huella del Hub
+{
+  const PESOS = contenido(2600), JSONB = Buffer.from('{"a":1}\n');
+  const sha1git = b => createHash('sha1').update(Buffer.concat([Buffer.from(`blob ${b.length}\0`), b])).digest('hex');
+  const HUBURL = 'https://huggingface.co/org/modelo/resolve/main/';
+  const hub = () => {
+    const peticiones = [];
+    const f = async (u) => {
+      peticiones.push(String(u));
+      if (String(u) === 'https://huggingface.co/api/models/org/modelo/tree/main/onnx')
+        return new Response(JSON.stringify([{ type: 'file', path: 'onnx/m.onnx', size: PESOS.length, oid: 'x', lfs: { oid: sha(PESOS), size: PESOS.length } }]), { status: 200 });
+      if (String(u) === 'https://huggingface.co/api/models/org/modelo/tree/main')
+        return new Response(JSON.stringify([{ type: 'file', path: 'config.json', size: JSONB.length, oid: sha1git(JSONB) }, { type: 'directory', path: 'onnx' }]), { status: 200 });
+      return new Response('no', { status: 404 });
+    };
+    f.peticiones = peticiones; return f;
+  };
+  {
+    const fx = hub(); const b = nuevoBroker(fx);
+    const r = ultimo(await b.put(HUBURL + 'onnx/m.onnx', new Blob([PESOS])));
+    ok('copia de pesos con su SHA-256: se guarda', r.kind === 'put' && r.size === PESOS.length, r.message);
+    const h = ultimo(await b.has(HUBURL + 'onnx/m.onnx'));
+    const g = ultimo(await b.get(HUBURL + 'onnx/m.onnx'));
+    ok('…y se sirve igual que una descarga, sin bajar nada', h.cached === true && g.kind === 'file' && sha(await bytesFile(g.file)) === sha(PESOS) &&
+      fx.peticiones.every(u => u.includes('/api/models/')), fx.peticiones.join(' | '));
+    ok('…en partes de tramo, con su marcador', nombresPartes(b).length === 3 && hayMarca(b), nombresPartes(b).join());
+  }
+  {
+    const b = nuevoBroker(hub());
+    const r = ultimo(await b.put(HUBURL + 'config.json', new Blob([JSONB])));
+    ok('copia de un JSON con su huella de git: se guarda', r.kind === 'put', r.message);
+  }
+  {
+    const b = nuevoBroker(hub()); const malo = Buffer.from(PESOS); malo[7] ^= 1;
+    const r = ultimo(await b.put(HUBURL + 'onnx/m.onnx', new Blob([malo])));
+    ok('copia con un byte cambiado: rechazada por integridad y sin nada en disco',
+      r.kind === 'error' && r.tipo === 'integridad' && !hayMarca(b) && nombresPartes(b).length === 0, `${r.tipo}: ${r.message}`);
+  }
+  {
+    const b = nuevoBroker(hub());
+    const r = ultimo(await b.put(HUBURL + 'onnx/otro.onnx', new Blob([PESOS])));
+    ok('copia de un fichero que el Hub no publica: rechazada', r.kind === 'error' && r.tipo === 'integridad' && !hayMarca(b), r.message);
+  }
+  {
+    const b = nuevoBroker(hub());
+    const r = ultimo(await b.put(url, new Blob([DATOS])));
+    ok('copia de algo que no es de Hugging Face: rechazada', r.kind === 'error' && !hayMarca(b), r.message);
+  }
+}
 
 console.log(fails ? `\n${fails} FALLO(S)` : '\nTodo en verde');
 process.exit(fails ? 1 : 0);
