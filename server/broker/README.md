@@ -19,16 +19,20 @@ lógica que costó encontrar y que se perdería con un despliegue o una limpieza
 
 ## Lo que NO es obvio y hay que respetar
 
-**Guarda TROCEADO, en partes de 64 MiB.** El navegador corta un fichero suelto
+**Guarda TROCEADO, en partes de 16 MiB.** El navegador corta un fichero suelto
 sobre los **1,94 GB** —medido— pase lo que pase con la cuota. Un modelo de
 3,8 GB en un solo fichero fallaba con «exceed its storage quota», que suena a
 falta de espacio y no lo es: es el tope por fichero. Con el troceado entra.
 
-Las partes eran de 1 GiB y ahora son de 64 MiB por la **recarga**: con
-`createWritable` los bytes no están en el fichero hasta `close()` —viven en un
-`.crswap` que el navegador tira al recargar—, así que solo sobrevive lo que ya
-se cerró. Con 1 GiB una recarga o un corte perdía hasta un giga; con 64 MiB,
-como mucho un tramo.
+Las partes eran de 1 GiB, luego de 64 MiB y ahora de 16 MiB por la
+**recarga**: con `createWritable` los bytes no están en el fichero hasta
+`close()` —viven en un `.crswap` que el navegador tira al recargar—, así que
+solo sobrevive lo que ya se cerró. Con 1 GiB una recarga o un corte perdía hasta
+un giga; con 16 MiB, como mucho un tramo. El paso de 64 a 16 es por los modelos
+de voz del Translator y del Copiloto: son ficheros de unas decenas de MB y, con
+64 MiB, cerrar la pestaña a mitad de uno no dejaba ninguna parte cerrada. Lo
+guardado antes en partes de 64 MiB se sigue leyendo y reanudando (el marcador
+dice cuántas partes hay y lo guardado es la suma de las que haya).
 
 **Reanuda.** Lo guardado es la suma de las partes `k.p0, k.p1…` seguidas y no
 vacías; `k.parte` guarda `{total, v}` (tamaño y ETag/Last-Modified del

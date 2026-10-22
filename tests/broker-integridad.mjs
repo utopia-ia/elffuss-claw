@@ -27,7 +27,7 @@ const sha = b => createHash('sha256').update(b).digest('hex');
 // ── el código real de la página, con dos ajustes de escala para el test ──────
 let codigo = html.match(/<script type="module">([\s\S]*?)<\/script>/)[1];
 const ajusta = (de, a) => { if (!codigo.includes(de)) throw new Error('el broker cambió, ajusta el test: ' + de); codigo = codigo.replace(de, a); };
-ajusta('const TRAMO = 64 * 1024 * 1024;', 'const TRAMO = 1000;');                  // varias partes con pocos bytes
+ajusta('const TRAMO = 16 * 1024 * 1024;', 'const TRAMO = 1000;');                  // varias partes con pocos bytes
 ajusta('Math.min(15000, 1000 * 2 ** (fallos - 1))', '1');                          // sin esperas reales
 
 // ── OPFS falso ───────────────────────────────────────────────────────────────

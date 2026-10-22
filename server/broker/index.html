@@ -176,7 +176,12 @@ async function borrarDesde(d, k, n){
 // guardado es la SUMA de las partes seguidas no vacías: una parte a medias que
 // se cerró al fallar la red también cuenta, porque es un prefijo válido.
 // Se pierde como mucho un tramo por recarga.
-const TRAMO = 64 * 1024 * 1024;
+// 16 MiB y no 64: los modelos de voz del Translator y del Copiloto son ficheros
+// de unas decenas de MB, y con 64 MiB una pestaña cerrada a mitad de uno no
+// llegaba a cerrar ninguna parte y lo volvía a bajar entero. Las partes
+// guardadas antes, de 64 MiB, se siguen leyendo y reanudando: el marcador lleva
+// cuántas hay y lo guardado es la suma de las que haya.
+const TRAMO = 16 * 1024 * 1024;
 const MAX_SIN_AVANCE = 6;                 // reintentos seguidos sin un solo byte nuevo
 
 async function leerJSON(d, nombre){

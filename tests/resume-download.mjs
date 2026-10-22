@@ -33,7 +33,8 @@ if (!existsSync(join(WEB, 'js/engine/provider.js'))) {
 }
 
 const MiB = 1024 * 1024;
-const TRAMO = 64 * MiB;                    // lo que el broker y el almacén cierran de una vez
+const TRAMO = 16 * MiB;                    // lo que el broker cierra de una vez
+const TRAMO_ALMACEN = 64 * MiB;            // lo que cierra el almacén propio de la app (model-store.js)
 const RATE = +(process.env.RATE || 40) * MiB;   // bytes/s por respuesta
 
 let fails = 0;
@@ -349,7 +350,7 @@ const cuerpos = (srv, path) => pedidos(srv, path).filter(r => r.range !== 'bytes
   // alcanza a CERRAR la parte en curso al descargarse (el fetch se aborta, salta
   // el catch y close() confirma). Lo que importa es que no empiece de cero ni
   // pida más allá de lo que llegó; la integridad la dice el hash.
-  ok('reanuda con Range desde lo guardado', desde >= TRAMO && desde <= alRecargar,
+  ok('reanuda con Range desde lo guardado', desde >= TRAMO_ALMACEN && desde <= alRecargar,
     `${rango || 'sin Range'} · al recargar iban ${(alRecargar / MiB).toFixed(0)} MiB`);
   ok('la barra dice «reanudando desde N %»', (r.prog || []).some(p => /reanudando desde \d+ %/.test(p)),
     (r.prog || []).find(p => /reanudando/.test(p)) || '—');
