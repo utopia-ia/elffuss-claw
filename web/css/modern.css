@@ -1,0 +1,85 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* Copyright (c) 2026 UtopiaIA */
+/* Elffuss look, 2026-10: the same brass, indigo and serif, on a lighter blue-slate ground, with a slow aurora behind it and
+   modern buttons. It loads after elffuss.css and only re-sets colours, buttons and the aurora: no layout, no behaviour. */
+
+:root {
+  --bg: #303752;
+  --bg2: #39415f;
+  --bg3: #424b6c;
+  --line: #4b5578;
+  --fg: #f1eff7;
+  --muted: #b6bccb;
+  --fg-dim: #cdcae2;
+  --accent: #d9b27a;
+  --accent2: #8272ff;
+  --ok: #8fd0a0;
+  --warn: #e3b968;
+  --ease: cubic-bezier(.16, 1, .3, 1);
+}
+
+/* A slow aurora behind the app: teal, violet, magenta and brass. */
+body { position: relative; isolation: isolate; }
+body::before {
+  content: ""; position: fixed; inset: -25% -15%; z-index: -1; pointer-events: none; filter: blur(52px); will-change: transform;
+  background:
+    radial-gradient(38rem 26rem at 10% 6%, rgba(84, 220, 198, .20), transparent 70%),
+    radial-gradient(42rem 28rem at 88% 4%, rgba(130, 114, 255, .30), transparent 70%),
+    radial-gradient(34rem 24rem at 72% 64%, rgba(231, 121, 207, .12), transparent 70%),
+    radial-gradient(40rem 26rem at 16% 80%, rgba(200, 160, 106, .18), transparent 70%);
+  animation: aurora 48s ease-in-out infinite alternate;
+}
+@keyframes aurora {
+  from { transform: translate3d(-2%, -1%, 0) scale(1); }
+  to { transform: translate3d(3%, 2%, 0) scale(1.06); }
+}
+
+/* Buttons: taller, softer corners, a light relief and a response when pressed. */
+button.primary, #send, button.ghost, .chip, .cbtn, #splash button {
+  transition: transform .18s var(--ease), box-shadow .18s var(--ease), background-color .15s, border-color .15s, color .15s;
+}
+button.primary:active, #send:active, button.ghost:active, .chip:active, .cbtn:active, #splash button:active { transform: translateY(1px) scale(.985); }
+
+button.primary, #send {
+  background: linear-gradient(180deg, #f0d2a4, #d3a96e);
+  color: #1b1408;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 12px;
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55), 0 1px 2px rgba(0, 0, 0, .25), 0 10px 22px -10px rgba(230, 194, 148, .55);
+}
+button.primary { min-height: 40px; padding: 0 18px; }
+button.primary:hover, #send:hover {
+  background: linear-gradient(180deg, #f7dcb4, #dcb57b);
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 1px 2px rgba(0, 0, 0, .25), 0 14px 28px -10px rgba(230, 194, 148, .7);
+}
+#send.is-stop { background: linear-gradient(180deg, #ee6a6e, #d44a4f); color: #fff; }
+#send.is-stopping { background: #7a2a2d; color: #f3d6d7; }
+
+button.ghost {
+  background: rgba(255, 255, 255, .06);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  min-height: 38px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+}
+button.ghost:hover { background: rgba(255, 255, 255, .12); border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
+
+.chip { border-radius: 999px; background: rgba(255, 255, 255, .06); }
+.chip:hover { background: rgba(255, 255, 255, .12); transform: translateY(-1px); }
+.cbtn { border-radius: 12px; }
+
+/* The download showcase and the app frame sit on the same blue-slate family, not on near-black. */
+#loading-stage { background: radial-gradient(1100px 700px at 50% 32%, #4a3f86, #2c3350 72%); }
+#appframe { background: #2c3350; }
+
+/* First visit: the welcome button follows the same language. */
+#splash button { border-radius: 14px; }
+
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
+  button.primary:hover, #send:hover, button.ghost:hover, .chip:hover { transform: none; }
+  button.primary:active, #send:active, button.ghost:active, .chip:active, .cbtn:active, #splash button:active { transform: none; }
+}
