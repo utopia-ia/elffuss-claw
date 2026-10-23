@@ -32,7 +32,18 @@ export function addMsg(cls, text) {
   }
   $('log').appendChild(div);
   $('log').scrollTop = $('log').scrollHeight;
+  if (/(^|\s)user(\s|$)/.test(cls)) ocultarSugerencias();
   return div;
+}
+
+// Las sugerencias de debajo del chat sirven para empezar. En cuanto hay un
+// mensaje del usuario —uno nuevo, uno en cola o la conversación restaurada al
+// abrir, que también entra por aquí— sobran. Se ocultan con `hidden` y no se
+// borran: el cambio de idioma las reescribe, y 🧹 recarga la página, con lo que
+// vuelven en una conversación vacía.
+function ocultarSugerencias() {
+  const chips = $('chips');
+  if (chips && !chips.hidden) chips.hidden = true;
 }
 
 // Llevar a un mensaje del chat: en el móvil, al lado del chat; el mensaje a la
@@ -1709,6 +1720,9 @@ export function init({ onSend, onStop = () => {}, onModelChange, onSettingsChang
     if (!c) return;
     if (c.dataset.accion === 'carpeta') onPickFolder();
     else onSend(c.textContent.trim());
+    // El chip pulsado desaparece con el primer mensaje: sin esto el foco del
+    // teclado se perdía en <body>. En el móvil no, para no abrir el teclado.
+    if (matchMedia('(pointer: fine)').matches) $('prompt')?.focus({ preventScroll: true });
   });
   document.querySelectorAll('#tabs button').forEach(b =>
     b.addEventListener('click', () => selectTab(b.dataset.tab, { push: true })));

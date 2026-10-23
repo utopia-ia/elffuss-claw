@@ -150,6 +150,7 @@ main {
 .msg.tool-result summary { cursor: pointer; }
 
 #chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px; }
+#chips[hidden] { display: none; }   /* tras el primer mensaje del usuario (ui.js) */
 .chip {
   font: inherit;
   font-size: .78rem;
