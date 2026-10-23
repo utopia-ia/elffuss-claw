@@ -7,9 +7,11 @@ viewer. Nothing to install, no mandatory backend, and the model runs **inside yo
 browser** (WebGPU) — everything stays on your machine.
 
 **[▶️ Live demo](https://claw.elffuss.com)** ·
-**[🧑‍💻 Elffuss Code (sibling project)](https://github.com/KikoCis/elffuss-code)** ·
-**[🧬 Shared core](https://github.com/KikoCis/elffuss)** ·
+**[🧑‍💻 Elffuss Code (sibling project)](https://github.com/utopia-ia/elffuss-code)** ·
+**[🧬 Shared core](https://github.com/utopia-ia/elffuss)** ·
 **License: Apache-2.0**
+
+> Elffuss Claw now lives in the UtopiaIA organization on GitHub, at github.com/utopia-ia/elffuss-claw. It moved from github.com/KikoCis/elffuss-claw on 23 October 2026; the old address redirects.
 
 <p align="center">
   <a href="https://claw.elffuss.com">
@@ -95,4 +97,4 @@ No framework, no build step. The agent talks to the tools with
 
 El empaquetador de contexto (BM25 con IDF endógena contra la pregunta viva, sin heurísticas) está medido: recuerdo de hechos **15,1 % → 65,3 %** al mismo gasto de tokens, y **recuperar bien bate a no comprimir** (F1 28,09 contra 22,56 del contexto completo, con el 8 % de los tokens).
 
-Tablas completas, ablaciones y referencias en el **[core compartido](https://github.com/KikoCis/elffuss#cómo-se-mide-el-gestor-de-contexto)** · la historia con lo que salió mal en la **[bitácora](https://bitacora.utopiaia.com/posts/16-beaten-by-doing-nothing.html)**.
+Tablas completas, ablaciones y referencias en el **[core compartido](https://github.com/utopia-ia/elffuss#cómo-se-mide-el-gestor-de-contexto)** · la historia con lo que salió mal en la **[bitácora](https://bitacora.utopiaia.com/posts/16-beaten-by-doing-nothing.html)**.
