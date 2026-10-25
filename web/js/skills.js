@@ -25,6 +25,8 @@ const ES = {
   skCreated: 'Skill «{name}» creada e instalada. Ya la sigo en cada conversación (mírala en la pestaña Skills).',
   skNoSuch: 'No hay ninguna skill «{name}». Créala primero con skill.create.',
   skUpdated: 'Skill «{name}» actualizada. Ya sigo la nueva versión.',
+  skUrlBad: 'Esa URL no es de una skill que sepa leer: dame la de GitHub (el repo o su SKILL.md), skills.sh o ui-skills.com.',
+  skUrlChoose: 'El repo {repo} trae varias skills: {lista}. Dime cuál y la instalo (skill.install con url y name).',
 };
 let traductor = null;
 export function usarTraductor(fn) { traductor = typeof fn === 'function' ? fn : null; }
@@ -165,6 +167,57 @@ export async function installFromRepo(entry) {
   if (md == null) throw new Error(tx('skMdFailed'));
   const skill = parseSkill(md, entry.name);
   return install({ ...skill, repo: entry.repo, path: entry.path });
+}
+
+// Instalar una skill que YA existe, a partir de su URL. Sin esto el modelo solo
+// tenía skill.create, y cuando el usuario pedía una skill concreta de internet
+// («instala impeccable») escribía de memoria una imitación —lenta, porque redacta
+// las instrucciones enteras, y peor que la original— o decía que no podía.
+//
+// Vale GitHub (el repo, una carpeta, el SKILL.md o su versión raw) y los
+// catálogos que enlazan a un repo de GitHub (skills.sh, ui-skills.com).
+// Devuelve { repo, branch?, path?, name? } o null si no sabe leerla.
+export function resolverUrlSkill(url) {
+  let u;
+  try { u = new URL(String(url || '').trim()); } catch { return null; }
+  const p = u.pathname.split('/').filter(Boolean);
+  const host = u.hostname.replace(/^www\./, '');
+  if (host === 'raw.githubusercontent.com' && p.length >= 4 && /SKILL\.md$/i.test(p.at(-1)))
+    return { repo: `${p[0]}/${p[1]}`, branch: p[2], path: p.slice(3).join('/') };
+  if (host === 'github.com' && p.length >= 2) {
+    const repo = `${p[0]}/${p[1].replace(/\.git$/, '')}`;
+    if ((p[2] === 'blob' || p[2] === 'tree') && p.length >= 5) {
+      let path = p.slice(4).join('/');
+      if (!/SKILL\.md$/i.test(path)) path += '/SKILL.md';
+      return { repo, branch: p[3], path };
+    }
+    return { repo };
+  }
+  if (host === 'skills.sh' && p.length >= 2) return { repo: `${p[0]}/${p[1]}`, name: p[2] || null };
+  if (host === 'ui-skills.com' && p[0] === 'skills' && p.length >= 3) return { repo: `${p[1]}/${p[2]}`, name: p[3] || null };
+  return null;
+}
+
+export async function installFromUrl({ url, name } = {}) {
+  const r = resolverUrlSkill(url);
+  if (!r) throw new Error(tx('skUrlBad'));
+  let entry;
+  if (r.path) {
+    entry = { repo: r.repo, branch: r.branch, path: r.path,
+      name: r.path.replace(/\/?SKILL\.md$/i, '').split('/').pop() || r.repo.split('/')[1] };
+  } else {
+    const lista = await listFromRepo(r.repo);
+    if (!lista.length) throw new Error(tx('skMdFailed'));
+    const quiere = String(name || r.name || r.repo.split('/')[1]).toLowerCase();
+    // Un repo suele traer la misma skill copiada para varios agentes
+    // (.claude/, .cursor/, .agents/…): cualquiera de ellas vale.
+    entry = lista.length === 1 ? lista[0] : lista.find(e => e.name.toLowerCase() === quiere);
+    if (!entry) {
+      const nombres = [...new Set(lista.map(e => e.name))];
+      return tx('skUrlChoose', { repo: r.repo, lista: nombres.slice(0, 30).join(', ') });
+    }
+  }
+  return usageMessage(await installFromRepo(entry));
 }
 
 // SKILL.md → { name, description, content }

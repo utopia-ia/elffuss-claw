@@ -71,7 +71,13 @@ Cómo actuar:
 6) TRANSFORMAR o CALCULAR sobre un fichero (escalar un modelo 3D, convertir un CSV, limpiar una lista) se hace AQUÍ. Un fichero son BYTES y fs.read/fs.write los leen y escriben, así que PROHIBIDO contestar «mis herramientas no sirven para esto» y parar. Dos caminos:
    · si cabe y es texto: fs.read, lo transformas tú y fs.write. Un STL ASCII, un CSV o un SVG es eso y nada más.
    · si hay que calcular de verdad o el usuario quiere repetirlo: app.create con una página que lo haga en el navegador. Esa ES tu consola: HTML, CSS y JavaScript.
-7) ⛔ Aquí NO hay shell ni Python: no existe terminal.run ni nada que instale paquetes. Así que NUNCA propongas una librería de terceros («necesitarías numpy-stl»), ni preguntes si algo está instalado, ni te ofrezcas y esperes («¿quieres que te prepare un script?»). Resuélvelo con fs.* y app.create, que para esto alcanzan: escalar un STL es multiplicar números.${bloqueEjemplos(RECORTAR_EJEMPLOS ? herramientas : null)}${skillsPromptBlock()}`;
+7) ⛔ Aquí NO hay shell ni Python: no existe terminal.run ni nada que instale paquetes. Así que NUNCA propongas una librería de terceros («necesitarías numpy-stl»), ni preguntes si algo está instalado, ni te ofrezcas y esperes («¿quieres que te prepare un script?»). Resuélvelo con fs.* y app.create, que para esto alcanzan: escalar un STL es multiplicar números.
+8) ANTES DE ACTUAR, mira qué pide el ÚLTIMO mensaje y conéctalo con TODA la conversación:
+   · Lo dicho antes sigue valiendo (para quién es, cuántos son, gustos, lo que se buscó, las URLs que salieron): úsalo y no lo vuelvas a preguntar. «Eso», «esa», «instálala» señalan lo último de lo que se habló.
+   · Si el usuario fija un orden («primero busca…», «búscala en internet»), tu PRIMER paso es ese.
+   · Haz lo que pide AHORA: no retomes ni rehagas una tarea anterior (no vuelvas a crear una app ya hecha) si no te lo pide.
+   · Si se entiende lo que quiere, hazlo; pregunta solo lo imprescindible que no puedas deducir.
+9) Si quiere una skill CONCRETA de internet: si no tienes su URL, web.search; luego skill.install con la URL de GitHub. No la imites con skill.create ni digas que no se puede instalar.${bloqueEjemplos(RECORTAR_EJEMPLOS ? herramientas : null)}${skillsPromptBlock()}`;
 }
 
 export const ETIQUETA_CONTEXTO = 'CONTEXTO AHORA (estado real del sistema, úsalo al responder):';
@@ -213,7 +219,7 @@ function looseToolCall(raw) {
   const am = raw.match(/"args"\s*:\s*\{/);
   const body = am ? raw.slice(am.index + am[0].length) : raw;
   const args = {};
-  for (const key of ['path', 'content', 'name', 'html', 'prompt', 'text', 'search', 'replace', 'query', 'key', 'value']) {
+  for (const key of ['path', 'content', 'name', 'html', 'prompt', 'text', 'search', 'replace', 'query', 'key', 'value', 'url']) {
     const km = body.match(new RegExp('"' + key + '"\\s*:\\s*"'));
     if (!km) continue;
     // El cierre REAL se elige mirando todos los candidatos y quedándose con el
