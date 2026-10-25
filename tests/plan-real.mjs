@@ -36,7 +36,9 @@ const ctx = await chromium.launchPersistentContext(PROFILE, {
   args: ['--enable-unsafe-webgpu', ...CHROME_ARGS],
   timeout: 120000,
 });
-await ctx.addInitScript(() => { try { localStorage.setItem('elffuss.model', 'rules'); localStorage.setItem('elffuss.welcomed', '1'); } catch {} });
+await ctx.addInitScript(() => { try { localStorage.setItem('elffuss.model', 'rules'); localStorage.setItem('elffuss.welcomed', '1');
+  // Los permisos, concedidos de antemano: sin esto web.search espera un clic en el diálogo y el turno se cuelga.
+  localStorage.setItem('elffuss.grants', JSON.stringify(['fs', 'apps', 'vault', 'tasks', 'web', 'memory'])); } catch {} });
 const p = await ctx.newPage();
 p.on('pageerror', e => log('PAGEERROR:', e.message.slice(0, 160)));
 await p.goto(BASE + '/', { waitUntil: 'domcontentloaded' });
@@ -85,11 +87,13 @@ const casos = await p.evaluate(async ({ BASE_H, BUSQUEDA }) => {
     a.history = historial.map(m => ({ ...m }));
     const herramientas = [], resultados = [];
     let textoFinal = '';
+    const tope = setTimeout(() => a.stop(), 240000);   // un turno colgado no tumba la prueba entera
     await a.handle(texto, ev => {
       if (ev.type === 'tool') herramientas.push({ tool: ev.call.tool, args: JSON.stringify(ev.call.args).slice(0, 160) });
       if (ev.type === 'tool_result') resultados.push(ev.result.slice(0, 160));
       if (ev.type === 'text') textoFinal = ev.text;
     });
+    clearTimeout(tope);
     return { herramientas, resultados, texto: textoFinal.slice(0, 300) };
   };
   const r = {};
