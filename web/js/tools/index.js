@@ -137,7 +137,9 @@ export async function snapshot() {
     'Fecha y hora: ' + horaEstable('es-ES'),
     'Apps ya creadas: ' + (appList.length ? appList.map(a => a.name).join(', ') : 'ninguna'),
     'App abierta en el visualizador: ' + (apps.currentApp() || 'ninguna'),
-    'Carpetas autorizadas: ' + (folderList.length ? folderList.join(', ') : 'ninguna (usa fs.pick_folder)'),
+    // «ninguna (usa fs.pick_folder)» se leía como una orden: con E4B real, pedir
+    // una skill o una búsqueda empezaba abriendo el selector de carpetas.
+    'Carpetas autorizadas: ' + (folderList.length ? folderList.join(', ') : 'ninguna (fs.pick_folder solo si la tarea necesita ficheros del usuario)'),
     `Tareas pendientes: ${pendingTasks.length}` +
       (next ? ` (próxima ${new Date(next.when).toLocaleTimeString('es-ES')}: «${next.prompt}»)` : ''),
     'Automatizaciones de carpetas: ' +

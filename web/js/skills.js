@@ -27,6 +27,7 @@ const ES = {
   skUpdated: 'Skill «{name}» actualizada. Ya sigo la nueva versión.',
   skUrlBad: 'Esa URL no es de una skill que sepa leer: dame la de GitHub (el repo o su SKILL.md), skills.sh o ui-skills.com.',
   skUrlChoose: 'El repo {repo} trae varias skills: {lista}. Dime cuál y la instalo (skill.install con url y name).',
+  skUrlBuscar: 'no inventes la URL: búscala con web.search y usa una que salga en los resultados.',
 };
 let traductor = null;
 export function usarTraductor(fn) { traductor = typeof fn === 'function' ? fn : null; }
@@ -206,7 +207,11 @@ export async function installFromUrl({ url, name } = {}) {
     entry = { repo: r.repo, branch: r.branch, path: r.path,
       name: r.path.replace(/\/?SKILL\.md$/i, '').split('/').pop() || r.repo.split('/')[1] };
   } else {
-    const lista = await listFromRepo(r.repo);
+    // Un repo que no existe suele ser una URL inventada: el error le dice al
+    // modelo qué hacer en vez de dejarle probar otra inventada (E4B lo hacía).
+    const lista = await listFromRepo(r.repo).catch(e => {
+      throw new Error(`${e.message} — ${tx('skUrlBuscar', { repo: r.repo })}`);
+    });
     if (!lista.length) throw new Error(tx('skMdFailed'));
     const quiere = String(name || r.name || r.repo.split('/')[1]).toLowerCase();
     // Un repo suele traer la misma skill copiada para varios agentes

@@ -76,6 +76,18 @@ const BASE_H = [
   { role: 'user', content: '[resultado app.create]\n✓ App «plan_comidas_mercadona» creada y abierta en el visualizador.' },
 ];
 
+// La guarda de URLs de skill.install, sin modelo.
+const guarda = await p.evaluate(async (BUSQUEDA) => {
+  const { urlDichaEn } = await import('/js/agent.js');
+  const h = [{ role: 'user', content: BUSQUEDA }];
+  return [
+    ['https://github.com/pbakaus/impeccable', true], ['https://github.com/pbakaus/impeccable/', true],
+    ['github.com/pbakaus/impeccable', true], ['https://ui-skills.com/skills/pbakaus/impeccable', true],
+    ['https://github.com/example/impecable-ui-skill', false], ['', false],
+  ].map(([u, e]) => ({ u, bien: urlDichaEn(h, u) === e }));
+}, BUSQUEDA);
+for (const g of guarda) ok(`guarda de URL: «${g.u}»`, g.bien);
+
 const casos = await p.evaluate(async ({ BASE_H, BUSQUEDA }) => {
   const { Agent } = await import('/js/agent.js');
   const prov = await import('/js/providers/litert.js');
@@ -117,9 +129,22 @@ ok('1 · «busca una skill… impecable»: busca (web.search)', tools(casos.busc
 ok('  …sin imitarla con skill.create', !tools(casos.busca).includes('skill.create'), tools(casos.busca).join(' → '));
 ok('  …sin rehacer la app de antes', !tools(casos.busca).includes('app.create'), tools(casos.busca).join(' → '));
 ok('2 · «búscala en internet primero»: el primer paso es web.search', tools(casos.primero)[0] === 'web.search', tools(casos.primero).join(' → ') || casos.primero.texto);
+// E4B a veces prueba primero una URL inventada: lo que se exige es que la pare la
+// guarda (sin tocar la red) y que acabe instalando la buena en el mismo turno.
+const inventadas = Object.values(casos).flatMap(c => c.herramientas.map((h, i) => ({ ...h, res: c.resultados[i] || '' })))
+  .filter(h => h.tool === 'skill.install' && !/pbakaus\/impeccable/.test(h.args));
+ok('las URLs inventadas las para la guarda, sin ir a la red', inventadas.every(h => /no ha salido en la conversación/.test(h.res)),
+  inventadas.map(h => h.args + ' → ' + h.res.slice(0, 60)).join(' | ') || 'ninguna');
 ok('3 · «esa, instálala»: skill.install', tools(casos.instala).includes('skill.install'), tools(casos.instala).join(' → ') || casos.instala.texto);
 ok('  …y queda instalada', casos.instala.resultados.some(x => /instalad|installed/i.test(x)), casos.instala.resultados.join(' | '));
 ok('4 · la lista de la compra no vuelve a preguntar para cuántos', !/cu[aá]ntas personas|how many people|para cu[aá]ntos/i.test(casos.lista.texto), tools(casos.lista).join(' → ') + ' · ' + casos.lista.texto.slice(0, 120));
+// Aviso, no fallo: E4B tiende a preguntar gustos o el menú aunque se le diga que
+// asuma. Ni reglas de prompt ni pasarle la historia como turnos reales del
+// prefacio (en vez de texto) lo cambiaron (medido 25-oct-2026). Es del modelo.
+if (/dieta|diet|alergi|vegetarian/i.test(casos.lista.texto)) console.log('⚠️  aviso: vuelve a preguntar la dieta (dijo «normal diet»)  — ' + casos.lista.texto.slice(0, 120));
+const sinCarpeta = Object.values(casos).every(c => !tools(c).includes('fs.pick_folder'));
+ok('ningún caso abre el selector de carpetas (no hacen falta ficheros)', sinCarpeta, Object.entries(casos).map(([k, c]) => k + ': ' + tools(c).join('→')).join(' · '));
+ok('tras instalar la skill, el turno se cierra', tools(casos.instala).filter(t => t === 'skill.install').length === 1 && tools(casos.instala).at(-1) === 'skill.install', tools(casos.instala).join(' → '));
 
 console.log(fails ? `\n❌ ${fails} FALLO(S)` : '\n✅ PLAN REAL: busca, sigue el orden, instala y usa lo ya dicho');
 await ctx.close();

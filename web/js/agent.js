@@ -76,8 +76,9 @@ Cómo actuar:
    · Lo dicho antes sigue valiendo (para quién es, cuántos son, gustos, lo que se buscó, las URLs que salieron): úsalo y no lo vuelvas a preguntar. «Eso», «esa», «instálala» señalan lo último de lo que se habló.
    · Si el usuario fija un orden («primero busca…», «búscala en internet»), tu PRIMER paso es ese.
    · Haz lo que pide AHORA: no retomes ni rehagas una tarea anterior (no vuelvas a crear una app ya hecha) si no te lo pide.
-   · Si se entiende lo que quiere, hazlo; pregunta solo lo imprescindible que no puedas deducir.
-9) Si quiere una skill CONCRETA de internet: si no tienes su URL, web.search; luego skill.install con la URL de GitHub. No la imites con skill.create ni digas que no se puede instalar.${bloqueEjemplos(RECORTAR_EJEMPLOS ? herramientas : null)}${skillsPromptBlock()}`;
+   · Si se entiende lo que quiere, HAZLO ya. Lo que falte y no sea imprescindible, asúmelo (lo ya dicho, o lo más habitual) y dilo en una línea; no preguntes gustos ni preferencias que no hagan falta.
+   · Nunca digas que has hecho algo («he preparado…», «he creado…») si no has llamado a la herramienta en este turno.
+9) Si quiere una skill CONCRETA de internet: si no tienes su URL en la conversación, web.search; luego skill.install con una URL que haya salido en los resultados. NUNCA inventes una URL. No la imites con skill.create ni digas que no se puede instalar.${bloqueEjemplos(RECORTAR_EJEMPLOS ? herramientas : null)}${skillsPromptBlock()}`;
 }
 
 export const ETIQUETA_CONTEXTO = 'CONTEXTO AHORA (estado real del sistema, úsalo al responder):';
@@ -424,6 +425,16 @@ function hastaQueParen(p, signal) {
   });
 }
 
+// ¿Ha salido esta URL en la conversación? Se compara sin esquema, «www.» ni barra
+// final: el modelo copia «https://www.skills.sh/x» de «www.skills.sh/x».
+export function urlDichaEn(historia, url) {
+  const norma = u => String(u || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '');
+  const buscada = norma(url);
+  if (!buscada) return false;
+  return historia.some(m => norma(m.content).includes(buscada) ||
+    String(m.content || '').toLowerCase().replace(/https?:\/\/(www\.)?/g, '').includes(buscada));
+}
+
 export class Agent {
   constructor(provider) {
     this.provider = provider;
@@ -534,6 +545,11 @@ export class Agent {
       let result;
       if (permitir && !permitir(call.tool)) {
         result = `ERROR: aquí solo puedes leer; «${call.tool}» cambiaría cosas y no está permitida. Propón ese cambio en texto.`;
+      } else if (call.tool === 'skill.install' && !urlDichaEn(this.history, call.args?.url)) {
+        // Con E4B real, «busca la skill X» empezaba instalando desde una URL
+        // inventada (github.com/example/…). Una URL que no ha salido en la
+        // conversación —ni la dio el usuario ni vino en un resultado— no se intenta.
+        result = 'ERROR: esa URL no ha salido en la conversación (¿inventada?). Búscala con web.search y usa una de los resultados.';
       } else {
         try { result = await hastaQueParen(runTool(call.tool, call.args, { signal }), signal); }
         catch (e) {
@@ -552,8 +568,10 @@ export class Agent {
         ? '\n(Reanaliza este error y reintenta con la corrección; no te rindas.)' : '';
       this.history.push({ role: 'user', content: `[resultado ${call.tool}]\n${resultStr}${pista}`, ts: Date.now() });
 
-      // Tras crear/abrir una app, la tarea suele estar hecha: cierra ya.
-      if ((call.tool === 'app.create' || call.tool === 'app.open') && !resultStr.startsWith('ERROR')) {
+      // Tras crear/abrir una app, la tarea suele estar hecha: cierra ya. Igual tras
+      // instalar una skill: con E4B real, después de instalarla seguía dando pasos
+      // (la instalaba otra vez desde otra URL, abría el selector de carpetas).
+      if (['app.create', 'app.open', 'skill.install'].includes(call.tool) && !resultStr.startsWith('ERROR')) {
         onEvent({ type: 'text', text: t('done', { result: resultStr }) });
         return;
       }
