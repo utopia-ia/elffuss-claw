@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 /* Copyright (c) 2026 UtopiaIA */
 /* The Elffuss mark: the brass leaf and the word, a link to https://elffuss.com/ on every site. On hover or keyboard focus the
-   leaf tilts and lifts, a thin line draws under the word and one small spark shows at the leaf's tip, all within 300 ms.
+   leaf tilts and lifts, a thin line draws under the word and one small spark shows at the leaf's tip, all in a fraction of a second.
    With reduced motion only the line and the colour change. No script. Colours come from the site's variables.
 
    Markup, the same on every site (the label follows the page's language: "Elffuss: todas las apps" in Spanish):
