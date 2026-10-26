@@ -1,0 +1,41 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* Copyright (c) 2026 UtopiaIA */
+/* The Elffuss mark: the brass leaf and the word, a link to https://elffuss.com/ on every site. On hover or keyboard focus the
+   leaf tilts and lifts, a thin line draws under the word and one small spark shows at the leaf's tip, all within 300 ms.
+   With reduced motion only the line and the colour change. No script. Colours come from the site's variables.
+
+   Markup, the same on every site (the label follows the page's language: "Elffuss: todas las apps" in Spanish):
+
+   <a class="elffuss-mark" href="https://elffuss.com/" aria-label="Elffuss: all apps"><svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><path class="leaf" d="M13.5 35C6.5 31.5 3.5 23 6.8 14.6 10 6.6 18.2 3.4 24.2 6.6c5.2 2.7 5 8.4.8 11.4-3.1 2.2-7 2-9 5-1.9 3-.6 7.6 1 12z"/><circle class="eye" cx="20.5" cy="13.2" r="2.1"/><path class="spark" d="M31 2.5l1.1 2.9 2.9 1.1-2.9 1.1L31 10.5l-1.1-2.9-2.9-1.1 2.9-1.1z"/></svg><span class="word">Elffuss</span></a>
+*/
+
+.elffuss-mark {
+  --mark-ease: cubic-bezier(.16, 1, .3, 1);
+  display: inline-flex; align-items: center; gap: .5rem;
+  color: var(--fg, #f1eff7); text-decoration: none;
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  font-weight: 700; font-size: 1.25rem; letter-spacing: -.01em; line-height: 1;
+  border-radius: 10px;
+}
+.elffuss-mark svg { width: 1.7em; height: 1.7em; flex: none; overflow: visible; transform-origin: 50% 90%; transition: transform .28s var(--mark-ease); }
+.elffuss-mark .leaf { fill: var(--accent, #c8a06a); transition: fill .28s; }
+.elffuss-mark .eye { fill: var(--bg, #090a11); }
+.elffuss-mark .spark { fill: var(--teal, #54dcc6); opacity: 0; transform: scale(.2) rotate(-30deg); transform-origin: 31px 6.5px; transition: opacity .2s .08s, transform .3s .08s var(--mark-ease); }
+.elffuss-mark .word { position: relative; padding-bottom: 3px; }
+.elffuss-mark .word::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--teal, #54dcc6), var(--accent2, #8272ff), var(--accent, #c8a06a));
+  transform: scaleX(0); transform-origin: left; transition: transform .28s var(--mark-ease);
+}
+
+.elffuss-mark:hover svg, .elffuss-mark:focus-visible svg { transform: translateY(-1px) rotate(-8deg); }
+.elffuss-mark:hover .leaf, .elffuss-mark:focus-visible .leaf { fill: #e6c294; }
+.elffuss-mark:hover .spark, .elffuss-mark:focus-visible .spark { opacity: 1; transform: scale(1) rotate(0); }
+.elffuss-mark:hover .word::after, .elffuss-mark:focus-visible .word::after { transform: scaleX(1); }
+.elffuss-mark:focus-visible { outline: 2px solid var(--teal, #54dcc6); outline-offset: 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .elffuss-mark svg, .elffuss-mark .spark, .elffuss-mark .word::after { transition: none; }
+  .elffuss-mark:hover svg, .elffuss-mark:focus-visible svg { transform: none; }
+  .elffuss-mark .spark { display: none; }
+}

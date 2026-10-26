@@ -78,6 +78,10 @@ button.ghost:hover { background: rgba(255, 255, 255, .12); border-color: var(--a
 /* First visit: the welcome button follows the same language. */
 #splash button { border-radius: 14px; }
 
+/* The Elffuss mark in the header: the leaf and the word lead to elffuss.com; «Claw» stays outside the link. */
+.brand .elffuss-mark { font-size: 1em; flex: none; }
+@media (max-width: 700px) { .brand .elffuss-mark .word { display: none; } }
+
 @media (prefers-reduced-motion: reduce) {
   body::before { animation: none; }
   button.primary:hover, #send:hover, button.ghost:hover, .chip:hover { transform: none; }
