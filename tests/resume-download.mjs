@@ -31,6 +31,20 @@ if (!existsSync(join(WEB, 'js/engine/provider.js'))) {
   console.error('Falta web/js/engine/: sincroniza el motor con ../elffuss-engine/sync-to-claw.sh');
   process.exit(2);
 }
+// Lo que este test pone a prueba vive todavía en dos ramas sin integrar: el
+// gancho __abrirPorRangos del motor (elffuss-engine, rama resume-fix) y
+// brokerLocal en el runtime de Claw (rama resume-fix). Sin ellas no hay nada que
+// probar, y tiene que decirlo así en vez de caer en un TypeError a mitad.
+const falta = [
+  !readFileSync(join(WEB, 'js/engine/provider.js'), 'utf8').includes('__abrirPorRangos')
+    && 'el motor de la rama resume-fix (__abrirPorRangos en js/engine/provider.js)',
+  !readFileSync(join(WEB, 'js/runtime/model-broker.js'), 'utf8').includes('brokerLocal')
+    && 'el runtime de Claw de la rama resume-fix (brokerLocal en web/js/runtime/model-broker.js)',
+].filter(Boolean);
+if (falta.length) {
+  console.error('Este test necesita ' + falta.join(' y ') + ', que aún no están en este árbol.');
+  process.exit(2);
+}
 
 const MiB = 1024 * 1024;
 const TRAMO = 16 * MiB;                    // lo que el broker cierra de una vez
