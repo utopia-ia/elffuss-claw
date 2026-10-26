@@ -14,6 +14,19 @@ mismo bajo `elffuss.utopiaia.com`, los alias viejos `elffuss-claw` y
 markdown escrito por cualquiera y, al ser del mismo site, un script colado ahí
 hablaría con el broker en su caché compartida; `key.*` no lo necesita.
 
+Las herramientas (`tools`, `cutout`, `ocr`, `detect` y `depth` `.elffuss.com`, del
+repo `elffuss-ai`) entran con menos permisos: solo pueden bajar, consultar o
+cancelar uno de los ficheros de su registro (`FICHEROS_HERRAMIENTAS`: cada URL de
+Hugging Face fijada a su commit, con su tamaño exacto; el bloque lo imprime
+`scripts/broker-repos.mjs` de `elffuss-ai`), y si dicen un tamaño tiene que ser el
+de la lista. Ni otros ficheros u otros commits de esos repos, ni vaciar el
+almacén, ni guardar copias, ni el diagnóstico. Y solo leen: lo que pide una
+herramienta nunca cura (borra) una copia guardada. Si una copia completa no mide
+lo que debe, la herramienta recibe «integridad» y la copia se queda; se vacía
+desde Claw. Esas páginas abren ficheros del usuario; si una fallara, no podría
+llenar el almacén ni borrar los modelos de las demás webs, tampoco con un tamaño
+falso.
+
 Estaba solo en el servidor, editada a mano. Se versiona aquí porque lleva
 lógica que costó encontrar y que se perdería con un despliegue o una limpieza.
 

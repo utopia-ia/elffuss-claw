@@ -38,6 +38,9 @@ const ACEPTA = [
   // copia de broker/ no lo aceptaba y la de server/ sí, y esta prueba no lo veía
   // porque el origen no estaba en ninguna de las dos listas.
   'https://burn-my-computer.utopiaia.com',
+  // Las herramientas de elffuss-ai (solo con permiso de lectura: tests/broker-herramientas.mjs)
+  'https://tools.elffuss.com', 'https://cutout.elffuss.com', 'https://ocr.elffuss.com',
+  'https://detect.elffuss.com', 'https://depth.elffuss.com',
   'http://localhost', 'http://localhost:8642',
   'https://socio.example',                       // añadido por ?allow=
 ];
@@ -55,6 +58,10 @@ const RECHAZA = [
   'https://models.git.elffuss.com', 'https://mx.elffuss.com',
   'https://burn-my-computer.utopiaia.com.evil.net', 'http://burn-my-computer.utopiaia.com',
   'https://x.burn-my-computer.utopiaia.com',
+  // Las herramientas solo existen bajo elffuss.com, con https y con su nombre exacto.
+  'https://ocr.elffuss.utopiaia.com', 'https://tools.elffuss.utopiaia.com',
+  'http://ocr.elffuss.com', 'https://ocr.elffuss.com.evil.net', 'https://x.ocr.elffuss.com',
+  'https://ocr2.elffuss.com', 'https://cutouts.elffuss.com', 'https://depth.elffuss.com:8443',
 ];
 const veredictos = {};   // página → { origen: acepta? }
 const codigos = {};      // página → el código de allowed() sin comentarios ni espacios
