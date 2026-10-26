@@ -13,11 +13,17 @@
 // y se reutiliza en todas. (Un tercero que lo integre tiene su propia partición
 // por privacidad del navegador: se baja una vez POR SU site. Los hosts viejos de
 // elffuss.utopiaia.com son, para el navegador, otro site distinto.)
-// API postMessage: {type:'elffuss-model-get', id, url} → {kind:'progress'}* →
-// {kind:'file', file} | {kind:'error', message}.  {type:'elffuss-model-has', id, url}
+// API postMessage: {type:'elffuss-model-get', id, url, bytes?} → {kind:'progress',
+// loaded, total, reanudadoDesde?, reintento?}* → {kind:'file', file} |
+// {kind:'error', message, tipo: 'red'|'cuota'|'http'|'cancelado'}.
+// {type:'elffuss-model-has', id, url, bytes?}   {type:'elffuss-model-cancel', url}
 // {type:'elffuss-model-clear', id} → {kind:'cleared', liberado, restante}: vacia
 // este almacen. Lo necesita el boton «vaciar cache» de las webs, que sin esto
 // solo borraba lo de SU origen y dejaba aqui el modelo grande.
+// {type:'elffuss-model-put', id, url, file} → {kind:'put', size} | {kind:'error'}:
+// guarda una copia que la web YA tiene (migrar su caché vieja sin volver a
+// bajarla). Solo ficheros de Hugging Face cuya huella coincide con la del Hub.
+// El aviso de listo dice qué sabe hacer: {kind:'elffuss-broker-ready', v, puede}.
 // (Aquí ponía que la respuesta venían trozos de ArrayBuffer, que es la versión
 // ANTERIOR: ahora se manda el File de OPFS por referencia, justamente para no
 // copiar los gigabytes a la RAM del renderer. La descripción vieja hizo perder
@@ -49,14 +55,58 @@ const keyFor = u => String(u).replace(/[?#].*$/, '').replace(/[^\w.\-]+/g, '_').
 async function requestPersist(){ try{ if(navigator.storage?.persist){ return (await navigator.storage.persisted?.()) || await navigator.storage.persist(); } }catch{} return false; }
 async function dir(){ const root = await navigator.storage.getDirectory(); return root.getDirectoryHandle(DIR, { create:true }); }
 
-async function cachedFile(url){
-  try{ const d = await dir(); const k = keyFor(url);
-    const marca = JSON.parse(await (await (await d.getFileHandle(k + '.done')).getFile()).text());
-    const f = await juntar(d, k, marca.parts || 1);
-    // El tamaño tiene que cuadrar con el apuntado: un fichero truncado por un
-    // desalojo se lee sin error y el modelo saldría con basura dentro.
-    return (f.size > 0 && (!marca.size || f.size === marca.size)) ? f : null;
-  }catch{ return null; }
+// ── INTEGRIDAD: funciones PURAS (sin OPFS ni red), extraídas tal cual por
+// tests/broker-integridad.mjs entre estos dos marcadores. Mantenerlas sin
+// dependencias de la página.
+// <integridad>
+// ¿Una copia con marcador `.done` es servible? `marca` es el JSON del marcador
+// (null si no se pudo leer: un marcador viejo, que guardaba solo un número, o a
+// medias), `tamano` lo que miden de verdad las partes juntas y `esperado` lo que
+// el llamador dice que debe medir (0 = no lo sabe). Un marcador SOLO vale si
+// cuadra con lo que hay en disco: se vio de verdad una parte 381 MB corta con
+// su marcador escrito, y el cargador la rechazaba y bajaba el modelo entero en
+// cada arranque.
+function veredictoCache(marca, tamano, esperado) {
+  if (!marca || typeof marca !== 'object') return { ok: false, motivo: 'marcador ilegible' };
+  if (!(tamano > 0)) return { ok: false, motivo: 'sin bytes' };
+  if (marca.size && tamano !== marca.size) return { ok: false, motivo: `mide ${tamano}, el marcador dice ${marca.size}` };
+  const debe = esperado || marca.total || marca.size || 0;
+  if (debe && tamano !== debe) return { ok: false, motivo: `mide ${tamano}, se esperaban ${debe}` };
+  return { ok: true };
+}
+// ¿Se puede marcar completo lo que acaba de bajarse? Devuelve null si sí, o el
+// motivo. `escrito` = bytes que de verdad hay en las partes (no los contados al
+// pasar), `total` = el del servidor (Content-Length / Content-Range), `esperado`
+// = el declarado por quien pide.
+function motivoIncompleto({ escrito, total, esperado }) {
+  if (total && escrito !== total) return `llegaron ${escrito} de ${total} bytes (servidor)`;
+  if (esperado && escrito !== esperado) return `llegaron ${escrito} y se esperaban ${esperado} bytes`;
+  if (!(escrito > 0)) return 'no llegó ningún byte';
+  return null;
+}
+// </integridad>
+
+// Una entrada que no cuadra se tira ENTERA, marcador incluido: dejar el
+// marcador apuntando a partes que no son lo que dice era justo el fallo.
+async function invalidar(d, k){
+  await d.removeEntry(k + '.done').catch(()=>{});
+  await borrarPartes(d, k);
+}
+// `esperado` (bytes que el llamador sabe que mide el fichero, 0 = no lo sabe).
+// Una entrada completa que no mide eso está ENVENENADA —pasó de verdad: una
+// respuesta 200 corta se guardó como entera y el motor la rechazaba en cada
+// carga, cayendo a la red para siempre sin que nada la limpiara—, así que se
+// borra aquí (autocuración) y la siguiente descarga la rehace. Sin marcador no
+// hay copia: las partes sueltas son una descarga a medias, que se REANUDA.
+async function cachedFile(url, esperado = 0){
+  let d, k;
+  try { d = await dir(); k = keyFor(url); await d.getFileHandle(k + '.done'); } catch { return null; }
+  let marca = null, f = null;
+  try { marca = JSON.parse(await (await (await d.getFileHandle(k + '.done')).getFile()).text()); } catch { /* ilegible */ }
+  try { if (marca) f = await juntar(d, k, marca.parts || 1); } catch { /* falta una parte */ }
+  if (f && veredictoCache(marca, f.size, esperado).ok) return f;
+  await invalidar(d, k);
+  return null;
 }
 async function juntar(d, k, n){
   const partes = [];
@@ -76,6 +126,7 @@ async function juntar(d, k, n){
 // cuántas partes dejara la descarga anterior—, y solo si el navegador no sabe
 // iterar el directorio se cae a borrar por número. Misma forma que la de
 // `model-store.js`, que ya lo hacía bien; el fallo estaba solo en este lado.
+// (El prefijo `k.p` también casa con `k.parte`, la huella: se va con ellas.)
 async function borrarPartes(d, k){
   await d.removeEntry(k + '.done').catch(()=>{});
   const pref = k + '.p';
@@ -90,107 +141,322 @@ async function borrarPartes(d, k){
       const ok = await d.removeEntry(pref + i).then(()=>true, ()=>false);
       huecos = ok ? 0 : huecos + 1;
     }
+    await d.removeEntry(k + '.parte').catch(()=>{});
   }
 }
-async function downloadToOPFS(url, onProgress){
-  await requestPersist();
-  const d = await dir(); const k = keyFor(url);
-  const PARTE = 1024 * 1024 * 1024;
-  // ── REANUDAR ────────────────────────────────────────────────────────────
-  // Las partes de 1 GiB ya completadas están CERRADAS, o sea durables en
-  // disco. Al fallar se borraban todas, así que un corte al 90 % de un modelo
-  // de gigas costaba la descarga entera y el usuario lo vivía como «vuelve a
-  // descargar el modelo». Ahora se conservan y se pide sólo el resto.
-  //
-  // Se empalma sólo si el fichero de origen sigue siendo el mismo tamaño: si
-  // cambió, empalmar daría un modelo corrupto que carga y devuelve basura, que
-  // es peor que volver a bajarlo. El tamaño se lee de Content-Range, que es de
-  // las pocas cabeceras que CORS deja ver desde el navegador (el ETag no).
-  let completas = 0, totalPrevio = 0;
-  try {
-    const ph = await d.getFileHandle(k + '.parte');
-    totalPrevio = JSON.parse(await (await ph.getFile()).text()).total || 0;
-    for (;;) {
-      const f = await (await d.getFileHandle(k + '.p' + completas)).getFile();
-      if (f.size !== PARTE) break;          // la última, a medias: no cuenta
-      completas++;
+// Borra las partes con índice >= n (lo que queda detrás del primer hueco).
+async function borrarDesde(d, k, n){
+  try{
+    const nombres = [];
+    for await (const nombre of d.keys()) {
+      if (!nombre.startsWith(k + '.p')) continue;
+      const m = /^\.p(\d+)$/.exec(nombre.slice(k.length));
+      if (m && +m[1] >= n) nombres.push(nombre);
     }
-  } catch { /* nada que reanudar */ }
-
-  let total = 0, aceptaRangos = false;
-  try {
-    const cab = await fetch(url, { headers: { Range: 'bytes=0-0' } });
-    aceptaRangos = cab.status === 206;
-    const cr = cab.headers.get('content-range');
-    total = cr ? +cr.split('/')[1] : (+cab.headers.get('content-length') || 0);
-    try { await cab.arrayBuffer(); } catch {}
-  } catch {}
-
-  const desde = completas * PARTE;
-  const reanuda = completas > 0 && aceptaRangos && total > 0 && desde < total && totalPrevio === total;
-  if (!reanuda) { await borrarPartes(d, k); completas = 0; }
-  else {
-    // La parte incompleta de la cola SÍ se tira: no se sabe cuánto de ella es
-    // bueno, y reescribirla cuesta un giga como mucho.
-    await d.removeEntry(k + '.p' + completas).catch(()=>{});
-    await d.removeEntry(k + '.done').catch(()=>{});
-    onProgress?.({ loaded: desde, total, reanudando: true });
+    for (const x of nombres) await d.removeEntry(x).catch(()=>{});
+  }catch{
+    for (let i = n, huecos = 0; i < 4096 && huecos < 2; i++) {
+      const ok = await d.removeEntry(k + '.p' + i).then(()=>true, ()=>false);
+      huecos = ok ? 0 : huecos + 1;
+    }
   }
+}
 
-  const net = await fetch(url, reanuda ? { headers: { Range: `bytes=${desde}-` } } : undefined);
-  const okEstado = reanuda ? net.status === 206 : net.ok;
-  if (!okEstado || !net.body) throw new Error('descarga falló: HTTP ' + net.status);
+// ── GUARDAR POR TRAMOS Y REANUDAR ────────────────────────────────────────────
+// Con createWritable los bytes NO están en el fichero hasta close(): viven en un
+// `<nombre>.crswap` que el navegador TIRA si la página se cierra o se recarga.
+// Medido: a 262 MB de descarga el fichero real medía 0 B y todo estaba en el
+// .crswap; tras recargar, 0 B. Por eso guardar en partes de 1 GiB conservaba
+// como mucho los GiB ya cerrados, y con cortes de red frecuentes casi nunca se
+// llegaba a cerrar ninguno.
+//
+// Ahora se cierra una parte cada TRAMO. Las partes son ficheros SUELTOS de
+// tamaño variable, así que cerrar no obliga a copiar nada (reabrir un fichero
+// con keepExistingData copia su contenido entero al .crswap en cada cierre). Lo
+// guardado es la SUMA de las partes seguidas no vacías: una parte a medias que
+// se cerró al fallar la red también cuenta, porque es un prefijo válido.
+// Se pierde como mucho un tramo por recarga.
+// 16 MiB y no 64: los modelos de voz del Translator y del Copiloto son ficheros
+// de unas decenas de MB, y con 64 MiB una pestaña cerrada a mitad de uno no
+// llegaba a cerrar ninguna parte y lo volvía a bajar entero. Las partes
+// guardadas antes, de 64 MiB, se siguen leyendo y reanudando: el marcador lleva
+// cuántas hay y lo guardado es la suma de las que haya.
+const TRAMO = 16 * 1024 * 1024;
+const MAX_SIN_AVANCE = 6;                 // reintentos seguidos sin un solo byte nuevo
+
+async function leerJSON(d, nombre){
+  try { return JSON.parse(await (await (await d.getFileHandle(nombre)).getFile()).text()); }
+  catch { return null; }
+}
+async function escribirJSON(d, nombre, obj){
+  const h = await d.getFileHandle(nombre, { create:true }); const w = await h.createWritable();
+  await w.write(new TextEncoder().encode(JSON.stringify(obj))); await w.close();
+}
+// Lo que hay guardado de verdad: partes p0, p1… seguidas y no vacías. La que se
+// estaba escribiendo al recargar queda a 0 B (su .crswap se tiró): corta ahí.
+async function guardado(d, k){
+  let n = 0, bytes = 0;
+  for (;;) {
+    let f; try { f = await (await d.getFileHandle(k + '.p' + n)).getFile(); } catch { break; }
+    if (!f.size) break;
+    n++; bytes += f.size;
+  }
+  return { n, bytes };
+}
+// Tamaño y «versión» del fichero en el servidor. Si cambió, empalmar daría un
+// modelo corrupto que carga y devuelve basura: peor que volver a bajarlo.
+async function sondear(url, signal){
+  const r = await fetch(url, { headers: { Range: 'bytes=0-0' }, cache: 'no-store', signal });
+  const cr = r.headers.get('content-range');
+  // Un 206 sin Content-Range visible (CORS) NO dice el total: su Content-Length es 1.
+  const total = cr ? +cr.split('/')[1] : (r.status === 200 ? (+r.headers.get('content-length') || 0) : 0);
+  const v = r.headers.get('etag') || r.headers.get('last-modified') || '';
+  // Cancelar, no leer: si el servidor ignoró el Range, el cuerpo es el fichero ENTERO.
+  try { await r.body?.cancel(); } catch {}
+  if (!r.ok) throw Object.assign(new Error('descarga falló: HTTP ' + r.status), { http: r.status });
+  return { total: total || 0, rangos: r.status === 206, v };
+}
+const esCuota = e => e?.name === 'QuotaExceededError' || /quota/i.test(String(e?.message || e));
+const esAbortar = e => e?.name === 'AbortError';
+function tipoDe(e){
+  if (esAbortar(e)) return 'cancelado';
+  if (esCuota(e)) return 'cuota';
+  if (e?.http && e.http >= 400 && e.http < 500 && e.http !== 408 && e.http !== 429) return 'http';
+  return 'red';
+}
+function dormir(ms, signal){
+  return new Promise((si, no) => {
+    const t = setTimeout(si, ms);
+    signal?.addEventListener('abort', () => { clearTimeout(t); no(new DOMException('cancelado', 'AbortError')); }, { once: true });
+  });
+}
+
+// Un intento: mira lo guardado, sondea el servidor, y sigue desde donde se
+// quedó. Un corte de red NO borra nada: se cierra la parte en curso —así sus
+// bytes quedan en disco— y el siguiente intento, en esta sesión o tras recargar,
+// empalma desde ahí. Es el MISMO camino para las dos cosas a propósito: un solo
+// mecanismo que se prueba, no dos que se desincronizan.
+async function intento(d, k, url, onProgress, signal, esperado = 0){
+  const previo = await leerJSON(d, k + '.parte');
+  const hay = await guardado(d, k);
+  const srv = await sondear(url, signal);
+  // El servidor dice un tamaño distinto del declarado: bajar GB para descubrirlo
+  // al final es perder la red. Se corta ya (y lo guardado no sirve).
+  if (esperado && srv.total && srv.total !== esperado) {
+    throw Object.assign(new Error(`el servidor da ${srv.total} bytes y se esperaban ${esperado}`), { tipo: 'integridad' });
+  }
+  const mismo = previo && srv.total > 0 && previo.total === srv.total &&
+                (!previo.v || !srv.v || previo.v === srv.v);
+  let desde = 0;
+  if (mismo && srv.rangos && hay.bytes > 0 && hay.bytes <= srv.total) {
+    desde = hay.bytes;
+    await borrarDesde(d, k, hay.n);          // lo que hubiera detrás de un hueco
+    await d.removeEntry(k + '.done').catch(()=>{});
+  } else {
+    await borrarPartes(d, k);
+  }
+  let nPartes = desde ? hay.n : 0;
+  let total = srv.total;
+
+  if (desde && desde === total) return { loaded: desde, total, nPartes };   // todo estaba ya
+  let net = await fetch(url, { headers: desde ? { Range: `bytes=${desde}-` } : {}, cache: 'no-store', signal });
+  if (desde && net.status === 200) {
+    // El servidor ignoró el Range: viene ENTERO. Se empieza de cero con esa misma respuesta.
+    await borrarPartes(d, k); desde = 0; nPartes = 0;
+  } else if (desde) {
+    const cr = net.headers.get('content-range') || '';
+    const m = /bytes (\d+)-\d+\/(\d+)/.exec(cr);
+    if (net.status !== 206 || !m || +m[1] !== desde || +m[2] !== total) {
+      try { await net.body?.cancel(); } catch {}
+      throw Object.assign(new Error('descarga falló: el servidor no reanudó (HTTP ' + net.status + ')'), { http: net.status });
+    }
+  }
+  if (!net.ok || !net.body) throw Object.assign(new Error('descarga falló: HTTP ' + net.status), { http: net.status });
   if (!total) total = (+net.headers.get('content-length') || 0) + desde;
-  // La huella, para que el próximo intento sepa si lo guardado sirve.
-  try { const ph = await d.getFileHandle(k + '.parte', { create:true });
-        const pw = await ph.createWritable();
-        await pw.write(new TextEncoder().encode(JSON.stringify({ total })));
-        await pw.close(); } catch {}
-  // TROCEADO en partes de 1 GiB. Un fichero suelto lo corta el navegador sobre
-  // los 1,94 GB —medido— pase lo que pase con la cuota, así que un modelo de
-  // 3,8 GB era IMPOSIBLE de cachear aquí y fallaba con «exceed its storage
-  // quota», que despista porque suena a falta de espacio y no lo es.
-  let nPartes = completas, enParte = 0, w = null;
+  // La huella, ANTES del primer byte: sin ella lo guardado no se puede reanudar.
+  await escribirJSON(d, k + '.parte', { total, v: srv.v });
+
+  let loaded = desde, enParte = 0, w = null, ultimoAviso = 0;
+  if (desde) onProgress?.({ loaded, total, reanudadoDesde: desde });
   const abrirParte = async () => {
     const fh = await d.getFileHandle(k + '.p' + nPartes, { create:true });
     w = await fh.createWritable(); nPartes++; enParte = 0;
   };
-  let loaded = desde; const reader = net.body.getReader();
+  const reader = net.body.getReader();
   try{
     await abrirParte();
     for(;;){ const { done, value } = await reader.read(); if (done) break;
       // Un trozo de red no respeta la frontera de parte: se reparte.
       let off = 0;
       while (off < value.byteLength) {
-        if (enParte >= PARTE) { await w.close(); await abrirParte(); }
-        const cabe = Math.min(PARTE - enParte, value.byteLength - off);
+        if (enParte >= TRAMO) { await w.close(); w = null; await abrirParte(); }
+        const cabe = Math.min(TRAMO - enParte, value.byteLength - off);
         await w.write(value.subarray(off, off + cabe));
         off += cabe; enParte += cabe; loaded += cabe;
       }
-      onProgress?.({ loaded, total }); }
+      const ahora = Date.now();
+      if (ahora - ultimoAviso > 150) { ultimoAviso = ahora; onProgress?.({ loaded, total, reanudadoDesde: desde || undefined }); }
+    }
     await w.close(); w = null;
   }catch(e){
-    // El motivo se GUARDA, no solo se lanza: desde fuera «no está cacheado» y
-    // «falló al cachear» se ven igual, y llevan a sitios opuestos. Nos costó
-    // media investigación no poder distinguirlos.
-    try { const eh = await d.getFileHandle('.ultimo-error', { create:true });
-          const ew = await eh.createWritable();
-          await ew.write(new TextEncoder().encode(String(e && e.message || e).slice(0,200)));
-          await ew.close(); } catch {}
+    reader.cancel().catch(() => {});
     // NO se borran las partes: cerrar confirma la que iba a medias y las
-    // completas ya estaban en disco. Es justo lo que permite reanudar.
-    try{ await w.close(); }catch{ try{ await w.abort(); }catch{} } throw e; }
-  await d.removeEntry(k + '.parte').catch(()=>{});
-  const dh = await d.getFileHandle(k + '.done', { create:true }); const dw = await dh.createWritable();
-  await dw.write(new TextEncoder().encode(JSON.stringify({ size: loaded, parts: nPartes }))); await dw.close();
-  return await juntar(d, k, nPartes);
+    // anteriores ya estaban cerradas. Es justo lo que permite reanudar.
+    if (w) { try{ await w.close(); }catch{ try{ await w.abort(); }catch{} } }
+    e.loaded = loaded; e.total = total;
+    throw e;
+  }
+  // ¿Llegó ENTERO? Un flujo que se corta sin lanzar termina en `done` como si
+  // nada: sin esta comprobación se marcaba completo lo que hubiera llegado (la
+  // misma garantía que model-store.js tiene desde cd53045 y aquí faltaba).
+  // Lo que hay de verdad en las partes, no lo contado al pasar: son dos
+  // medidas distintas y la que cuenta es la del disco.
+  const hay2 = await guardado(d, k);
+  const motivo = motivoIncompleto({ escrito: hay2.bytes, total, esperado }) ||
+    (hay2.bytes !== loaded ? `se escribieron ${hay2.bytes} de ${loaded} bytes recibidos` : null);
+  if (motivo) {
+    // Corte limpio (llegó menos que el total del servidor): es de RED, se
+    // reanuda desde lo guardado. Todo lo demás —se escribió distinto de lo
+    // recibido, o llegó «entero» pero no mide lo declarado— es de INTEGRIDAD:
+    // reintentar lo mismo daría lo mismo, así que se descarta y se avisa.
+    const corte = hay2.bytes === loaded && total && loaded < total;
+    throw Object.assign(new Error('descarga incompleta: ' + motivo), { loaded, total, tipo: corte ? 'red' : 'integridad' });
+  }
+  onProgress?.({ loaded, total });
+  return { loaded, total, nPartes };
+}
+
+async function downloadToOPFS(url, onProgress, signal, esperado = 0){
+  await requestPersist();
+  const d = await dir(); const k = keyFor(url);
+  let fallos = 0, mejor = -1;
+  for (;;) {
+    try {
+      const { loaded, total, nPartes } = await intento(d, k, url, onProgress, signal, esperado);
+      await d.removeEntry(k + '.parte').catch(()=>{});
+      await escribirJSON(d, k + '.done', { size: loaded, total, parts: nPartes });
+      return await juntar(d, k, nPartes);
+    } catch (e) {
+      const tipo = e?.tipo || tipoDe(e);
+      // El motivo se GUARDA, no solo se lanza: desde fuera «no está cacheado» y
+      // «falló al cachear» se ven igual, y llevan a sitios opuestos.
+      try { await escribirJSON(d, '.ultimo-error', { tipo, msg: String(e && e.message || e).slice(0,200), cuando: new Date().toISOString() }); } catch {}
+      if (tipo === 'cuota') {
+        // Lo guardado no va a caber entero: ocupando cuota solo estorbaría a otros modelos.
+        await borrarPartes(d, k);
+        throw Object.assign(new Error('No cabe en el almacén del navegador (cuota): ' + (e.message || e)), { tipo });
+      }
+      if (tipo === 'integridad') {
+        // Lo bajado no es lo que debía: NO se marca, NO se reintenta lo mismo y
+        // NO se deja en disco ocupando cuota ni sirviéndose como bueno.
+        await invalidar(d, k);
+        throw Object.assign(e instanceof Error ? e : new Error(String(e)), { tipo });
+      }
+      if (tipo !== 'red') throw Object.assign(e instanceof Error ? e : new Error(String(e)), { tipo });
+      // Corte de red: se reintenta AQUÍ, desde lo guardado, en vez de rendirse y
+      // que la app lo baje otra vez por otro camino. Solo cuentan los fallos
+      // seguidos SIN AVANCE: una red que se cae cada pocos minutos pero avanza
+      // entre medias acaba terminando.
+      const llegado = e.loaded ?? -1;
+      if (llegado > mejor) { mejor = llegado; fallos = 0; }
+      fallos++;
+      if (fallos > MAX_SIN_AVANCE) throw Object.assign(new Error('se cortó la conexión y no se pudo reanudar: ' + (e.message || e)), { tipo });
+      const espera = Math.min(15000, 1000 * 2 ** (fallos - 1));
+      onProgress?.({ loaded: Math.max(0, llegado), total: e.total || 0, reintento: fallos, espera });
+      await dormir(espera, signal);
+    }
+  }
+}
+
+// Una descarga por fichero, TAMBIÉN entre pestañas: dos iframes del mismo origen
+// escribiendo las mismas partes a la vez se pisarían. Web Locks es por origen.
+// Mientras espera el turno, late, para que quien pregunta no lo dé por muerto.
+async function enExclusiva(k, fn, latir){
+  if (!navigator.locks?.request) return fn();
+  const t = setInterval(latir, 5000);
+  try { return await navigator.locks.request('elffuss-dl:' + k, async () => { clearInterval(t); return fn(); }); }
+  finally { clearInterval(t); }
+}
+
+// ── GUARDAR UNA COPIA QUE YA TIENE LA WEB (migrar) ─────────────────────────
+// Las webs que guardaban sus modelos en su propia Cache API (Translator,
+// Copiloto) los pasan aquí una vez, para no volver a bajarlos y para que el
+// resto de webs los vean. Como cualquier web admitida podría mandar lo que
+// quisiera bajo la URL de un modelo, y lo leería OTRA web, solo se acepta un
+// fichero de Hugging Face cuyos bytes casan con la huella que publica el Hub:
+// SHA-256 de LFS para los pesos, SHA-1 de blob de git para los JSON. Lo que no
+// se puede comprobar no se guarda (la web sigue con su copia, o lo baja).
+const HUB = /^https:\/\/huggingface\.co\/([\w.\-]+\/[\w.\-]+)\/resolve\/([\w.\-]+)\/([^?#]+)$/;
+const COPIA_MAX = 512 * 1024 * 1024;     // se lee entera para la huella
+const listados = new Map();              // repo@rev/carpeta → Promise<Map(ruta → entrada del Hub)>
+async function entradaHub(url){
+  const m = HUB.exec(String(url).replace(/[?#].*$/, ''));
+  if (!m) return null;
+  const [, repo, rev, ruta] = m;
+  const carpeta = ruta.includes('/') ? ruta.slice(0, ruta.lastIndexOf('/')) : '';
+  const clave = repo + '@' + rev + '/' + carpeta;
+  if (!listados.has(clave)) {
+    const p = fetch(`https://huggingface.co/api/models/${repo}/tree/${encodeURIComponent(rev)}${carpeta ? '/' + carpeta : ''}`, { cache: 'no-store' })
+      .then(r => { if (!r.ok) throw Object.assign(new Error('el Hub no dio la lista: HTTP ' + r.status), { http: r.status }); return r.json(); })
+      .then(l => new Map(l.filter(x => x.type === 'file').map(x => [x.path, x])));
+    p.catch(() => listados.delete(clave));
+    listados.set(clave, p);
+  }
+  return (await listados.get(clave)).get(ruta) || null;
+}
+const hex = b => Array.from(new Uint8Array(b), x => x.toString(16).padStart(2, '0')).join('');
+async function comprobarHuella(url, blob){
+  const e = await entradaHub(url);
+  const mal = motivo => Object.assign(new Error('copia rechazada: ' + motivo), { tipo: 'integridad' });
+  if (!e) throw mal('no es un fichero conocido del Hub');
+  if (blob.size > COPIA_MAX) throw mal('demasiado grande para comprobarla');
+  const datos = await blob.arrayBuffer();
+  if (e.lfs) {
+    if (datos.byteLength !== e.lfs.size) throw mal(`mide ${datos.byteLength} y el Hub dice ${e.lfs.size}`);
+    if (hex(await crypto.subtle.digest('SHA-256', datos)) !== e.lfs.oid) throw mal('la huella SHA-256 no coincide');
+  } else {
+    if (datos.byteLength !== e.size) throw mal(`mide ${datos.byteLength} y el Hub dice ${e.size}`);
+    const cab = new TextEncoder().encode(`blob ${datos.byteLength}\0`);
+    const todo = new Uint8Array(cab.length + datos.byteLength); todo.set(cab); todo.set(new Uint8Array(datos), cab.length);
+    if (hex(await crypto.subtle.digest('SHA-1', todo)) !== e.oid) throw mal('la huella de git no coincide');
+  }
+}
+// Se escribe con las mismas partes y el mismo marcador que una descarga, así que
+// se lee igual. En exclusiva con una descarga del mismo fichero (Web Locks).
+async function guardarCopia(url, blob){
+  await requestPersist();
+  const d = await dir(); const k = keyFor(url);
+  return enExclusiva(k, async () => {
+    const ya = await cachedFile(url, blob.size); if (ya) return ya;
+    await borrarPartes(d, k);
+    let n = 0;
+    try {
+      for (let off = 0; off < blob.size; off += TRAMO, n++) {
+        const w = await (await d.getFileHandle(k + '.p' + n, { create:true })).createWritable();
+        const r = blob.slice(off, off + TRAMO).stream().getReader();
+        try { for (;;) { const { done, value } = await r.read(); if (done) break; await w.write(value); } await w.close(); }
+        catch (e) { try { await w.abort(); } catch {} throw e; }
+      }
+    } catch (e) { await borrarPartes(d, k); throw Object.assign(e instanceof Error ? e : new Error(String(e)), { tipo: e?.tipo || tipoDe(e) }); }
+    const hay = await guardado(d, k);
+    const motivo = motivoIncompleto({ escrito: hay.bytes, total: blob.size });
+    if (motivo) { await invalidar(d, k); throw Object.assign(new Error('copia incompleta: ' + motivo), { tipo: 'integridad' }); }
+    await escribirJSON(d, k + '.done', { size: blob.size, total: blob.size, parts: n });
+    return juntar(d, k, n);
+  }, () => {});
 }
 
 let inflight = new Map();   // url → Promise<File> (colapsa descargas simultáneas)
-async function getFile(url, onProgress){
-  const hit = await cachedFile(url); if (hit) return hit;
+const controles = new Map(); // url → AbortController (para poder cancelar)
+async function getFile(url, onProgress, esperado = 0){
+  const hit = await cachedFile(url, esperado); if (hit) return hit;
   if (inflight.has(url)) return inflight.get(url);
-  const p = downloadToOPFS(url, onProgress).finally(()=> inflight.delete(url));
+  const ac = new AbortController(); controles.set(url, ac);
+  const p = enExclusiva(keyFor(url), async () => {
+    const ya = await cachedFile(url, esperado); if (ya) return ya;   // la bajó otra pestaña
+    return downloadToOPFS(url, onProgress, ac.signal, esperado);
+  }, () => onProgress?.({ loaded: 0, total: 0, esperandoTurno: true }))
+    .finally(()=> { inflight.delete(url); controles.delete(url); });
   inflight.set(url, p); return p;
 }
 
@@ -247,7 +513,7 @@ addEventListener('message', async e => {
       return;
     }
     if (type === 'elffuss-model-has') {
-    const f = await cachedFile(url); post({ kind:'has', cached: !!f, size: f?f.size:0 }); return;
+    const f = await cachedFile(url, +d.bytes || 0); post({ kind:'has', cached: !!f, size: f?f.size:0 }); return;
   }
   // Vaciar MI almacén. Hasta ahora no habia forma de pedirlo desde fuera, y eso
   // hacia que el boton «vaciar cache» de las webs mintiera: borraba la cache de
@@ -272,19 +538,38 @@ addEventListener('message', async e => {
     } catch (err) { post({ kind: 'error', message: String(err?.message || err) }); }
     return;
   }
+  // Quien pidió la descarga se rindió (timeout): sin esto el iframe seguía
+  // bajando por detrás mientras la app lo bajaba OTRA VEZ por la red.
+  if (type === 'elffuss-model-cancel') { controles.get(url)?.abort(); post({ kind:'cancelled' }); return; }
+  if (type === 'elffuss-model-put') {
+    try {
+      const f = d.file;
+      if (!(f instanceof Blob)) throw new Error('falta el fichero');
+      await comprobarHuella(url, f);
+      const g = await guardarCopia(url, f);
+      post({ kind:'put', size: g.size });
+    } catch (err) { post({ kind:'error', message: String(err?.message || err), tipo: err?.tipo || tipoDe(err) }); }
+    return;
+  }
   if (type === 'elffuss-model-get') {
     try{
-      const file = await getFile(url, p => post({ kind:'progress', ...p }));
+      const file = await getFile(url, p => post({ kind:'progress', ...p }), +d.bytes || 0);
       // El File de OPFS es un Blob respaldado en DISCO: structured-clone lo pasa
       // POR REFERENCIA (Chromium: vive en el proceso de navegador, ref-contado,
       // paginado a disco) → NO copia los GB a la RAM de ningún renderer. El padre
       // lo lee perezosamente con file.stream(). Mantener este iframe vivo mientras
       // el padre lee (el Blob vivo mantiene referenciados los datos en OPFS).
       post({ kind:'file', file });
-    }catch(err){ post({ kind:'error', message: String(err?.message || err) }); }
+    }catch(err){ post({ kind:'error', message: String(err?.message || err), tipo: err?.tipo || tipoDe(err) }); }
   }
 });
 // avisar a quien nos embebe que estamos listos
-try{ parent.postMessage({ kind:'elffuss-broker-ready' }, '*'); }catch{}
+// `puede`: lo que entiende esta versión, para que una web no espere respuesta a
+// un mensaje que un broker más viejo no conoce.
+try{ parent.postMessage({ kind:'elffuss-broker-ready', v: 2, puede: ['get', 'has', 'cancel', 'clear', 'put'] }, '*'); }catch{}
+// Sin red, sin esta página no hay modelos (solo ella lee esta OPFS): sw.js la
+// guarda para que abra también sin conexión. Si no se puede registrar, todo
+// sigue igual que antes.
+try{ navigator.serviceWorker?.register('sw.js').catch(()=>{}); }catch{}
 </script>
 </body></html>
