@@ -1273,6 +1273,10 @@ if (!IS_COPILOT && ceo.wasEnabledLastSession()) ceo.enable();
     // para que hasta la primera descarga de pesos quede cacheada y no se repita.
     await ensureModelCache();
     await realGPUCheck; // que defaultBrain()/modelOptions() vean el adaptador real, no solo la API
+    // Hay WebGPU pero no adaptador: el navegador tiene la GPU bloqueada (suele
+    // pasar tras cerrársele varias veces el proceso de GPU, hasta reiniciarlo).
+    // Sin decirlo, el selector sale con solo dos opciones y parece un fallo de Claw.
+    if (navigator.gpu && !realGPU) ui.toast(t('gpuBlocked'));
     // El sondeo del motor propio resuelve después de que ui.init() pintara el
     // selector, así que hay que repintarlo: si no, la opción no aparece hasta
     // que algo más fuerce un refresco, y el usuario no la ve nunca.
