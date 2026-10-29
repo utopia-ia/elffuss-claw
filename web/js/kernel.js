@@ -191,7 +191,7 @@ const lfm3Check = (async () => {
 // Opciones del selector: locales siempre; externos solo si están activados.
 function modelOptions() {
   const local = [];
-  if (realGPU) local.push({ id: 'litert:gemma-e4b', label: 'Gemma-4 E4B · LiteRT-LM (~2.8 GB) ★ — por defecto' });
+  if (realGPU) local.push({ id: 'litert:gemma-e4b', label: 'Gemma-4 E4B · LiteRT-LM (~2.8 GB)' });
   if (realGPU) local.push({ id: 'litert:gemma-e2b', label: 'Gemma-4 E2B · LiteRT-LM (~2 GB) — más ligero, carga antes' });
   local.push({ id: 'onnx:qwen3.5-0.8b', label: 'Qwen3.5-0.8B · WebGPU (~600 MB) — ligero' });
   // MiniCPM5-2B por WebLLM: OPCIÓN, no predeterminado. Pesa 1,3 GB y MLC pide
@@ -275,11 +275,16 @@ async function gpuCapacity() {
   const mem = navigator.deviceMemory || 8;
   if (!navigator.gpu) return { gpu: false, maxBuf: 0, mem };
   try { const a = await navigator.gpu.requestAdapter();
-    return a ? { gpu: true, maxBuf: a.limits?.maxBufferSize || 0, mem } : { gpu: false, maxBuf: 0, mem };
+    return a ? { gpu: true, maxBuf: a.limits?.maxBufferSize || 0, mem, f16: !!a.features?.has('shader-f16') } : { gpu: false, maxBuf: 0, mem };
   } catch { return { gpu: false, maxBuf: 0, mem }; }
 }
 async function pickLocalBrain() {
   const c = await gpuCapacity();
+  // LFM3 1.7B (motor propio) es el cerebro por defecto donde el motor está y
+  // hay GPU de verdad: lo comprueban ENGINE_READY y LFM3_READY, que el arranque
+  // espera antes de llamar aquí. Sus 1,8 GB piden un búfer de 1 GB como el E2B,
+  // y el motor no compila sus shaders sin shader-f16.
+  if (c.gpu && c.f16 && !isMobile() && realGPU && ENGINE_READY && LFM3_READY && c.maxBuf >= 2 ** 30) return 'engine:lfm3-1.7b';
   if (c.gpu && !isMobile()) {
     if (c.maxBuf >= 2 ** 31 && c.mem >= 8) return 'litert:gemma-e4b';
     if (c.maxBuf >= 2 ** 30 && c.mem >= 6) return 'litert:gemma-e2b';
@@ -866,6 +871,11 @@ function pararTurnoPorCambio() {
 }
 // `volviendo`: es la vuelta al cerebro que funcionaba tras un fallo (no se
 // intenta volver otra vez si también falla), dentro de un cambio ya en marcha.
+// `elegido`: lo eligió el usuario en el selector. Solo eso se recuerda para el
+// próximo arranque (ELEGIDO). Antes se recordaba cualquier carga, también el
+// respaldo ligero cuando Gemma no cabía, y desde ese día el arranque cargaba
+// Qwen3.5-0.8B para siempre aunque nadie lo hubiera escogido.
+const ELEGIDO = 'elffuss.model.elegido';
 function changeModel(id, opciones = {}) {
   if (opciones.volviendo) return cambiarModelo(id, opciones);
   pararTurnoPorCambio();
@@ -873,7 +883,7 @@ function changeModel(id, opciones = {}) {
   cargaEnCurso = carga.then(() => {}, () => {});
   return carga;
 }
-async function cambiarModelo(id, { volviendo = false } = {}) {
+async function cambiarModelo(id, { volviendo = false, elegido = false } = {}) {
   const previo = activeModel;         // el que estaba funcionando
   if (id === 'rules') { // modo básico
     agent.setProvider(rules);
@@ -884,11 +894,16 @@ async function cambiarModelo(id, { volviendo = false } = {}) {
     pintarFicha(null);
     ui.modelStatus('off');
     localStorage.setItem('elffuss.model', 'rules');
+    if (elegido) localStorage.setItem(ELEGIDO, 'rules');
     ui.setModel('rules');
     ui.toast(t('basicModeOn'));
     return true;
   }
   ui.modelStatus('loading');
+  // Qué cerebro se está cargando, a la vista de las pruebas (tests/cerebro-por-defecto.mjs):
+  // los pesos del motor pueden llegar por el almacén compartido o el service
+  // worker, donde la prueba no ve la petición.
+  document.documentElement.dataset.cargando = id;
   // `finally` y no un reset al final del try: si la carga falla —que pasa, de
   // ahí el camino de respaldo de abajo— el flag se quedaría puesto y la web
   // avisaría al salir para siempre, hasta que el usuario aprendiera a ignorar
@@ -907,6 +922,7 @@ async function cambiarModelo(id, { volviendo = false } = {}) {
     montarVelocimetro(mod);
     pintarFicha(id);
     localStorage.setItem('elffuss.model', id);
+    if (elegido) localStorage.setItem(ELEGIDO, id);
     ui.setModel(id);
     if (isLocal(id)) ui.contarCompartido();   // sus pesos pueden estar en el almacén compartido
     const where = isLocal(id) ? (realGPU ? t('whereGpu') : t('whereCpu')) : t('whereExt');
@@ -1020,7 +1036,7 @@ function enviarDesdeLaCaja(text, { desdeCaja = false } = {}) {
   if (hard) apagarHardWork();
   send(text, { hard });
 }
-ui.init({ onSend: enviarDesdeLaCaja, onStop: stopCurrent, onModelChange: changeModel, onSettingsChanged: refreshModelOptions, onPickFolder: autorizarCarpeta });
+ui.init({ onSend: enviarDesdeLaCaja, onStop: stopCurrent, onModelChange: id => changeModel(id, { elegido: true }), onSettingsChanged: refreshModelOptions, onPickFolder: autorizarCarpeta });
 ui.mountDiskChip();   // cuánto ocupan los modelos en este navegador, y cómo vaciarlo
 // Botón «liberar el modelo» del panel de consumo: suelta la RAM sin recargar.
 ui.setOnFreeModel(async () => {
@@ -1265,7 +1281,9 @@ if (!IS_COPILOT && ceo.wasEnabledLastSession()) ceo.enable();
     // volvería a aparecer hasta que algo forzara otro refresco.
     const [hayMotor, hay27, hayMini, hayLfm3] = await Promise.all([engineCheck, modelo27Check, minicpmCheck, lfm3Check]);
     if (hayMotor || hay27 || hayMini || hayLfm3) refreshModelOptions();
-    const saved = localStorage.getItem('elffuss.model');
+    // Solo lo que eligió el usuario (ver ELEGIDO). 'elffuss.model' sigue diciendo
+    // qué se cargó la última vez, pero ya no decide el arranque.
+    const saved = localStorage.getItem(ELEGIDO);
     if (saved === 'rules') return; // elección explícita
     // En modo copiloto el translator YA está usando la máquina (Whisper +
     // diarización), así que si NUNCA has elegido cerebro se arranca con el
@@ -1378,7 +1396,7 @@ workspace.init({
     { id: 'tasks', get label() { return t('stTasks'); }, icon: '⏰', kind: 'idb-store', store: 'tasks' },
     { id: 'vault', get label() { return t('stVault'); }, icon: '🔐', kind: 'idb-store', store: 'vault', sensitive: true },
     { id: 'prefs', get label() { return t('stPrefs'); }, icon: '⚙️', kind: 'ls',
-      keys: ['elffuss.model', 'elffuss.acer', 'elffuss.resumen', 'elffuss.semantic'] },
+      keys: ['elffuss.model', 'elffuss.model.elegido', 'elffuss.acer', 'elffuss.resumen', 'elffuss.semantic'] },
   ],
 });
 workspace.restore().catch(() => {});
