@@ -175,6 +175,19 @@ const minicpmCheck = (async () => {
   } catch { return (MINICPM_READY = false); }
 })();
 
+// LFM3-1.7B, el modelo por defecto del motor propio. Mismo patrón: nombre y
+// tamaño del registro, y una sonda CON handle que la lista espera.
+let LFM3_READY = false, LFM3_LABEL = 'LFM3 1.7B', LFM3_GB = 0;
+const lfm3Check = (async () => {
+  try {
+    const reg = await import('./engine/registro.js');
+    const m = reg.MODELS && reg.MODELS['lfm3-1.7b'];
+    if (m) { LFM3_LABEL = m.label || LFM3_LABEL; LFM3_GB = (m.bytes || 0) / 1e9; }
+    LFM3_READY = await reg.disponible('lfm3-1.7b');
+    return LFM3_READY;
+  } catch { return (LFM3_READY = false); }
+})();
+
 // Opciones del selector: locales siempre; externos solo si están activados.
 function modelOptions() {
   const local = [];
@@ -194,6 +207,10 @@ function modelOptions() {
   // Runtime propio: solo se ofrece si el motor está desplegado (llega por rsync,
   // no por git). Ofrecerlo cuando no está sería prometer algo que falla al
   // elegirlo. Ver ENGINE_READY.
+  // LFM3 va PRIMERO entre los del motor: es su modelo por defecto. Comprobado
+  // contra llama.cpp token a token, y razona (lo pide el registro). La etiqueta
+  // no promete más que eso y el tamaño.
+  if (realGPU && ENGINE_READY && LFM3_READY) local.push({ id: 'engine:lfm3-1.7b', label: `${LFM3_LABEL} · Elffuss Engine (${LFM3_GB.toFixed(1)} GB, se guarda) — razona` });
   if (realGPU && ENGINE_READY) local.push({ id: 'engine:qwen35-0.8b', label: 'Qwen3.5-0.8B · Elffuss Engine (~800 MB)' });
   // El 27B no está aquí por dudoso: su forward está verificado contra llama.cpp
   // capa a capa y genera texto coherente. Está aquí por lo que CUESTA, y el coste
@@ -820,6 +837,7 @@ const FICHAS = {
   'onnx:qwen3.5-0.8b': 'https://huggingface.co/onnx-community/Qwen3.5-0.8B-ONNX',
   'webllm:minicpm5-2b': 'https://huggingface.co/fatih-can/MiniCPM5-2B-MLC',
   'engine:qwen35-0.8b': 'https://huggingface.co/ggml-org/Qwen3.5-0.8B-GGUF',
+  'engine:lfm3-1.7b': 'https://huggingface.co/LiquidAI/LFM3-1.7B',
 };
 const etiquetaDe = id => modelOptions().find(o => o.id === id)?.label?.split(' · ')[0] || id;
 // Cuánto baja un cerebro local, sacado de su etiqueta en el selector («(~2.8 GB)»,
@@ -1245,8 +1263,8 @@ if (!IS_COPILOT && ceo.wasEnabledLastSession()) ceo.enable();
     // Los dos sondeos se esperan JUNTOS. Repintar solo con el del motor dejaría
     // fuera el 27B cuando su comprobación tarda un poco más, y esa opción no
     // volvería a aparecer hasta que algo forzara otro refresco.
-    const [hayMotor, hay27, hayMini] = await Promise.all([engineCheck, modelo27Check, minicpmCheck]);
-    if (hayMotor || hay27 || hayMini) refreshModelOptions();
+    const [hayMotor, hay27, hayMini, hayLfm3] = await Promise.all([engineCheck, modelo27Check, minicpmCheck, lfm3Check]);
+    if (hayMotor || hay27 || hayMini || hayLfm3) refreshModelOptions();
     const saved = localStorage.getItem('elffuss.model');
     if (saved === 'rules') return; // elección explícita
     // En modo copiloto el translator YA está usando la máquina (Whisper +
