@@ -1038,6 +1038,9 @@ function pintaPastilla() {
   const opt = (estadoModelo.id && [...sel.options].find(o => o.value === estadoModelo.id)) || sel.options[sel.selectedIndex];
   const txt = opt?.textContent || '';
   nom.textContent = txt.split(/ · | \(| —/)[0].trim();
+  // Sin modelo, la opción se llama «Básico» y el estado también: no decirlo dos veces.
+  const corto = $('model-status-txt');
+  if (corto) corto.hidden = corto.textContent.trim().toLowerCase() === nom.textContent.toLowerCase();
   const estado = $('model-status')?.getAttribute('aria-label') || '';
   chip.setAttribute('aria-label', `${tr('modelSelectL')}: ${txt}${estado ? ' — ' + estado : ''}`);
   chip.title = chip.getAttribute('aria-label');
