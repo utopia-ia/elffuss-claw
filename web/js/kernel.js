@@ -18,6 +18,9 @@ import * as telemetry from './telemetry.js';
 import * as gram from './copilot-grammar.js';
 import * as rutas from './rutas.js';
 import { abrirModal } from './modal.js';
+import { ofrecerInstalar } from './instalar.js';
+
+ofrecerInstalar();   // en el móvil, lo primero: instalarla como app
 
 applyI18n(); // traduce el chrome al idioma del navegador antes de nada
 telemetry.init('elffuss-claw'); // opt-in, apagado por defecto — ver Ajustes
@@ -177,15 +180,20 @@ const minicpmCheck = (async () => {
 
 // LFM3-1.7B, el modelo por defecto del motor propio. Mismo patrón: nombre y
 // tamaño del registro, y una sonda CON handle que la lista espera.
+// Su Q4_0 es el del MÓVIL: el Q8_0 no cabe en la pestaña de un teléfono y este sí.
 let LFM3_READY = false, LFM3_LABEL = 'LFM3 1.7B', LFM3_GB = 0;
+let LFM3Q4_READY = false, LFM3Q4_LABEL = 'LFM3 1.7B · Q4_0', LFM3Q4_GB = 0;
 const lfm3Check = (async () => {
   try {
     const reg = await import('./engine/registro.js');
     const m = reg.MODELS && reg.MODELS['lfm3-1.7b'];
     if (m) { LFM3_LABEL = m.label || LFM3_LABEL; LFM3_GB = (m.bytes || 0) / 1e9; }
-    LFM3_READY = await reg.disponible('lfm3-1.7b');
-    return LFM3_READY;
-  } catch { return (LFM3_READY = false); }
+    const q4 = reg.MODELS && reg.MODELS['lfm3-1.7b-q4'];
+    if (q4) { LFM3Q4_LABEL = q4.label || LFM3Q4_LABEL; LFM3Q4_GB = (q4.bytes || 0) / 1e9; }
+    [LFM3_READY, LFM3Q4_READY] = await Promise.all([
+      reg.disponible('lfm3-1.7b'), q4 ? reg.disponible('lfm3-1.7b-q4') : false]);
+    return LFM3_READY || LFM3Q4_READY;
+  } catch { return (LFM3_READY = LFM3Q4_READY = false); }
 })();
 
 // Opciones del selector: locales siempre; externos solo si están activados.
@@ -211,6 +219,7 @@ function modelOptions() {
   // contra llama.cpp token a token, y razona (lo pide el registro). La etiqueta
   // no promete más que eso y el tamaño.
   if (realGPU && ENGINE_READY && LFM3_READY) local.push({ id: 'engine:lfm3-1.7b', label: `${LFM3_LABEL} · Elffuss Engine (${LFM3_GB.toFixed(1)} GB, se guarda) — razona` });
+  if (realGPU && ENGINE_READY && LFM3Q4_READY) local.push({ id: 'engine:lfm3-1.7b-q4', label: `${LFM3Q4_LABEL} · Elffuss Engine (${LFM3Q4_GB.toFixed(1)} GB, se guarda) — razona, para móvil` });
   if (realGPU && ENGINE_READY) local.push({ id: 'engine:qwen35-0.8b', label: 'Qwen3.5-0.8B · Elffuss Engine (~800 MB)' });
   // El 27B no está aquí por dudoso: su forward está verificado contra llama.cpp
   // capa a capa y genera texto coherente. Está aquí por lo que CUESTA, y el coste
@@ -290,7 +299,10 @@ async function pickLocalBrain() {
     if (c.maxBuf >= 2 ** 30 && c.mem >= 6) return 'litert:gemma-e2b';
   }
   // Móvil: aunque el navegador móvil tenga WebGPU, NO cargar Gemma grande
-  // —no cabe en su presupuesto de memoria—. Cerebro ligero: Qwen3.5-0.8B.
+  // —no cabe en su presupuesto de memoria—. Desde el 2-nov-2026, LFM3 en Q4_0
+  // por el motor propio (1,05 GB, contexto 8k) si hay shader-f16; si no, el
+  // cerebro ligero de siempre, Qwen3.5-0.8B.
+  if (c.gpu && c.f16 && realGPU && ENGINE_READY && LFM3Q4_READY) return 'engine:lfm3-1.7b-q4';
   return 'onnx:qwen3.5-0.8b';
 }
 const defaultBrain = () => (!realGPU || isMobile()) ? 'onnx:qwen3.5-0.8b' : 'litert:gemma-e4b';
@@ -1318,7 +1330,9 @@ if (!IS_COPILOT && ceo.wasEnabledLastSession()) ceo.enable();
     // guardado, la puerta decía «haría falta bajar ~600 MB» y lo que cargaba al
     // aceptar no bajaba ni un byte. La puerta queda para los locales, con el
     // tamaño del que se va a bajar de verdad (podía ser un Gemma de gigas).
-    if (esTelefono() && localStorage.getItem('elffuss.movil.ok') !== '1') {
+    // Con el motor propio y su Q4_0 de móvil no hay puerta: es el modelo que
+    // sí cabe en el teléfono, y se carga por defecto (2-nov-2026).
+    if (esTelefono() && chain[0] !== 'engine:lfm3-1.7b-q4' && localStorage.getItem('elffuss.movil.ok') !== '1') {
       for (const id of chain.filter(x => x.startsWith('ext:'))) if (await changeModel(id)) return;
       const locales = chain.filter(x => !x.startsWith('ext:'));
       if (!locales.length) return;
