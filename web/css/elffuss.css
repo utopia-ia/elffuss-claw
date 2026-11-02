@@ -55,9 +55,30 @@ header {
 #build a { color: inherit; text-decoration: none; }
 #build a:hover { text-decoration: underline; }
 .controls { flex: none; }
-.model-pick { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
-.model-pick select { max-width: min(30vw, 380px); text-overflow: ellipsis; }
-#disk-chip { white-space: nowrap; flex: none; padding: 4px 10px; font-size: .78rem; border-radius: 999px; }
+/* La pastilla del cerebro: icono, nombre corto, dónde corre y el punto. Abre un
+   desplegable con el selector, que ya no está a la vista en la cabecera. */
+.model-wrap { position: relative; display: inline-flex; min-width: 0; }
+.model-chip { display: inline-flex; align-items: center; gap: 7px; min-width: 0; max-width: min(42vw, 360px);
+  padding: 5px 12px 5px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg3);
+  color: var(--fg); font-size: .82rem; cursor: pointer; white-space: nowrap; }
+.model-chip:hover { border-color: var(--accent2); }
+.model-chip[aria-expanded="true"] { border-color: var(--accent2); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent2) 22%, transparent); }
+.model-chip #model-ico { display: inline-flex; flex: none; }
+.model-chip .mc-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.model-chip .model-st-txt { flex: none; margin-left: 0; }
+.model-chip .model-st-txt.gpu, .model-chip .model-st-txt.loading { color: var(--muted); }
+.model-chip .dot { flex: none; }
+.model-pop { position: absolute; top: calc(100% + 8px); right: 0; z-index: 60; width: min(420px, 92vw);
+  display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px;
+  background: var(--bg2, var(--bg3)); border: 1px solid var(--line); box-shadow: 0 14px 40px rgba(0, 0, 0, .35); }
+.model-pop[hidden] { display: none; }
+.model-pick { display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 0; }
+.model-pick .mp-title { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.model-pick select { width: 100%; max-width: none; text-overflow: ellipsis; }
+.mp-where { margin: 0; font-size: .78rem; color: var(--muted); }
+.mind-elf { width: 20px; height: 20px; display: block; }
+#disk-chip { white-space: nowrap; flex: none; padding: 4px 10px; font-size: .78rem; border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; }
+#disk-chip[hidden] { display: none; }
 .model-card { color: var(--muted); text-decoration: none; font-size: .9rem; flex: none; }
 .model-card:hover { color: var(--fg); }
 .model-card[hidden] { display: none; }
@@ -512,15 +533,20 @@ body:has(#splash:not([hidden])) #toasts { visibility: hidden; }
      Sin esto, el nowrap de la regla general cambiaba «se parte en líneas» por
      «Permisos se sale de la pantalla», que es peor: medido a 390 px. */
   .controls { flex: 1 1 auto; min-width: 0; justify-content: flex-end; }
-  .model-pick { flex: 1 1 auto; min-width: 0; }
-  .model-pick select { max-width: none; width: 100%; min-width: 0; font-size: .78rem; }
+  .model-wrap { flex: 1 1 auto; min-width: 0; justify-content: flex-end; }
+  .model-chip { max-width: 100%; padding: 4px 9px 4px 7px; font-size: .74rem; gap: 5px; }
+  /* En el teléfono no caben el nombre y la frase: el nombre y «· GPU», corto. */
+  .model-chip .model-st-txt { display: none; }
+  .model-chip.gpu .mc-name::after { content: ' · GPU'; font-weight: 400; color: var(--muted); }
+  .model-chip:not(.gpu) .model-st-txt { display: inline; }
+  .model-pop { position: fixed; top: 56px; left: 8px; right: 8px; width: auto; }
   #disk-chip { padding: 4px 7px; font-size: .72rem; }
   /* Solo el logo como marca. El nombre y el icono del selector no caben en un
      teléfono, y con el nombre dentro el selector se le montaba ENCIMA: medido a
      390 px, «Elffu» asomaba por detrás de la caja del selector. Al tocarlo se
      abre el selector nativo del sistema, que sí enseña los nombres enteros. */
   .brand { flex: none; }
-  .brand b, #model-ico, .model-card { display: none; }
+  .brand b { display: none; }
   #btn-clear, #btn-perms { padding: 7px 9px; font-size: .78rem; }
   .model-st-txt { margin-left: -2px; font-size: .68rem; }
 
@@ -775,7 +801,7 @@ body.modo-basico .proposal-needs-model { display: flex; }
 @media (pointer: coarse) {
   #composer button, #composer select, #composer input,
   .bar button, .bar select, #tabs button, button.ghost,
-  #model-select, #send, #btn-clear, #btn-mind, #btn-perms,
+  #model-select, #model-chip, #send, #btn-clear, #btn-mind, #btn-perms,
   #btn-slash, #btn-hardwork, #btn-flip {
     min-height: 44px;
   }

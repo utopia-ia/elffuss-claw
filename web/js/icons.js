@@ -63,3 +63,20 @@ export const ACTIVITY = {
   chat: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
     <path d="M4 5h16v11H9l-5 4z"/></svg>`,
 };
+
+// Iconos de marca, con el degradado de Elffuss (latón → violeta → verde agua) en
+// vez de currentColor: el cerebro es la configuración (el modelo y sus ajustes),
+// el diccionario lo que se guarda (los modelos bajados) y el chip dice dónde
+// corre el modelo. El degradado va en coordenadas del icono (userSpaceOnUse): con
+// las de cada trazo, una raya recta no tiene alto y no se pintaba. Cada icono
+// lleva su propio id de degradado para no repetir ids en la página.
+let _grad = 0;
+const marca = (p, s) => {
+  const id = 'elfg' + (++_grad);
+  return `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="url(#${id})" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">`
+    + `<defs><linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="3" y1="3" x2="21" y2="21"><stop offset="0" stop-color="#e2bd84"/><stop offset=".55" stop-color="#a48cff"/><stop offset="1" stop-color="#5fe0cc"/></linearGradient></defs>${p}</svg>`;
+};
+const MEDIO_CEREBRO = '<path d="M11.4 5.6A2.5 2.5 0 0 0 7 6.6a2.9 2.9 0 0 0-2.3 3.7A3.2 3.2 0 0 0 4.6 15a3 3 0 0 0 2.6 2.4 2.6 2.6 0 0 0 4.2 1.1z"/><path d="M7.6 10.2c1 0 1.8.5 2.2 1.3M7.4 14.6c.9-.2 1.6-.8 1.9-1.6"/>';
+export const brainIcon = (s = 16) => marca(MEDIO_CEREBRO + `<g transform="matrix(-1 0 0 1 24 0)">${MEDIO_CEREBRO}</g>`, s);
+export const dictIcon = (s = 16) => marca('<path d="M5 5.2A2.2 2.2 0 0 1 7.2 3H18v14.5H7.2A2.2 2.2 0 0 0 5 19.7z"/><path d="M5 19.7a1.6 1.6 0 0 0 1.6 1.6H18v-3.8"/><path d="M9.2 13.5l2.3-6 2.3 6M10 11.6h3"/><path d="M18 6.5h1.6M18 10h1.6M18 13.5h1.6"/>', s);
+export const gpuIcon = (s = 16) => marca('<rect x="6" y="6" width="12" height="12" rx="2.2"/><path d="M10 10h4v4h-4z"/><path d="M9.5 3v3M14.5 3v3M9.5 18v3M14.5 18v3M3 9.5h3M3 14.5h3M18 9.5h3M18 14.5h3"/>', s);

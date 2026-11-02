@@ -37,7 +37,10 @@ ok('activarlo dice «elígelo en el selector de modelo», no «🧠»', await ha
   && !/🧠/.test(await aviso.innerText()));
 ok('…y aparece en el selector', await p.evaluate(() => [...document.querySelectorAll('#model-select option')].some(o => o.value === 'ext:ollama')));
 await aviso.locator('.toast-accion').click();
-ok('su botón lleva al selector de modelo', await p.evaluate(() => document.activeElement?.id === 'model-select'));
+ok('su botón lleva al selector de modelo', await p.evaluate(() => document.activeElement?.id === 'model-select'
+  && !document.getElementById('model-pop').hidden));
+// El selector vive en el desplegable de la pastilla del cerebro: Escape lo cierra.
+await p.keyboard.press('Escape');
 
 // ── feedback ────────────────────────────────────────────────────────────────
 let estado = 500, recibido = null;

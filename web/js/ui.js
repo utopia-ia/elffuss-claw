@@ -8,7 +8,7 @@ import { renderMarkdown, linkify } from './md.js';
 import * as rutas from './rutas.js';
 import { t as tr, uiLang } from './i18n.js';
 import { humanizeStreamPreview } from './humanize.js'; // alias: dentro de tick(t) el token ya se llama t
-import { UI } from './icons.js';
+import { UI, brainIcon, dictIcon } from './icons.js';
 import { cacheEstimate } from './model-cache.js';
 import * as modelos from './model-storage.js';
 import * as workspace from './workspace.js';
@@ -478,7 +478,7 @@ function resaltar(seccion, detalle) {
 export function enfocarSelectorModelo() {
   const sel = $('model-select');
   if (!sel) return;
-  sel.focus();                       // está en la cabecera: a la vista en los dos lados del móvil
+  abrePopModelo(true);               // vive en el desplegable de la pastilla del cerebro
   try { sel.showPicker?.(); } catch { /* sin gesto de usuario no se despliega: queda enfocado */ }
 }
 
@@ -1006,7 +1006,9 @@ export function setFichaModelo(url, nombre = '') {
   }
 }
 
-export function modelStatus(state) { // 'off' | 'loading' | 'on' | 'gpu'
+let estadoModelo = { state: 'off', gpu: false, id: null };
+export function modelStatus(state, { gpu = false, id = null } = {}) { // 'off' | 'loading' | 'on' | 'gpu'
+  estadoModelo = { state, gpu: state === 'gpu' || (state === 'loading' && gpu), id: state === 'loading' ? id : null };
   const d = $('model-status');
   d.className = 'dot ' + state;
   // El punto solo era color (y un title en español): ahora dice el estado, en su
@@ -1016,9 +1018,46 @@ export function modelStatus(state) { // 'off' | 'loading' | 'on' | 'gpu'
   d.setAttribute('aria-label', txt);
   const corto = $('model-status-txt');
   if (corto) {
-    corto.textContent = tr({ off: 'modelStOffShort', loading: 'modelStLoadingShort', on: 'modelStOnShort', gpu: 'modelStGpuShort' }[state] || 'modelStOffShort');
+    // Dónde corre, siempre a la vista: «en tu GPU» (y «cargando en tu GPU»
+    // mientras baja) cuando de verdad es la GPU; si no, el estado a secas.
+    const clave = state === 'loading' && estadoModelo.gpu ? 'modelStLoadingGpuShort'
+      : { off: 'modelStOffShort', loading: 'modelStLoadingShort', on: 'modelStOnShort', gpu: 'modelStGpuShort' }[state] || 'modelStOffShort';
+    corto.textContent = tr(clave);
     corto.className = 'model-st-txt ' + state;
   }
+  pintaPastilla();
+}
+
+// ---------- la pastilla del cerebro y su desplegable ----------
+// El nombre corto del modelo elegido (hasta el primer « · », « (» o « —»), y
+// en el desplegable, si corre en la GPU, la frase que lo dice entera.
+function pintaPastilla() {
+  const sel = $('model-select'), nom = $('model-chip-name'), chip = $('model-chip');
+  if (!sel || !nom || !chip) return;
+  // Mientras carga, el que se está cargando (el selector sigue en el anterior).
+  const opt = (estadoModelo.id && [...sel.options].find(o => o.value === estadoModelo.id)) || sel.options[sel.selectedIndex];
+  const txt = opt?.textContent || '';
+  nom.textContent = txt.split(/ · | \(| —/)[0].trim();
+  const estado = $('model-status')?.getAttribute('aria-label') || '';
+  chip.setAttribute('aria-label', `${tr('modelSelectL')}: ${txt}${estado ? ' — ' + estado : ''}`);
+  chip.title = chip.getAttribute('aria-label');
+  chip.classList.toggle('gpu', estadoModelo.gpu);
+  const w = $('model-pop-where');
+  if (w) { w.hidden = !estadoModelo.gpu; w.textContent = tr('modelPopWhere'); }
+}
+function abrePopModelo(abrir) {
+  const pop = $('model-pop'), chip = $('model-chip');
+  if (!pop || !chip) return;
+  abrir ??= pop.hidden;
+  pop.hidden = !abrir;
+  chip.setAttribute('aria-expanded', String(abrir));
+  if (abrir) { pintaPastilla(); try { $('model-select').focus({ preventScroll: true }); } catch { /* — */ } }
+}
+export function cierraPopModelo({ foco = false } = {}) {
+  const pop = $('model-pop');
+  if (!pop || pop.hidden) return;
+  abrePopModelo(false);
+  if (foco) $('model-chip')?.focus({ preventScroll: true });
 }
 
 // ---------- selector de modelo (dinámico) ----------
@@ -1044,9 +1083,10 @@ export function rebuildModelSelect(options, current) {
   }
   for (const g of groups.values()) sel.appendChild(g);
   if (current && options.some(o => o.id === current)) sel.value = current;
+  pintaPastilla();
 }
 
-export function setModel(id) { $('model-select').value = id; }
+export function setModel(id) { $('model-select').value = id; pintaPastilla(); }
 
 // Las etiquetas del selector se escriben en español (kernel.js). Fuera del
 // español se traducen sus coletillas —«por defecto», «ligero», «Básico (sin
@@ -1741,7 +1781,12 @@ export function init({ onSend, onStop = () => {}, onModelChange, onSettingsChang
     selectTab(tabs[j].dataset.tab);
   });
   $('btn-perms').addEventListener('click', () => { selectTab('permisos', { push: true }); if (isMobile()) flipTo('viz'); });
-  $('model-select').addEventListener('change', e => onModelChange(e.target.value));
+  $('model-select').addEventListener('change', e => { pintaPastilla(); cierraPopModelo({ foco: true }); onModelChange(e.target.value); });
+  $('model-chip').addEventListener('click', () => abrePopModelo());
+  $('model-pop-title').textContent = tr('modelSelectL');
+  // Se cierra con Escape (el foco vuelve a la pastilla) o con un clic fuera.
+  $('model-pop').addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); cierraPopModelo({ foco: true }); } });
+  document.addEventListener('pointerdown', e => { if (!e.target.closest?.('.model-wrap')) cierraPopModelo(); }, true);
   // El selector tenía por nombre un icono: ahora se llama «Cerebro (modelo de IA)».
   $('model-select').setAttribute('aria-label', tr('modelSelectL'));
   modelStatus($('model-status').className.replace('dot', '').trim() || 'off');
@@ -1767,7 +1812,7 @@ export function init({ onSend, onStop = () => {}, onModelChange, onSettingsChang
   { const b = $('build'); if (b) { const sello = b.textContent.trim(); b.dataset.sello = sello; b.replaceChildren(enlaceBuild(sello)); } }
 
   // iconos vectoriales (sin emojis)
-  $('model-ico').innerHTML = UI.code;
+  $('model-ico').innerHTML = brainIcon(16);
   $('btn-clear').innerHTML = UI.newChat || UI.clear;
   setWorking(working);   // icono, título y aria del botón enviar/parar
   $('btn-slash').innerHTML = UI.slash;
@@ -1982,7 +2027,8 @@ export function mountDiskChip() {
     const { total } = await modelos.medir({ compartido: preguntarCompartido });
     if (total < UMBRAL_CHIP) { chip.hidden = true; return; }
     chip.hidden = false;
-    chip.textContent = '💾 ' + _gbDisk(total);
+    chip.innerHTML = dictIcon(14);
+    chip.appendChild(el('span', null, _gbDisk(total)));
     const txt = tr('diskChipT', { size: _gbDisk(total) });
     chip.title = txt;
     chip.setAttribute('aria-label', txt);
@@ -1994,7 +2040,8 @@ export function mountDiskChip() {
     if (!confirm(tr(hayCompartido ? 'diskConfirm' : 'diskConfirmLocal', { size: _gbDisk(total) }))) return;
     chip.disabled = true;
     chip.setAttribute('aria-busy', 'true');
-    chip.textContent = '💾 …';
+    chip.innerHTML = dictIcon(14);
+    chip.appendChild(el('span', null, '…'));
     try { avisarLiberado(await modelos.vaciar()); }
     catch (e) { toast(tr('diskFail', { err: e?.message || e })); }
     chip.disabled = false;

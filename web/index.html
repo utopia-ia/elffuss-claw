@@ -40,16 +40,26 @@
     <span class="claim">las apps no existen: se crean</span><span class="claim" id="build">__BUILD__</span>
   </div>
   <div class="controls">
-    <label class="model-pick"><span id="model-ico" class="icon-inline" aria-hidden="true"></span>
-      <select id="model-select"><!-- lo rellena kernel.js (locales + externos activados) --></select>
-    </label>
-    <a id="model-card" class="model-card" target="_blank" rel="noopener noreferrer" hidden>ⓘ</a>
-    <span id="model-status" class="dot off" role="img" title="estado del modelo"></span>
-    <!-- El estado también en palabras, a la vista: el punto solo era un color. Para
-         un lector de pantalla ya lo dice el aria-label del punto. -->
-    <span id="model-status-txt" class="model-st-txt" aria-hidden="true"></span>
+    <!-- El cerebro, en una pastilla: el nombre corto y dónde corre (en tu GPU),
+         con su punto de estado. El selector va dentro del desplegable: a la vista
+         ocupaba media cabecera y cambiar de modelo es cosa de pocas veces. -->
+    <div class="model-wrap">
+      <button id="model-chip" type="button" class="model-chip" aria-haspopup="true" aria-expanded="false" aria-controls="model-pop">
+        <span id="model-ico" class="icon-inline" aria-hidden="true"></span>
+        <span id="model-chip-name" class="mc-name"></span>
+        <span id="model-status-txt" class="model-st-txt" aria-hidden="true"></span>
+        <span id="model-status" class="dot off" role="img" title="estado del modelo"></span>
+      </button>
+      <div id="model-pop" class="model-pop" hidden>
+        <label class="model-pick"><span id="model-pop-title" class="mp-title"></span>
+          <select id="model-select"><!-- lo rellena kernel.js (locales + externos activados) --></select>
+        </label>
+        <a id="model-card" class="model-card" target="_blank" rel="noopener noreferrer" hidden>ⓘ</a>
+        <p id="model-pop-where" class="mp-where" hidden></p>
+      </div>
+    </div>
     <button id="btn-clear" class="ghost icon-btn" title="Nueva conversación"></button>
-    <button id="btn-mind" class="ghost icon-btn" title="Mente de Elffuss — cerebro autónomo">🧠</button>
+    <button id="btn-mind" class="ghost icon-btn" title="Mente de Elffuss — cerebro autónomo"><img class="mind-elf" src="img/elffuss.svg" alt=""></button>
     <button id="disk-chip" class="ghost" hidden></button>
     <button id="speed-chip" class="ghost" hidden title="velocidad de esta máquina"></button>
     <button id="btn-perms" class="ghost">Permisos</button>

@@ -60,13 +60,24 @@ ok('si el elegido no carga, lo dice y sigue con el que funcionaba', await hasta(
 ok('…mientras cargaba el selector estuvo desactivado y luego se reactivó', await p.evaluate(() =>
   window.__desactivado.includes(true) && !document.getElementById('model-select').disabled));
 ok('…y no te sacó de Ajustes para enseñar la descarga', await p.evaluate(() => document.querySelector('#tabs [aria-selected="true"]').dataset.tab === 'ajustes'));
-// Con el teclado: el selector se desactiva mientras carga (y pierde el foco);
-// al terminar, el foco vuelve a él (antes se quedaba en <body>).
-await p.focus('#model-select');
+// Con el teclado: el selector vive en el desplegable de la pastilla del cerebro.
+// Elegir cierra el desplegable y el foco vuelve a la pastilla (no a <body>),
+// también después de la carga.
+await p.focus('#model-chip');
+await p.keyboard.press('Enter');
+ok('la pastilla del cerebro abre el desplegable y enfoca el selector', await hasta(() => p.evaluate(() =>
+  !document.getElementById('model-pop').hidden && document.activeElement?.id === 'model-select'
+  && document.getElementById('model-chip').getAttribute('aria-expanded') === 'true')));
 await p.selectOption('#model-select', 'ext:openai');
-ok('elegir cerebro con el teclado: al acabar la carga el foco vuelve al selector', await hasta(async () =>
-  await listo() && await p.evaluate(() => !document.getElementById('model-select').disabled && document.activeElement?.id === 'model-select')),
+ok('elegir cerebro con el teclado: se cierra el desplegable y al acabar la carga el foco está en la pastilla', await hasta(async () =>
+  await listo() && await p.evaluate(() => !document.getElementById('model-select').disabled && document.getElementById('model-pop').hidden
+    && document.activeElement?.id === 'model-chip')),
   await p.evaluate(() => document.activeElement?.id || document.activeElement?.tagName));
+// Escape cierra el desplegable y devuelve el foco a la pastilla.
+await p.click('#model-chip');
+await p.keyboard.press('Escape');
+ok('Escape cierra el desplegable y devuelve el foco a la pastilla', await p.evaluate(() =>
+  document.getElementById('model-pop').hidden && document.activeElement?.id === 'model-chip'));
 await escribir(p, 'hola');
 ok('el cerebro que funcionaba sigue contestando', await hasta(async () => /respuesta de ollama/.test(await p.locator('#log').innerText())));
 await reposo(p);

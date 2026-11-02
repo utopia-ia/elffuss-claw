@@ -911,7 +911,7 @@ async function cambiarModelo(id, { volviendo = false, elegido = false } = {}) {
     ui.toast(t('basicModeOn'));
     return true;
   }
-  ui.modelStatus('loading');
+  ui.modelStatus('loading', { gpu: isLocal(id) && realGPU, id });
   // Qué cerebro se está cargando, a la vista de las pruebas (tests/cerebro-por-defecto.mjs):
   // los pesos del motor pueden llegar por el almacén compartido o el service
   // worker, donde la prueba no ve la petición.

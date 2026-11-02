@@ -56,7 +56,7 @@ await p.reload({ waitUntil: 'domcontentloaded' });
 await listo();
 ok('con pesos guardados aparece el chip y los cuenta (~6 MB)', await hasta(() => p.evaluate(() => {
   const c = document.getElementById('disk-chip');
-  return !c.hidden && /💾 6 MB/.test(c.textContent);
+  return !c.hidden && c.textContent.trim() === '6 MB' && !!c.querySelector('svg');
 })), await p.evaluate(() => document.getElementById('disk-chip').textContent));
 ok('su nombre accesible dice qué es y qué hace', /Modelos descargados en este navegador: 6 MB/.test(await p.getAttribute('#disk-chip', 'aria-label') || ''));
 p.__aceptar = true;
@@ -126,7 +126,7 @@ export async function clearShared(o) {
   await hasta(() => q.evaluate(() => !document.getElementById('disk-chip').hidden));
   await q.waitForTimeout(1500);
   const alArrancar = await q.evaluate(() => ({ comp: window.__comp || [], chip: document.getElementById('disk-chip').textContent }));
-  ok('al arrancar en Básico, el chip cuenta solo este origen: no pregunta al almacén compartido', !alArrancar.comp.length && /💾 3 MB/.test(alArrancar.chip),
+  ok('al arrancar en Básico, el chip cuenta solo este origen: no pregunta al almacén compartido', !alArrancar.comp.length && alArrancar.chip.trim() === '3 MB',
     JSON.stringify(alArrancar));
   await q.click('#tabs button[data-tab="ajustes"]');
   ok('al abrir Ajustes sí pregunta, a todos los orígenes con pesos', await hasta(() => q.evaluate(() =>
