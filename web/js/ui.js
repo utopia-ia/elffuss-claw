@@ -1709,6 +1709,16 @@ export function init({ onSend, onStop = () => {}, onModelChange, onSettingsChang
   perms.setAsker(askPermission);
   apps.setRenderer((name, html) => renderApp(name, html, { ruta: true }));
   apps.setOnRemoved(vaciarVisor);
+  // El chat de elffuss.com escribe apps y memoria a través de bridge.html: esta pestaña repinta lo que enseña.
+  try {
+    new BroadcastChannel('elffuss-bridge').onmessage = (e) => {
+      if (e.data?.store === 'apps') refreshApps().catch(() => {});
+      if (e.data?.store === 'memory') {
+        const c = document.querySelector('#panel-ajustes .card[data-ruta="memoria"]');
+        if (c) pintarMemoria(c).catch(() => {});
+      }
+    };
+  } catch { /* sin BroadcastChannel: se ve al recargar */ }
   if ($('appframe').hidden) $('appframe').title = tr('appFrameEmpty');
   onSettingsChangedCb = onSettingsChanged || (() => {});
   // al instalar una skill: mensaje «cómo usarla» en el chat + volver al chat en móvil
