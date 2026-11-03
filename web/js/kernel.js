@@ -758,9 +758,11 @@ function avisoPendiente() {
 // La copia lleva también lo PENDIENTE (el turno que se paró y lo que esperaba
 // en la cola): antes «Deshacer» devolvía solo el histórico y un mensaje en cola
 // se perdía para siempre. Se lee antes de parar, porque parar vacía la cola.
-// Formato: { history, queue }; una copia antigua era solo el array del histórico.
-const leerCopia = x => Array.isArray(x) ? { history: x, queue: [] }
-  : x && Array.isArray(x.history) ? { history: x.history, queue: Array.isArray(x.queue) ? x.queue : [] } : null;
+// Formato: { history, queue, memoria }; una copia antigua era solo el array del
+// histórico. `memoria` es el id de la conversación y su «Sin memoria»
+// (memory-wire.js estadoConversacion): vuelven con ella.
+const leerCopia = x => Array.isArray(x) ? { history: x, queue: [], memoria: null }
+  : x && Array.isArray(x.history) ? { history: x.history, queue: Array.isArray(x.queue) ? x.queue : [], memoria: x.memoria || null } : null;
 async function nuevaConversacion() {
   const boton = document.getElementById('btn-clear');
   if (boton?.getAttribute('aria-busy') === 'true') return;   // ya se está borrando
@@ -768,7 +770,7 @@ async function nuevaConversacion() {
   await pararParaBorrar({ boton, aviso: t('clearing') });
   const actual = await db.get('kv', 'history').catch(() => null);
   if (actual?.length || pendientes.length) {
-    await db.set('kv', 'historyBackup', { history: actual || [], queue: pendientes }).catch(() => {});
+    await db.set('kv', 'historyBackup', { history: actual || [], queue: pendientes, memoria: memoria.estadoConversacion() }).catch(() => {});
     avisarTrasRecargar({ tipo: 'limpiado' });
   }
   await db.del('kv', 'history').catch(() => {});
@@ -788,7 +790,7 @@ async function deshacerNuevaConversacion() {
   await pararParaBorrar();
   const nueva = await db.get('kv', 'history').catch(() => null);
   if (nueva?.length || pendientes.length) {
-    await db.set('kv', 'historyBackup', { history: nueva || [], queue: pendientes }).catch(() => {});
+    await db.set('kv', 'historyBackup', { history: nueva || [], queue: pendientes, memoria: memoria.estadoConversacion() }).catch(() => {});
     avisarTrasRecargar({ tipo: 'intercambiado' });
   } else {
     await db.del('kv', 'historyBackup').catch(() => {});
@@ -801,6 +803,7 @@ async function deshacerNuevaConversacion() {
   } else {
     await db.del('kv', 'queue').catch(() => {});
   }
+  memoria.restaurarConversacion(copia.memoria);   // con su id y su «Sin memoria»
   recargar();
 }
 document.getElementById('btn-clear').addEventListener('click', () => nuevaConversacion());

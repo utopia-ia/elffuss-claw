@@ -131,6 +131,21 @@ export function conversacion() {
 export function nuevaConversacion() {
   try { localStorage.removeItem(CONV_KEY); localStorage.removeItem(INCOGNITO_KEY); } catch { /* — */ }
 }
+// Lo que «Deshacer» tras 🧹 tiene que devolver con la conversación: su id y su
+// «Sin memoria». Sin esto, la conversación volvía con la memoria encendida y con
+// otro id («olvidar lo que aprendí aquí» ya no la cubría).
+export function estadoConversacion() {
+  try { return { conv: localStorage.getItem(CONV_KEY), incognito: localStorage.getItem(INCOGNITO_KEY) === '1' }; }
+  catch { return { conv: null, incognito: false }; }
+}
+export function restaurarConversacion(e) {
+  if (!e || typeof e !== 'object') return;
+  try {
+    if (typeof e.conv === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(e.conv)) localStorage.setItem(CONV_KEY, e.conv);
+    else localStorage.removeItem(CONV_KEY);
+    if (e.incognito === true) localStorage.setItem(INCOGNITO_KEY, '1'); else localStorage.removeItem(INCOGNITO_KEY);
+  } catch { /* sin almacenamiento */ }
+}
 export function sinMemoria() { try { return localStorage.getItem(INCOGNITO_KEY) === '1'; } catch { return false; } }
 export function ponerSinMemoria(v) { try { if (v) localStorage.setItem(INCOGNITO_KEY, '1'); else localStorage.removeItem(INCOGNITO_KEY); } catch { /* — */ } }
 
