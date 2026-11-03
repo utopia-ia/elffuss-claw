@@ -1,0 +1,15 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- Copyright (c) 2026 UtopiaIA -->
+<!-- La página almacén de la memoria compartida de Elffuss. Embebida y oculta, solo atiende a las apps de la lista
+     (memory.config.js); embebida con ?view=panel, es el panel; abierta sola, es el gestor completo. No habla con la
+     red: la CSP de aquí abajo lo impide aunque falten las cabeceras del servidor (server/memory/headers.conf), que
+     además fijan frame-ancestors. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>Memory</title>
+<div id="root"></div>
+<script type="module" src="./page.js"></script>
