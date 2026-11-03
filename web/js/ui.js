@@ -13,6 +13,7 @@ import { cacheEstimate } from './model-cache.js';
 import * as modelos from './model-storage.js';
 import * as workspace from './workspace.js';
 import * as telemetry from './telemetry.js';
+import * as memoria from './memory-wire.js';
 
 let onSettingsChangedCb = () => {};
 let onSkillInstalledCb = () => {};
@@ -459,10 +460,12 @@ export async function navegar(ruta) {
 // «Acerca de»…): lo trae a la vista, lo marca y le da el foco.
 function resaltar(seccion, detalle) {
   const panel = $('panel-' + seccion);
-  const sel = `[data-ruta="${CSS.escape(detalle)}"]`;
+  // Un hecho de la memoria compartida se señala por su id en el panel (que se
+  // monta un poco después: se espera algo más).
+  const sel = `[data-ruta="${CSS.escape(detalle)}"]` + (seccion === 'ajustes' ? `, .mem-item[data-id="${CSS.escape(detalle)}"]` : '');
   const tryIt = (n = 0) => {
     const el = panel?.querySelector(sel);
-    if (!el) { if (n < 20) setTimeout(() => tryIt(n + 1), 50); return; }
+    if (!el) { if (n < 60) setTimeout(() => tryIt(n + 1), 50); return; }
     panel.querySelectorAll('.resaltado').forEach(e => e.classList.remove('resaltado'));
     el.classList.add('resaltado');
     el.querySelector('details')?.setAttribute('open', '');   // p. ej. el texto de una skill
@@ -1230,6 +1233,10 @@ function workspaceCard() {
       inv.appendChild(line);
     }
     const danger = el('div', 'row');
+    // La memoria compartida es de todas las apps de Elffuss: «Borrar todo» no la
+    // toca salvo que se marque esta casilla (desmarcada por defecto), y entonces
+    // se borra en el gestor de la memoria, en dos pasos.
+    let tambien = null;
     const wipe = btn(tr('wsWipe'), 'ghost', async () => {
       if (!window.confirm(tr('wsWipeConfirm'))) return;
       ocupado(wipe, true);                 // aria-disabled: sin perder el foco (ver btn)
@@ -1237,10 +1244,20 @@ function workspaceCard() {
       // el IndexedDB dejaba la conversación en pantalla y en memoria, y el
       // siguiente mensaje la volvía a guardar entera; skills, bóveda abierta y
       // app actual también seguían vivas hasta recargar.
-      try { await onWipeCb(); }
+      try { await onWipeCb({ tambienMemoria: !!tambien?.checked }); }
       catch (e) { ocupado(wipe, false); toast('⚠️ ' + (e?.message || e)); }
     });
     danger.appendChild(wipe);
+    memoria.cargar().then(m => {
+      if (!m || danger.querySelector('#wipe-memoria-compartida')) return;
+      const lab = document.createElement('label');
+      lab.className = 'muted';
+      tambien = document.createElement('input');
+      tambien.type = 'checkbox';
+      tambien.id = 'wipe-memoria-compartida';
+      lab.append(tambien, ' ', tr('memWipeShared'));
+      danger.appendChild(lab);
+    });
     inv.appendChild(danger);
   };
   paint().catch(() => { state.textContent = '—'; });
@@ -1395,10 +1412,22 @@ export function refreshSettings() {
 // ---------- memoria ----------
 // Lo que Elffuss recuerda de ti (memory.save) se veía solo como un número en
 // «Qué hay guardado» o pidiéndoselo al chat. Aquí se ve y se olvida hecho a hecho.
+//
+// Con la memoria compartida (v2) esta tarjeta enseña el panel de la memoria de
+// todas las apps (el mismo de la página almacén, montado aquí porque Claw es
+// del mismo origen): buscar, editar, fijar, olvidar con «Deshacer», «¿Por qué lo
+// recuerdo?», propuestas pendientes y el enlace al gestor completo. Sin memoria
+// v2, la lista de antes.
 function memoriaCard() {
   const c = el('div', 'card col');
   c.dataset.ruta = 'memoria';      // #/memoria
-  pintarMemoria(c);
+  c.replaceChildren(el('b', null, tr('memTitle')), el('span', 'muted', tr('memDesc')));
+  memoria.cargar().then(async m => {
+    if (!m) { pintarMemoria(c); return; }
+    const sitio = el('div', 'mem-panel');
+    c.appendChild(sitio);
+    await memoria.montarPanel(sitio);
+  }).catch(() => pintarMemoria(c));
   return c;
 }
 // Tras olvidar un hecho, el foco va al ✕ del que queda en su sitio (o al título
@@ -1704,16 +1733,56 @@ export function setStopping() {
   b.setAttribute('aria-label', b.title);
 }
 
+// ---------- memoria compartida: tarjetas en el chat ----------
+// Lo que la memoria tiene que enseñar o preguntar sale como una tarjeta debajo de
+// la respuesta (las del motor, memory-cards.js): «Recordado · Deshacer», «¿Lo
+// recuerdo? · Sí · Editar · No», el permiso de la primera vez, «¿Olvido…?»… Nada
+// se olvida ni se confirma sin el clic del usuario. El texto de los hechos va
+// siempre como texto, nunca como HTML.
+function montarTarjetasDeMemoria() {
+  memoria.alPintarTarjeta((tarjeta, M, extra = {}) => {
+    const div = document.createElement('div');
+    div.className = 'msg mem-tarjeta';
+    $('log').appendChild(div);
+    M.cards.renderCard(div, tarjeta, M.mem, {
+      lang: uiLang(), scheme: 'dark',
+      onSee: () => { location.hash = rutas.href('memoria'); },
+      // Con el permiso recién dado, la misma petición otra vez, con la evidencia
+      // del mismo turno: si el usuario lo había pedido, ahora sí se guarda.
+      onGranted: async si => { if (si && extra.turno && extra.nombre) await extra.turno.correr(extra.nombre, extra.args).catch(() => {}); },
+    });
+    $('log').scrollTop = $('log').scrollHeight;
+  });
+  // «Tenía presentes N recuerdos ▾»: exactamente los hechos que entraron en el prompt.
+  memoria.alPintarUsados((bloque, M) => {
+    const div = document.createElement('div');
+    div.className = 'msg mem-usados';
+    $('log').appendChild(div);
+    M.cards.renderUsed(div, bloque, { cfg: M.cfg, lang: uiLang(), scheme: 'dark' });
+  });
+  document.body.classList.toggle('sin-memoria', memoria.sinMemoria());
+}
+
+// /sinmemoria: esta conversación sin memoria (ni se lee ni se guarda nada), o con
+// ella otra vez. 🧹 empieza otra conversación con la memoria puesta.
+function alternarSinMemoria() {
+  const v = !memoria.sinMemoria();
+  memoria.ponerSinMemoria(v);
+  document.body.classList.toggle('sin-memoria', v);
+  toast(tr(v ? 'memIncognitoOn' : 'memIncognitoOff'));
+}
+
 // ---------- arranque ----------
 export function init({ onSend, onStop = () => {}, onModelChange, onSettingsChanged, onPickFolder = () => onSend(tr('pFolder')) }) {
   perms.setAsker(askPermission);
   apps.setRenderer((name, html) => renderApp(name, html, { ruta: true }));
+  montarTarjetasDeMemoria();
   apps.setOnRemoved(vaciarVisor);
   // El chat de elffuss.com escribe apps y memoria a través de bridge.html: esta pestaña repinta lo que enseña.
   try {
     new BroadcastChannel('elffuss-bridge').onmessage = (e) => {
       if (e.data?.store === 'apps') refreshApps().catch(() => {});
-      if (e.data?.store === 'memory') {
+      if (e.data?.store === 'memory' && !memoria.lista()) {
         const c = document.querySelector('#panel-ajustes .card[data-ruta="memoria"]');
         if (c) pintarMemoria(c).catch(() => {});
       }
@@ -1751,6 +1820,7 @@ export function init({ onSend, onStop = () => {}, onModelChange, onSettingsChang
     if (parando) return;         // ya se está parando: otro clic no hace nada
     onStop();
   });
+  let pegado = false;
   $('composer').addEventListener('submit', e => {
     e.preventDefault();
     // Mientras trabaja, aquí solo se llega con Enter (el ■ no envía): con texto
@@ -1763,8 +1833,15 @@ export function init({ onSend, onStop = () => {}, onModelChange, onSettingsChang
     if (hist.length > 100) hist = hist.slice(-100);
     try { localStorage.setItem(HKEY, JSON.stringify(hist)); } catch { /* lleno */ }
     hIdx = -1; draft = '';
-    onSend(text, { desdeCaja: true });     // solo lo escrito en la caja puede ir por Hard Work
+    // Solo lo ESCRITO en la caja puede fundamentar un recuerdo: si se pegó o se
+    // soltó algo en este mensaje, no cuenta como escrito (memoria v2).
+    const tecleado = !pegado;
+    pegado = false;
+    onSend(text, { desdeCaja: true, tecleado });     // solo lo escrito en la caja puede ir por Hard Work
   });
+  $('prompt').addEventListener('paste', () => { pegado = true; });
+  $('prompt').addEventListener('drop', () => { pegado = true; });
+  $('prompt').addEventListener('input', () => { if (!$('prompt').value) pegado = false; });
   // Chips: botones (antes <span> sin foco). «Autoriza una carpeta» abre el
   // selector de carpetas EN el clic: pasándoselo al modelo, el selector nativo
   // llegaba después de su turno y el navegador ya no lo dejaba abrir.
@@ -1849,6 +1926,7 @@ export function init({ onSend, onStop = () => {}, onModelChange, onSettingsChang
     { label: '/tareas', en: '/tasks', hint: tr('cmTasks'), run: () => verPanel('tareas') },
     { label: '/vault', en: '/vault', hint: tr('cmVault'), run: () => verPanel('vault') },
     { label: '/limpiar', en: '/clear', hint: tr('cmClear'), run: () => $('btn-clear').click() },
+    { label: '/sinmemoria', en: '/nomemory', hint: tr('cmNoMemory'), run: () => alternarSinMemoria() },
     { label: '/atajos', en: '/shortcuts', hint: tr('cmKeys'), run: () => mostrarAtajos(), foco: false },
   ];
   const nombreCmd = c => (uiLang() === 'es' ? c.label : c.en);
