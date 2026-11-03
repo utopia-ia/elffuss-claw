@@ -134,16 +134,14 @@ const horaEstable = (loc) => {
 // Con la memoria compartida (v2) los hechos NO van aquí: el turno pide al
 // almacén un bloque <memoria> con lo relevante para lo que se pregunta, dentro de
 // un presupuesto según el modelo (memory-wire.js), y el agente lo pone delante de
-// este estado. La línea «Memoria (…)» de los 8 últimos solo queda en modo v1.
+// este estado. La línea «Memoria (…)» de los 8 últimos de la v1 ya no está:
+// si la memoria v2 no carga, no entra ningún hecho (falla cerrada).
 export async function snapshot() {
-  const v1 = !memoriaV2.lista();
-  const [appList, pendingTasks, folderList, facts, watches] = await Promise.all([
-    apps.allApps(), tasks.pending(), fs.folders(), v1 ? memory.recent(8) : [], watch.allWatches(),
+  const [appList, pendingTasks, folderList, watches] = await Promise.all([
+    apps.allApps(), tasks.pending(), fs.folders(), watch.allWatches(),
   ]);
   const next = pendingTasks.sort((a, b) => a.when - b.when)[0];
   return [
-    ...(v1 ? ['Memoria (hechos que recuerdas del usuario): ' +
-      (facts.length ? facts.map(f => f.fact).join(' · ') : 'nada aún')] : []),
     // TRUNCADA A LA HORA EN PUNTO, y no es estético: esto llevaba SEGUNDOS y va
     // en la cabeza del prompt de sistema. El motor reutiliza el prefijo solo si
     // los tokens del turno empiezan EXACTAMENTE por los ya ingeridos, así que un

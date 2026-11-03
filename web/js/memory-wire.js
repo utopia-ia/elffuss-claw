@@ -19,10 +19,10 @@
 //     memoria, la evidencia de lo que el usuario ESCRIBIÓ, la marca de turno
 //     contaminado, y las tarjetas que la interfaz tiene que enseñar.
 //
-// Si el motor que se sirve no trae los módulos de memoria (un despliegue sin
-// ellos), `cargar()` devuelve null y Claw sigue con la memoria de antes
-// (tools/memory.js, modo v1): nada se rompe y nada se pierde, porque la
-// migración copia esos hechos la próxima vez que el motor sí esté.
+// Si la memoria no carga (un módulo que no llega, IndexedDB que falla),
+// `cargar()` devuelve null y la memoria queda APAGADA en ese turno: ni bloque ni
+// escrituras, y las herramientas contestan «no disponible» (falla cerrada; nunca
+// se vuelve al almacén viejo de Claw). La siguiente llamada lo vuelve a intentar.
 import { uiLang } from './i18n.js';
 
 const APP = 'claw';
@@ -46,7 +46,13 @@ let pintorUsados = null;
 // ── Carga ────────────────────────────────────────────────────────────────────
 
 export function cargar() {
-  if (!cargando) cargando = abrir().catch((e) => { console.warn('[memoria] sin memoria v2:', e?.message || e); return null; });
+  if (!cargando) {
+    cargando = abrir().catch((e) => {
+      console.warn('[memoria] sin memoria v2:', e?.name || 'error');
+      cargando = null;      // un fallo pasajero no deja la memoria apagada hasta recargar
+      return null;
+    });
+  }
   return cargando;
 }
 export const lista = () => M;

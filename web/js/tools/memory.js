@@ -6,11 +6,11 @@
 // guarda lo que el usuario pidió y dijo con sus palabras, olvidar siempre pasa
 // por una tarjeta que el usuario confirma, y lo demás queda como propuesta.
 //
-// Lo de abajo del todo (modo v1) es la memoria de antes, en el almacén 'memory'
-// de Claw. Solo se usa si el motor servido no trae los módulos de memoria; en
-// cuanto los trae, la migración copia esos hechos a la memoria compartida.
-import * as db from '../db.js';
-import { require as requirePerm } from '../permissions.js';
+// Si la memoria v2 no carga (un módulo que no llega, IndexedDB que falla), las
+// herramientas FALLAN CERRADAS: contestan «no disponible» y no escriben nada. No
+// se vuelve a la memoria de antes (el almacén 'memory' de Claw): eso guardaba
+// sin la puerta (sin disparador, sin evidencia, sin turno contaminado), borraba
+// sin tarjeta, y la migración lo copiaba después como hecho activo compartido.
 import { t } from '../i18n.js';
 import * as memoria from '../memory-wire.js';
 
@@ -25,44 +25,16 @@ async function v2(nombre, args, ctx = {}) {
 }
 
 export async function save(args = {}, ctx = {}) {
-  const r = await v2('memory.save', args, ctx);
-  return r ?? saveV1(args);
+  return (await v2('memory.save', args, ctx)) ?? t('memOff');
 }
 export async function listFacts(args = {}, ctx = {}) {
-  const r = await v2('memory.list', args, ctx);
-  return r ?? listFactsV1();
+  return (await v2('memory.list', args, ctx)) ?? t('memOff');
 }
 export async function forget(args = {}, ctx = {}) {
-  const r = await v2('memory.forget', args, ctx);
-  return r ?? forgetV1(args);
+  return (await v2('memory.forget', args, ctx)) ?? t('memOff');
 }
 
-// ── Modo v1 (sin módulos de memoria en el motor servido) ────────────────────
-
-async function saveV1({ fact } = {}) {
-  if (!fact) throw new Error(t('toolMissing', { arg: 'fact' }));
-  await requirePerm('memory', fact);
-  const id = 'm' + Math.random().toString(36).slice(2, 8);
-  await db.set('memory', id, { id, fact: String(fact).slice(0, 300), at: Date.now() });
-  return t('memSaved', { fact, id });
-}
-
-async function listFactsV1() {
-  const all = (await db.all('memory')).sort((a, b) => a.at - b.at);
-  return all.length
-    ? all.map(f => `• [${f.id}] ${f.fact}`).join('\n')
-    : t('memNone');
-}
-
-async function forgetV1({ id } = {}) {
-  await db.del('memory', id);
-  return t('memForgot', { id });
-}
-
-// Lo que entraba en el CONTEXTO AHORA con la memoria v1: los 8 más recientes.
-// Con la memoria v2 el bloque lo arma el almacén (memory-wire.js) y esto solo
-// lo usa el modo v1.
-export async function recent(n = 8) {
-  if (memoria.lista()) return [];
-  return (await db.all('memory')).sort((a, b) => b.at - a.at).slice(0, n).reverse();
-}
+// Lo que entraba en el CONTEXTO AHORA con la memoria v1 (los 8 más recientes).
+// Con la memoria v2 el bloque lo arma el almacén (memory-wire.js): aquí ya no
+// entra nada, cargue o no la memoria.
+export async function recent() { return []; }

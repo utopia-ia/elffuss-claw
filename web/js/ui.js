@@ -3,7 +3,7 @@ import * as db from './db.js';
 import * as perms from './permissions.js';
 import * as settings from './settings.js';
 import * as skills from './skills.js';
-import { fs, apps, vault, tasks, watch, memory } from './tools/index.js';
+import { fs, apps, vault, tasks, watch } from './tools/index.js';
 import { renderMarkdown, linkify } from './md.js';
 import * as rutas from './rutas.js';
 import { t as tr, uiLang } from './i18n.js';
@@ -1416,45 +1416,30 @@ export function refreshSettings() {
 // Con la memoria compartida (v2) esta tarjeta enseña el panel de la memoria de
 // todas las apps (el mismo de la página almacén, montado aquí porque Claw es
 // del mismo origen): buscar, editar, fijar, olvidar con «Deshacer», «¿Por qué lo
-// recuerdo?», propuestas pendientes y el enlace al gestor completo. Sin memoria
-// v2, la lista de antes.
+// recuerdo?», propuestas pendientes y el enlace al gestor completo. Si la
+// memoria no carga, lo dice (y no enseña ni toca el almacén viejo de Claw).
+//
+// Un solo panel vivo: refreshSettings() rehace la tarjeta entera, y cada panel
+// montado se suscribe a los cambios del almacén. El anterior se desmonta antes
+// de quedarse el nuevo; sin eso, cada repintado dejaba un panel suelto que se
+// volvía a pintar (y releía la memoria entera) con cada cambio, para siempre.
+let panelMemoria = null;
 function memoriaCard() {
   const c = el('div', 'card col');
   c.dataset.ruta = 'memoria';      // #/memoria
   c.replaceChildren(el('b', null, tr('memTitle')), el('span', 'muted', tr('memDesc')));
+  const sinMemoria = () => c.appendChild(el('span', 'muted', tr('memOff')));
   memoria.cargar().then(async m => {
-    if (!m) { pintarMemoria(c); return; }
+    if (!m) { sinMemoria(); return; }
     const sitio = el('div', 'mem-panel');
     c.appendChild(sitio);
-    await memoria.montarPanel(sitio);
-  }).catch(() => pintarMemoria(c));
+    const h = await memoria.montarPanel(sitio);
+    if (!h) return;
+    if (!c.isConnected) { h.unmount?.(); return; }   // la tarjeta ya se cambió mientras se montaba
+    if (panelMemoria && panelMemoria !== h) panelMemoria.unmount?.();
+    panelMemoria = h;
+  }).catch(sinMemoria);
   return c;
-}
-// Tras olvidar un hecho, el foco va al ✕ del que queda en su sitio (o al título
-// de la sección) y, tras «Deshacer», al del hecho devuelto.
-async function pintarMemoria(c) {
-  const hechos = (await db.all('memory').catch(() => [])).sort((a, b) => a.at - b.at);
-  c.replaceChildren(el('b', null, tr('memTitle')), el('span', 'muted', tr('memDesc')));
-  if (!hechos.length) c.appendChild(el('span', 'muted', tr('memEmpty')));
-  for (const f of hechos) {
-    const fila = el('div', 'row between');
-    fila.dataset.ruta = f.id;       // #/memoria/<id>
-    const x = btn('✕', 'ghost', async () => {
-      const i = [...c.querySelectorAll('.row[data-ruta]')].indexOf(fila);
-      await memory.forget({ id: f.id });
-      await pintarMemoria(c);
-      enfocarFila(c.querySelectorAll('.row[data-ruta]'), i, 'button', c.querySelector(':scope > b'));
-      toast(tr('memForgotten'), { accion: { label: tr('undo'), run: async () => {
-        await db.set('memory', f.id, f);
-        await pintarMemoria(c);
-        enfocarFila(c.querySelectorAll(`.row[data-ruta="${CSS.escape(f.id)}"]`), 0, 'button');
-      } } });
-    });
-    x.title = tr('memForgetL', { fact: String(f.fact).slice(0, 60) });
-    x.setAttribute('aria-label', x.title);
-    fila.append(el('span', null, f.fact), x);
-    c.appendChild(fila);
-  }
 }
 
 // ---------- acerca de ----------
@@ -1782,10 +1767,6 @@ export function init({ onSend, onStop = () => {}, onModelChange, onSettingsChang
   try {
     new BroadcastChannel('elffuss-bridge').onmessage = (e) => {
       if (e.data?.store === 'apps') refreshApps().catch(() => {});
-      if (e.data?.store === 'memory' && !memoria.lista()) {
-        const c = document.querySelector('#panel-ajustes .card[data-ruta="memoria"]');
-        if (c) pintarMemoria(c).catch(() => {});
-      }
     };
   } catch { /* sin BroadcastChannel: se ve al recargar */ }
   if ($('appframe').hidden) $('appframe').title = tr('appFrameEmpty');
