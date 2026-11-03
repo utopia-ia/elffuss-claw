@@ -4,6 +4,7 @@ import { skillsPromptBlock, installed } from './skills.js';
 import { crearRouter, bloqueEjemplos } from './tool-router.js';
 import { t } from './i18n.js';
 import * as telemetry from './telemetry.js';
+import * as memoria from './memory-wire.js';
 
 const MAX_STEPS = 6;
 
@@ -78,7 +79,15 @@ Cómo actuar:
    · Haz lo que pide AHORA: no retomes ni rehagas una tarea anterior (no vuelvas a crear una app ya hecha) si no te lo pide.
    · Si se entiende lo que quiere, HAZLO ya. Lo que falte y no sea imprescindible, asúmelo (lo ya dicho, o lo más habitual) y dilo en una línea; no preguntes gustos ni preferencias que no hagan falta.
    · Nunca digas que has hecho algo («he preparado…», «he creado…») si no has llamado a la herramienta en este turno.
-9) Si quiere una skill CONCRETA de internet: si no tienes su URL en la conversación, web.search; luego skill.install con una URL que haya salido en los resultados. NUNCA inventes una URL. No la imites con skill.create ni digas que no se puede instalar.${bloqueEjemplos(RECORTAR_EJEMPLOS ? herramientas : null)}${skillsPromptBlock()}`;
+9) Si quiere una skill CONCRETA de internet: si no tienes su URL en la conversación, web.search; luego skill.install con una URL que haya salido en los resultados. NUNCA inventes una URL. No la imites con skill.create ni digas que no se puede instalar.${bloqueMemoria()}${bloqueEjemplos(RECORTAR_EJEMPLOS ? herramientas : null)}${skillsPromptBlock()}`;
+}
+
+// Las reglas de la memoria compartida (las del motor, siempre los mismos bytes:
+// no llevan ningún hecho, que van en el bloque <memoria> del turno). Sin memoria
+// v2 no se añade nada y el prompt queda como antes.
+function bloqueMemoria() {
+  const r = memoria.reglas();
+  return r ? `\n\nMEMORIA (lo que el usuario te pide recordar; vale en todas sus apps de Elffuss):\n${r}` : '';
 }
 
 export const ETIQUETA_CONTEXTO = 'CONTEXTO AHORA (estado real del sistema, úsalo al responder):';
@@ -457,22 +466,37 @@ export class Agent {
   // `permitir` (opcional): (nombre de herramienta) => bool. Lo que no pasa no se
   // ejecuta: el modelo recibe un ERROR que se lo explica. Lo usa el cerebro
   // autónomo, que solo puede leer (ver ceo.js `allowTool`).
-  async handle(userText, onEvent, { signal: deFuera = null, permitir = null } = {}) {
+  //
+  // `typed` (opcional): el usuario ESCRIBIÓ este mensaje en la caja. Solo lo
+  // escrito por el usuario puede fundamentar un recuerdo (memoria v2): lo pegado,
+  // los chips, las tareas programadas y las propuestas del cerebro no. Por
+  // defecto false: si nadie lo dice, no cuenta.
+  // `modelo` (opcional): el id del cerebro activo («engine:lfm3-1.7b», …). Con él
+  // la memoria dimensiona su bloque según el contexto del modelo en el registro.
+  async handle(userText, onEvent, { signal: deFuera = null, permitir = null, typed = false, modelo = null } = {}) {
     const aborter = (this._aborter = new AbortController());
     if (deFuera?.aborted) { onEvent({ type: 'aborted', text: t('stopped') }); return; }
     const alAbortar = () => aborter.abort();
     deFuera?.addEventListener?.('abort', alAbortar, { once: true });
-    try { return await this._turno(userText, onEvent, aborter.signal, permitir); }
+    try { return await this._turno(userText, onEvent, aborter.signal, permitir, { typed, modelo }); }
     finally { deFuera?.removeEventListener?.('abort', alAbortar); }
   }
 
-  async _turno(userText, onEvent, signal, permitir = null) {
+  async _turno(userText, onEvent, signal, permitir = null, { typed = false, modelo = null } = {}) {
     const parado = () => onEvent({ type: 'aborted', text: t('stopped') });
     // La marca temporal se pone AL AÑADIR, que es el único momento en que se
     // sabe: el gestor de contexto resuelve «ayer» con la fecha del turno en que
     // se dijo, no con la de ahora (ver annotateDates en acer-core.js). Sin esto
     // la anotación se calla, que es lo correcto, pero no sirve para nada.
-    this.history.push({ role: 'user', content: userText, ts: Date.now() });
+    this.history.push({ role: 'user', content: userText, ts: Date.now(), ...(typed === true ? { typed: true } : {}) });
+    // La memoria del turno (memoria v2): el bloque <memoria> se pide UNA vez y se
+    // reutiliza en cada paso; la evidencia es lo que el usuario escribió. Sin
+    // memoria v2 (motor sin esos módulos) es null y todo sigue como antes.
+    const mt = await memoria.empezarTurno({ history: this.history, model: await memoria.modeloDelCerebro(modelo) }).catch(() => null);
+    const responder = async (text) => {
+      onEvent({ type: 'text', text });
+      await mt?.fin().catch(() => {});
+    };
     const done = [];            // firmas de tool calls ya ejecutadas este turno
     let lastResult = '';
     // Una sola decisión por turno, sobre lo que pidió el usuario. El prompt no
@@ -484,7 +508,12 @@ export class Agent {
       let out;
       if (signal.aborted) return parado();
       try {
-        const context = await snapshot().catch(() => '');
+        // El bloque de memoria va DENTRO del mensaje efímero de estado vivo, delante
+        // del último mensaje (ver conContexto): nunca en la cabeza del prompt de
+        // sistema, que así no cambia y la caché de prefijo sigue valiendo.
+        const vivo = await snapshot().catch(() => '');
+        const bloque = mt?.bloque?.text || '';
+        const context = bloque ? (vivo ? `${bloque}\n${vivo}` : bloque) : vivo;
         if (signal.aborted) return parado();
         // Los proveedores que saben cuánto contexto tienen lo dicen; los que no,
         // devuelven 0 y todo sigue igual que siempre. Sin esto, Elffuss le
@@ -507,7 +536,10 @@ export class Agent {
         out = await this.provider.chat(conContexto(this.history, context, ETIQUETA_CONTEXTO),
           systemPrompt('', { herramientas }),
           t => { if (!signal.aborted) onEvent({ type: 'token', text: t }); },
-          { signal, onPrefill: (hechos, total) => { if (!signal.aborted) onEvent({ type: 'prefill', hechos, total }); } });
+          // `reserveTokens`: lo que ocupa el bloque de memoria se descuenta del
+          // presupuesto de la historia antes de ajustarla (motor propio, ONNX,
+          // WebLLM y LiteRT lo leen; los que no, lo ignoran).
+          { signal, reserveTokens: mt?.bloque?.tokens || 0, onPrefill: (hechos, total) => { if (!signal.aborted) onEvent({ type: 'prefill', hechos, total }); } });
       } catch (e) {
         // Un proveedor que corta con la señal puede LANZAR (fetch abortado,
         // stream cancelado): eso es la parada que se ha pedido, no un fallo.
@@ -527,7 +559,7 @@ export class Agent {
       const call = parseToolCall(out);
       if (!call) {
         this.history.push({ role: 'assistant', content: out, ts: Date.now() });
-        onEvent({ type: 'text', text: out });
+        await responder(out);
         return;
       }
 
@@ -536,7 +568,7 @@ export class Agent {
       // cierra con una respuesta en vez de girar hasta agotar los pasos.
       const sig = call.tool + ':' + JSON.stringify(call.args || {});
       if (done.includes(sig)) {
-        onEvent({ type: 'text', text: closingLine(done, lastResult) });
+        await responder(closingLine(done, lastResult));
         return;
       }
       done.push(sig);
@@ -551,7 +583,7 @@ export class Agent {
         // conversación —ni la dio el usuario ni vino en un resultado— no se intenta.
         result = 'ERROR: esa URL no ha salido en la conversación (¿inventada?). Búscala con web.search y usa una de los resultados.';
       } else {
-        try { result = await hastaQueParen(runTool(call.tool, call.args, { signal }), signal); }
+        try { result = await hastaQueParen(runTool(call.tool, call.args, { signal, memoria: mt }), signal); }
         catch (e) {
           // Parado con la herramienta en marcha: el turno acaba aquí y no apunta
           // nada de este paso (la herramienta puede acabar por detrás).
@@ -559,6 +591,11 @@ export class Agent {
           result = 'ERROR: ' + e.message;
         }
       }
+      // Cualquier herramienta que no sea de memoria CONTAMINA el turno en cuanto su
+      // resultado entra en el contexto: desde aquí, lo que el modelo quiera guardar
+      // es como mucho una propuesta que el usuario confirma (falla cerrado: da
+      // igual qué herramienta sea, y también si se rechazó).
+      mt?.herramienta(call.tool);
       const resultStr = typeof result === 'string' ? result : JSON.stringify(result);
       lastResult = resultStr;
       onEvent({ type: 'tool_result', tool: call.tool, result: resultStr });
@@ -572,11 +609,11 @@ export class Agent {
       // instalar una skill: con E4B real, después de instalarla seguía dando pasos
       // (la instalaba otra vez desde otra URL, abría el selector de carpetas).
       if (['app.create', 'app.open', 'skill.install'].includes(call.tool) && !resultStr.startsWith('ERROR')) {
-        onEvent({ type: 'text', text: t('done', { result: resultStr }) });
+        await responder(t('done', { result: resultStr }));
         return;
       }
     }
     if (signal.aborted) return parado();
-    onEvent({ type: 'text', text: closingLine(done, lastResult) });
+    await responder(closingLine(done, lastResult));
   }
 }

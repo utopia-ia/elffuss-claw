@@ -7,6 +7,7 @@ import * as web from './web.js';
 import * as memory from './memory.js';
 import * as watch from './watch.js';
 import * as skills from '../skills.js';
+import * as memoriaV2 from '../memory-wire.js';
 import { t } from '../i18n.js';
 
 export { fs, apps, vault, tasks, web, memory, watch };
@@ -37,10 +38,23 @@ export const TOOLS = {
   'skill.list':   { desc: 'Ver las skills instaladas', params: {}, run: async () => { const s = skills.installed(); return s.length ? s.map(x => `• ${x.name}: ${x.description || ''}`).join('\n') : t('skNoneTool'); } },
   'skill.get':    { desc: 'Leer el contenido completo de una skill instalada (útil antes de editarla)', params: { name: 'nombre de la skill' }, run: async a => { const s = await skills.get(a.name); return s ? `# ${s.name}\n${s.description || ''}\n\n${s.content || ''}` : t('skNoSuchTool', { name: a.name }); } },
   'skill.edit':   { desc: 'EDITAR una skill ya instalada: cambia sus instrucciones (o añade con append:true). Úsalo para ajustar el guion/argumentos de una skill que ya existe, p. ej. el copiloto de ventas', params: { name: 'nombre de la skill', instructions: 'nuevas instrucciones en markdown', description: 'opcional, nueva descripción', append: 'true para añadir al final en vez de reemplazar' }, run: a => skills.editSkill(a) },
-  'memory.save':   { desc: 'Recordar un hecho sobre el usuario PARA SIEMPRE (memoria persistente)', params: { fact: 'el hecho' }, run: a => memory.save(a) },
-  'memory.list':   { desc: 'Ver todo lo recordado', params: {}, run: () => memory.listFacts() },
-  'memory.forget': { desc: 'Olvidar un hecho por id', params: { id: 'id del hecho' }, run: a => memory.forget(a) },
+  // Con la memoria compartida (v2) la descripción y los parámetros los pone el
+  // motor (memoryTools, ver catalogoMemoria); estos son los de la memoria v1.
+  'memory.save':   { desc: 'Recordar un hecho sobre el usuario PARA SIEMPRE (memoria persistente)', params: { fact: 'el hecho' }, run: (a, ctx) => memory.save(a, ctx) },
+  'memory.list':   { desc: 'Ver todo lo recordado', params: {}, run: (a, ctx) => memory.listFacts(a, ctx) },
+  'memory.forget': { desc: 'Olvidar un hecho por id', params: { id: 'id del hecho' }, run: (a, ctx) => memory.forget(a, ctx) },
 };
+
+// Las tres herramientas de memoria tal como las define el motor cuando la
+// memoria compartida está cargada: mismos nombres, sus descripciones y sus
+// parámetros (fact, importance, replaces · query, limit · id, query).
+function catalogoMemoria() {
+  const defs = memoriaV2.herramientas();
+  if (!defs) return;
+  for (const [nombre, d] of Object.entries(defs)) {
+    if (TOOLS[nombre]) { TOOLS[nombre].desc = d.desc; TOOLS[nombre].params = d.params; }
+  }
+}
 
 // Cómo llega el valor de un <param> cuando el modelo usa etiquetas.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -73,6 +87,7 @@ export const PARAM_NUMERO = { 'tasks.add': ['inMinutes'] };
 export const PARAM_BOOLEANO = { 'skill.edit': ['append'] };
 
 export function toolHelp() {
+  catalogoMemoria();
   return Object.entries(TOOLS).map(([n, t]) =>
     `- ${n}(${Object.keys(t.params).join(', ')}): ${t.desc}`).join('\n');
 }
@@ -116,14 +131,19 @@ const horaEstable = (loc) => {
   return d.toLocaleString(loc, { dateStyle: 'short', timeStyle: 'short' });
 };
 
+// Con la memoria compartida (v2) los hechos NO van aquí: el turno pide al
+// almacén un bloque <memoria> con lo relevante para lo que se pregunta, dentro de
+// un presupuesto según el modelo (memory-wire.js), y el agente lo pone delante de
+// este estado. La línea «Memoria (…)» de los 8 últimos solo queda en modo v1.
 export async function snapshot() {
+  const v1 = !memoriaV2.lista();
   const [appList, pendingTasks, folderList, facts, watches] = await Promise.all([
-    apps.allApps(), tasks.pending(), fs.folders(), memory.recent(8), watch.allWatches(),
+    apps.allApps(), tasks.pending(), fs.folders(), v1 ? memory.recent(8) : [], watch.allWatches(),
   ]);
   const next = pendingTasks.sort((a, b) => a.when - b.when)[0];
   return [
-    'Memoria (hechos que recuerdas del usuario): ' +
-      (facts.length ? facts.map(f => f.fact).join(' · ') : 'nada aún'),
+    ...(v1 ? ['Memoria (hechos que recuerdas del usuario): ' +
+      (facts.length ? facts.map(f => f.fact).join(' · ') : 'nada aún')] : []),
     // TRUNCADA A LA HORA EN PUNTO, y no es estético: esto llevaba SEGUNDOS y va
     // en la cabeza del prompt de sistema. El motor reutiliza el prefijo solo si
     // los tokens del turno empiezan EXACTAMENTE por los ya ingeridos, así que un

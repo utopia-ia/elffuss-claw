@@ -19,6 +19,7 @@ import * as gram from './copilot-grammar.js';
 import * as rutas from './rutas.js';
 import { abrirModal } from './modal.js';
 import { ofrecerInstalar } from './instalar.js';
+import * as memoria from './memory-wire.js';
 
 ofrecerInstalar();   // en el móvil, lo primero: instalarla como app
 
@@ -362,7 +363,7 @@ const bootPromise = new Promise(r => { bootReady = r; });
 // id; restoreQueue las sigue aceptando.
 const persistQueue = () =>
   db.set('kv', 'queue', queue.map(paraGuardar)).catch(() => {});
-const paraGuardar = q => ({ id: q.id, text: q.text, intentos: q.intentos || 0, hard: !!q.hard, propuesta: !!q.propuesta });
+const paraGuardar = q => ({ id: q.id, text: q.text, intentos: q.intentos || 0, hard: !!q.hard, propuesta: !!q.propuesta, ...(q.typed ? { typed: true } : {}) });
 // Lo pendiente ahora mismo (el turno en marcha y lo que espera detrás), en el
 // formato de la cola guardada.
 const pendientesAhora = () => queue.map(paraGuardar);
@@ -374,9 +375,11 @@ const nuevoId = () => (globalThis.crypto?.randomUUID?.() || Date.now().toString(
 // que llegara después —chips, tareas programadas, «Ejecutar propuesta»—.
 // Devuelve el mensaje en la cola (quien lo manda puede colgarle `alCancelar`).
 // `propuesta`: es una propuesta del cerebro (ver executeProposal).
-function send(text, { hard = false, propuesta = false } = {}) {
+// `typed`: el usuario lo ESCRIBIÓ en la caja (ni pegado, ni chip, ni tarea
+// programada, ni propuesta). Solo eso puede fundamentar un recuerdo.
+function send(text, { hard = false, propuesta = false, typed = false } = {}) {
   const el = ui.addMsg('user queued', text);
-  const item = { id: nuevoId(), text, el, hard, propuesta };
+  const item = { id: nuevoId(), text, el, hard, propuesta, typed: typed === true };
   queue.push(item);
   persistQueue();
   if (queue.length > 1) ui.toast(t('queuedAhead', { n: queue.length - 1 }));
@@ -499,7 +502,7 @@ async function vaciarCola() {
       continue;
     }
     ui.setWorking(true);   // ■ «Parar» para este turno, aunque el anterior dijera «Parando…»
-    await process(item.text, item.id, item.hard);
+    await process(item.text, item.id, item.hard, item.typed === true);
     // Orden anti-pérdida: el histórico ya está COMMITEADO dentro de process()
     // (incluye este turno como lastDone). Solo entonces sacamos de la cola.
     // Si el refresco cae entre ambos commits, el mensaje aparece en histórico
@@ -514,7 +517,7 @@ async function vaciarCola() {
 
 // `id` es el del mensaje en la cola: se apunta como lastDone al terminar.
 // `hard`: este mensaje va por Hard Work (se decide al enviarlo, ver send()).
-async function process(text, id = null, hard = false) {
+async function process(text, id = null, hard = false, typed = false) {
   const signal = (turnCtl = new AbortController()).signal;
   const epoca = epocaHistorial;
   if (hard) return processHardWork(text, signal, epoca, id);
@@ -543,7 +546,7 @@ async function process(text, id = null, hard = false) {
       if (ev.type === 'tool_result') ui.addToolResult(ev.tool, ev.result);
       if (ev.type === 'error') { huboError = true; ui.addMsg('assistant err', ev.text); }
       if (ev.type === 'aborted') { parado = true; avisoParado(thinking); }   // parado: aviso, no error
-    }, { signal });
+    }, { signal, typed, modelo: activeModel });
   } catch (e) {
     huboError = true;
     throw e;
@@ -670,7 +673,7 @@ async function restoreQueue() {
   if (!pending.length) { db.set('kv', 'queue', []).catch(() => {}); return; }
   for (const it of pending) {
     const el = ui.addMsg('user queued', it.text);
-    queue.push({ id: it.id || nuevoId(), text: it.text, intentos: it.intentos || 0, el, hard: !!it.hard, propuesta: !!it.propuesta });
+    queue.push({ id: it.id || nuevoId(), text: it.text, intentos: it.intentos || 0, el, hard: !!it.hard, propuesta: !!it.propuesta, typed: it.typed === true });
   }
   ui.toast(t('queueRestored', { n: pending.length }));
   pump();
@@ -771,6 +774,7 @@ async function nuevaConversacion() {
   await db.del('kv', 'history').catch(() => {});
   await db.del('kv', 'queue').catch(() => {});
   agent.history = [];
+  memoria.nuevaConversacion();   // otra conversación: otro id, y «Sin memoria» se apaga
   recargar(boton);
 }
 // «Deshacer» no tira lo que hayas empezado DESPUÉS de 🧹: antes lo sustituía
@@ -824,7 +828,12 @@ async function borrarTodoDelNavegador() {
   fuera(localStorage);
   fuera(sessionStorage);
 }
-ui.setOnWipe(async () => {
+// La memoria compartida (memoria v2) NO entra en «Borrar todo»: es de todas las
+// apps de Elffuss, no solo de Claw. Si el usuario marca «y también la memoria
+// compartida», al terminar se abre el gestor de la memoria, donde se borra en
+// dos pasos y viendo cuántas cosas son (el almacén 'memory' viejo de Claw sí se
+// vacía con lo demás: es una copia de Claw).
+ui.setOnWipe(async ({ tambienMemoria = false } = {}) => {
   await pararParaBorrar();
   await workspace.wipe({ confirm: 'BORRAR' });
   await workspace.forget().catch(() => {});
@@ -832,8 +841,12 @@ ui.setOnWipe(async () => {
   mindLog.olvidar();
   agent.history = [];
   avisarTrasRecargar({ tipo: 'borrado' });
+  if (tambienMemoria && memoria.lista()) { location.assign(memoria.urlGestor()); return; }
   recargar();
 });
+// Se carga ya: la migración de la memoria vieja y el permiso heredado quedan
+// hechos antes del primer turno.
+memoria.cargar();
 
 // El velocímetro (⚡ tok/s) solo tiene algo que decir con el motor propio, que
 // es quien mide (`alMedir`). Con cualquier otro cerebro se monta con null y el
@@ -1043,10 +1056,10 @@ async function autorizarCarpeta() {
 }
 // Lo que escribes en la caja: si Hard Work está puesto, ESE mensaje va por Hard
 // Work y el modo se apaga (es para un mensaje).
-function enviarDesdeLaCaja(text, { desdeCaja = false } = {}) {
+function enviarDesdeLaCaja(text, { desdeCaja = false, tecleado = false } = {}) {
   const hard = desdeCaja && hardMode;
   if (hard) apagarHardWork();
-  send(text, { hard });
+  send(text, { hard, typed: desdeCaja && tecleado });
 }
 ui.init({ onSend: enviarDesdeLaCaja, onStop: stopCurrent, onModelChange: id => changeModel(id, { elegido: true }), onSettingsChanged: refreshModelOptions, onPickFolder: autorizarCarpeta });
 ui.mountDiskChip();   // cuánto ocupan los modelos en este navegador, y cómo vaciarlo
