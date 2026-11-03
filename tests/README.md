@@ -40,6 +40,23 @@ enlaces) · `ux-mente` · `ux-borrar` (🧹 y «Borrar todo») · `ux-modelos` (
 `ux-velocimetro` · `ux-movil` · `ux-copiloto` · `ux-skills` · `ux-ajustes` ·
 `ux-paneles` (Apps, Tareas, Permisos) · `ux-teclado` (menú «/», atajos, chips) ·
 `ux-hardwork` · `ux-modelo` (selector) · `ux-splash` · `ux-ingles` (lo rehecho, en inglés).
+## Memoria compartida (`memoria-v2*.mjs`)
+
+```bash
+node memoria-v2-config.mjs   # sin navegador: config, cabeceras de la página almacén, puente v1
+node memoria-v2.mjs          # Chrome del sistema con los orígenes de verdad (HTTPS local)
+```
+
+Necesitan el motor copiado en `web/js/engine/` con sus módulos de memoria; sin
+ellos fallan, no se saltan. `memoria-v2.mjs` arranca su propio servidor HTTPS
+(`memoria-v2-servidor.mjs`) que contesta como `claw.elffuss.com`, `elffuss.com`,
+`code.elffuss.com`, `blog.elffuss.com` y `evil.test`, con un certificado de
+prueba aceptado solo para esos nombres, y un cerebro de mentira compatible con
+OpenAI que sigue un guion (también hostil). Sin GPU ni pesos. Comprueba la
+migración de la memoria vieja de Claw, que Claw guarda y lee con el motor, que
+lo que no dijo el usuario no se guarda, que la memoria se comparte entre apps y
+no con nadie más, el puente v1 y «Borrar todo».
+
 ## Proxy `/proxy?url=…` (Python, sin red)
 
 ```bash

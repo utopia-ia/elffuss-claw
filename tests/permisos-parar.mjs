@@ -113,8 +113,12 @@ ok('3 · cada una recibe SU respuesta, y la tercera no pregunta (su ámbito ya s
 
 // ── 4 · el cerebro CEO con permisos pendientes ───────────────────────────────
 // Primero tal como lo monta la app: init() sin `allowTool` conserva la lista de
-// solo lectura que le dio kernel.js, y memory.save (escribe) no llega a pedir
+// solo lectura que le dio kernel.js, y app.create (escribe) no llega a pedir
 // permiso: el modelo recibe un ERROR que se lo explica y el ciclo termina.
+// (Era memory.save; con la memoria compartida guardar ya no abre el diálogo de
+// permisos de Claw —el permiso es de la memoria, con su tarjeta—, así que el
+// ejemplo de herramienta que pide permiso pasa a ser crear una app: el de las
+// tareas ya está concedido en el paso 3.)
 await p.evaluate(async () => {
   const ceo = await import('/js/ceo.js');
   window.__ceo = { llamadas: 0, herramienta: true };
@@ -122,7 +126,7 @@ await p.evaluate(async () => {
     workspace: { isReady: async () => true, tree: async () => 'a.txt', list: async () => [], read: async () => '', remove: async () => {}, write: async () => {} },
     provider: () => ({ chat: async () => {
       window.__ceo.llamadas++;
-      return window.__ceo.herramienta ? '```tool\n{"tool":"memory.save","args":{"fact":"x"}}\n```' : 'Una propuesta concreta para el espacio.';
+      return window.__ceo.herramienta ? '```tool\n{"tool":"app.create","args":{"name":"x","html":"<p>x"}}\n```' : 'Una propuesta concreta para el espacio.';
     } }),
     isBusy: () => false,
     onEvent: () => {},
