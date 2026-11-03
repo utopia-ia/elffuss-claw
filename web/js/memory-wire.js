@@ -74,14 +74,19 @@ async function abrir() {
 
 // El permiso «🧠 Memoria» que el usuario ya dio a Claw (permissions.js) se
 // hereda como permiso de Claw sobre la memoria compartida, UNA vez: si ya hay
-// una decisión en el almacén (sí o no), manda esa.
+// una decisión en el almacén (sí o no), manda esa. Queda apuntado que ya se
+// heredó: revocar a Claw en el gestor borra su permiso del almacén, y sin la
+// marca la siguiente carga de Claw lo volvía a dar con el permiso viejo.
+const HEREDADO_KEY = 'elffuss.memoria.permisoHeredado';
 async function heredarPermiso(mem) {
+  try { if (localStorage.getItem(HEREDADO_KEY) === '1') return; } catch { return; }
   let antes = [];
   try { antes = JSON.parse(localStorage.getItem('elffuss.grants') || '[]'); } catch { /* sin almacenamiento */ }
   if (!Array.isArray(antes) || !antes.includes('memory')) return;
   const r = await mem.ready();
-  if (r.mode === 'off' || r.grant) return;
-  await mem.setGrant('granted');
+  if (r.mode === 'off') return;
+  if (!r.grant) await mem.setGrant('granted');
+  try { localStorage.setItem(HEREDADO_KEY, '1'); } catch { /* — */ }
 }
 
 // ── Lo que pinta la interfaz ─────────────────────────────────────────────────
