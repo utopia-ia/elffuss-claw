@@ -78,8 +78,9 @@ function senalDe(x) {
 // El 4º argumento es la señal sola o `{ signal, onPrefill }` (ver senalDe). Sin
 // normalizarlo, con el objeto de opciones `signal.addEventListener` no existía y
 // chat() reventaba con un TypeError antes de generar nada.
-// Lo que ocupa el bloque de memoria del turno (agent.js `reserveTokens`): se
-// descuenta del presupuesto de la historia antes de empaquetarla.
+// `reserveTokens`: lo que vaya en el prompt FUERA de `history`. El bloque de
+// memoria de Claw va dentro de `history` (en el mensaje de estado) y ya cuenta
+// al empaquetar, así que agent.js manda 0 aquí.
 const reservaDe = x => (x && typeof x === 'object' && Number.isFinite(x.reserveTokens) && x.reserveTokens > 0 ? Math.floor(x.reserveTokens) : 0);
 export async function chat(history, system, onToken = () => {}, opciones = null) {
   if (!generator) throw new Error('Modelo no cargado');

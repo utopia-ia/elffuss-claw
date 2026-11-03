@@ -536,10 +536,13 @@ export class Agent {
         out = await this.provider.chat(conContexto(this.history, context, ETIQUETA_CONTEXTO),
           systemPrompt('', { herramientas }),
           t => { if (!signal.aborted) onEvent({ type: 'token', text: t }); },
-          // `reserveTokens`: lo que ocupa el bloque de memoria se descuenta del
-          // presupuesto de la historia antes de ajustarla (motor propio, ONNX,
-          // WebLLM y LiteRT lo leen; los que no, lo ignoran).
-          { signal, reserveTokens: mt?.bloque?.tokens || 0, onPrefill: (hechos, total) => { if (!signal.aborted) onEvent({ type: 'prefill', hechos, total }); } });
+          // `reserveTokens`: sitio para lo que el proveedor mete en el prompt
+          // FUERA de lo que ajusta. El bloque de memoria va DENTRO del mensaje de
+          // estado, que forma parte del array que ajustan el motor propio, ONNX y
+          // WebLLM: ya cuenta ahí, y reservarlo otra vez le quitaba ese mismo
+          // sitio a la historia. Solo LiteRT, que ajusta la conversación anterior
+          // aparte del turno nuevo, lo declara (memoriaFueraDelHistorial) y lo recibe.
+          { signal, reserveTokens: this.provider.memoriaFueraDelHistorial?.() ? (mt?.bloque?.tokens || 0) : 0, onPrefill: (hechos, total) => { if (!signal.aborted) onEvent({ type: 'prefill', hechos, total }); } });
       } catch (e) {
         // Un proveedor que corta con la señal puede LANZAR (fetch abortado,
         // stream cancelado): eso es la parada que se ha pedido, no un fallo.

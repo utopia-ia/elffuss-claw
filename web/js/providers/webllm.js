@@ -81,8 +81,9 @@ const senalDe = x => (x && typeof x.aborted === 'boolean') ? x
 //     y no se emiten;
 //   · el generador pone la bandera a false al ARRANCAR, así que una parada
 //     anterior a su primer trozo se perdería: se vuelve a pedir en cada trozo.
-// Lo que ocupa el bloque de memoria del turno (agent.js `reserveTokens`): se
-// descuenta del presupuesto de la historia antes de empaquetarla.
+// `reserveTokens`: lo que vaya en el prompt FUERA de `history`. El bloque de
+// memoria de Claw va dentro de `history` (en el mensaje de estado) y ya cuenta
+// al empaquetar, así que agent.js manda 0 aquí.
 const reservaDe = x => (x && typeof x === 'object' && Number.isFinite(x.reserveTokens) && x.reserveTokens > 0 ? Math.floor(x.reserveTokens) : 0);
 export async function chat(history, system, onToken = () => {}, signal = null) {
   const reserva = reservaDe(signal);

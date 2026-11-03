@@ -251,7 +251,11 @@ const hastaQue = (p, signal) => !signal ? p : new Promise(r => {
 // normalizarlo, con el objeto de opciones `signal.aborted` no existía y parar no
 // paraba: la respuesta seguía hasta el final.
 // Lo que ocupa el bloque de memoria del turno (agent.js `reserveTokens`): se
-// descuenta del presupuesto de la historia antes de empaquetarla.
+// descuenta del presupuesto de la historia antes de empaquetarla. Aquí sí hace
+// falta: la conversación anterior se empaqueta aparte del turno nuevo (donde va
+// el bloque, en el mensaje de estado), así que el bloque no cuenta en ella.
+// agent.js solo manda la reserva a quien lo declara.
+export const memoriaFueraDelHistorial = () => true;
 const reservaDe = x => (x && typeof x === 'object' && Number.isFinite(x.reserveTokens) && x.reserveTokens > 0 ? Math.floor(x.reserveTokens) : 0);
 // Se guarda para el turno en marcha: la historia solo se empaqueta al rehacer
 // la conversación (rehacerCompactada).
