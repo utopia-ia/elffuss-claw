@@ -48,7 +48,7 @@ ok('una app de otro sitio en la config se rechaza (cross-site)', /cross-site/.te
 const conf = readFileSync(join(RAIZ, 'server', 'memory', 'headers.conf'), 'utf8');
 const csp = (/add_header Content-Security-Policy "([^"]+)" always;/.exec(conf) || [])[1] || '';
 const fa = (/frame-ancestors ([^;"]+)/.exec(csp) || [])[1]?.trim().split(/\s+/) || [];
-ok('headers.conf es para la ruta de la página almacén', new RegExp(`location ${new URL(cfg.storeUrl).pathname} \\{`).test(conf));
+ok('headers.conf es para la ruta de la página almacén', new RegExp(`location \\^~ ${new URL(cfg.storeUrl).pathname} \\{`).test(conf));
 ok('frame-ancestors son EXACTAMENTE los orígenes de la config', JSON.stringify(fa) === JSON.stringify(origenes), fa.join(' '));
 ok("connect-src 'none' (la página no puede mandar la memoria a ninguna parte)", /connect-src 'none'/.test(csp));
 ok("default-src 'none', script-src 'self', base-uri y form-action cerrados",
