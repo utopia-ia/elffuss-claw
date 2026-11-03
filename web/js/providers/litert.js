@@ -250,9 +250,16 @@ const hastaQue = (p, signal) => !signal ? p : new Promise(r => {
 // El 4º argumento es la señal sola o `{ signal, onPrefill }` (ver senalDe). Sin
 // normalizarlo, con el objeto de opciones `signal.aborted` no existía y parar no
 // paraba: la respuesta seguía hasta el final.
+// Lo que ocupa el bloque de memoria del turno (agent.js `reserveTokens`): se
+// descuenta del presupuesto de la historia antes de empaquetarla.
+const reservaDe = x => (x && typeof x === 'object' && Number.isFinite(x.reserveTokens) && x.reserveTokens > 0 ? Math.floor(x.reserveTokens) : 0);
+// Se guarda para el turno en marcha: la historia solo se empaqueta al rehacer
+// la conversación (rehacerCompactada).
+let reservaTurno = 0;
 export async function chat(history, system, onToken = () => {}, opciones = null) {
   if (!engine) throw new Error('Modelo no cargado');
   const signal = senalDe(opciones);
+  reservaTurno = reservaDe(opciones);
   if (signal?.aborted) return '';   // parado antes de empezar: ni se toca la conversación
   const delante = turno;
   let soltar;
@@ -546,7 +553,7 @@ async function rehacerCompactada(history, hasta, system, nuevos, cabecera = CABE
     // El presupuesto de acer-core va en SUS tokens estimados, no en los del modelo.
     const caracteres = previos.reduce((a, m) => a + m.content.length, 0) || 1;
     const suyos = previos.reduce((a, m) => a + estimateTokens(m.content), 0);
-    const presupuesto = Math.max(100, Math.round(ctxTokens * FRAC_HISTORIAL * charsPorToken * suyos / caracteres));
+    const presupuesto = Math.max(100, Math.round(Math.max(0, ctxTokens * FRAC_HISTORIAL - reservaTurno) * charsPorToken * suyos / caracteres));
     // La pregunta de AHORA va al final para que acer-core puntúe con ella; luego se quita.
     const noEsResultado = m => m.role === 'user' && !m.content.startsWith('[resultado');
     const pregunta = ([...nuevos].reverse().find(noEsResultado) || [...history].reverse().find(noEsResultado))?.content || '';

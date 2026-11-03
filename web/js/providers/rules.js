@@ -137,8 +137,12 @@ export async function chat(history) {
   if (mRemember) return call({ tool: 'memory.save', args: { fact: mRemember[1].trim() } });
   if (/(qué|que) recuerdas|tu memoria|mis recuerdos/.test(t))
     return call({ tool: 'memory.list', args: {} });
-  const mForget = text.match(/\bolvida (?:el )?(m[a-z0-9]{6})\b/i);
+  const mForget = text.match(/\bolvida (?:el )?(m[a-z0-9]{4,10})\b/i);
   if (mForget) return call({ tool: 'memory.forget', args: { id: mForget[1] } });
+  // «olvida (que) X» por el texto: la memoria busca el hecho y pregunta con una
+  // tarjeta antes de olvidar nada (memoria v2). Con la v1 solo se olvidaba por id.
+  const mForgetTexto = text.match(/^(?:olvida|olv[ií]date de|forget)(?:\s+(?:que|that))?\s+(.+)/i);
+  if (mForgetTexto) return call({ tool: 'memory.forget', args: { query: mForgetTexto[1].replace(/[?.!]+$/, '').trim() } });
 
   // vault
   const mSecret = text.match(/guarda (?:el |la )?(?:secreto|contraseña) ([\w.@-]+)\s*[:=]\s*(\S+)/i);

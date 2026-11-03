@@ -174,6 +174,10 @@ export const EJEMPLOS = [
   'Usuario: créame una skill para revisar mis finanzas cada mes\nTú:\n```tool\n{"tool": "skill.create", "args": {"name": "Revisor de finanzas", "description": "Ayuda a revisar finanzas mensuales", "instructions": "Cuando el usuario hable de finanzas: 1) pide o lee su archivo de gastos, 2) resume ingresos/gastos por categoría, 3) señala gastos inusuales, 4) propone un ahorro. Sé concreto y usa tablas."}}\n```',
   'Usuario: ¿qué archivos tengo?\nTú:\n```tool\n{"tool": "fs.list", "args": {}}\n```',
   'Usuario: recuérdame en 10 minutos beber agua\nTú:\n```tool\n{"tool": "tasks.add", "args": {"inMinutes": 10, "prompt": "beber agua"}}\n```',
+  // Memoria (v2): un hecho corto, en tercera persona, y solo porque el usuario
+  // lo pide. Va detrás del de tareas para que «recuérdame en 10 minutos» y
+  // «recuerda que» se vean juntos y se distingan.
+  'Usuario: recuerda que soy alérgica a los frutos secos\nTú:\n```tool\n{"tool": "memory.save", "args": {"fact": "Es alérgica a los frutos secos"}}\n```',
 ];
 const familiaEjemplo = e => (e.match(/"tool":\s*"([a-z]+)\./) || [])[1];
 

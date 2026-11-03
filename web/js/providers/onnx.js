@@ -78,6 +78,9 @@ function senalDe(x) {
 // El 4º argumento es la señal sola o `{ signal, onPrefill }` (ver senalDe). Sin
 // normalizarlo, con el objeto de opciones `signal.addEventListener` no existía y
 // chat() reventaba con un TypeError antes de generar nada.
+// Lo que ocupa el bloque de memoria del turno (agent.js `reserveTokens`): se
+// descuenta del presupuesto de la historia antes de empaquetarla.
+const reservaDe = x => (x && typeof x === 'object' && Number.isFinite(x.reserveTokens) && x.reserveTokens > 0 ? Math.floor(x.reserveTokens) : 0);
 export async function chat(history, system, onToken = () => {}, opciones = null) {
   if (!generator) throw new Error('Modelo no cargado');
   const signal = senalDe(opciones);
@@ -85,7 +88,7 @@ export async function chat(history, system, onToken = () => {}, opciones = null)
   // ACE-lite: eviction por relevancia. Presupuesto amplio (LFM2.5 aguanta
   // contexto largo); el tope POR MENSAJE (context.js) evita que un README
   // gigante dispare «Too many tokens requested».
-  const messages = [{ role: 'system', content: system }, ...(await packHistoryAsync(history, 5000))];
+  const messages = [{ role: 'system', content: system }, ...(await packHistoryAsync(history, Math.max(500, 5000 - reservaDe(opciones))))];
   if (signal?.aborted) throw abortado('');
   let streamed = '';
   const streamer = new TextStreamer(generator.tokenizer, {

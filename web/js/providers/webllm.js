@@ -81,11 +81,15 @@ const senalDe = x => (x && typeof x.aborted === 'boolean') ? x
 //     y no se emiten;
 //   · el generador pone la bandera a false al ARRANCAR, así que una parada
 //     anterior a su primer trozo se perdería: se vuelve a pedir en cada trozo.
+// Lo que ocupa el bloque de memoria del turno (agent.js `reserveTokens`): se
+// descuenta del presupuesto de la historia antes de empaquetarla.
+const reservaDe = x => (x && typeof x === 'object' && Number.isFinite(x.reserveTokens) && x.reserveTokens > 0 ? Math.floor(x.reserveTokens) : 0);
 export async function chat(history, system, onToken = () => {}, signal = null) {
+  const reserva = reservaDe(signal);
   signal = senalDe(signal);
   if (!motor) throw new Error('Modelo no cargado');
   if (signal?.aborted) return '';
-  const messages = [{ role: 'system', content: system }, ...(await packHistoryAsync(history, 2500))];
+  const messages = [{ role: 'system', content: system }, ...(await packHistoryAsync(history, Math.max(500, 2500 - reserva)))];
   if (signal?.aborted) return '';
   // Sin el bloque de razonamiento: es un modelo híbrido y el <think> se come el
   // presupuesto de tokens sin aportar nada a lo que el usuario lee.
