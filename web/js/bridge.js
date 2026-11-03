@@ -19,9 +19,20 @@
 //     el HTML de una app se guarda como texto: lo ejecuta, en su caja, quien lo enseña.
 //   · Pedir permisos: el chat pregunta antes de guardar, como Claw (permissions.js), y aquí no hay interfaz.
 //
-// Los registros son idénticos a los de Claw: memoria como tools/memory.js save() ({id: 'm'+6 caracteres, fact
-// hasta 300, at}) y apps como tools/apps.js create() ({name, html, created}, con la misma regla para los
-// nombres genéricos «app» y «boceto»). db.js es el de Claw: mismo nombre, versión y almacenes.
+// Las apps son las de Claw: tools/apps.js create() ({name, html, created}, con la misma regla para los nombres
+// genéricos «app» y «boceto»). db.js es el de Claw: mismo nombre, versión y almacenes.
+//
+// MEMORIA: PUENTE DE TRANSICIÓN (v1 → memoria compartida v2). La memoria ya no vive en el almacén 'memory' de
+// Claw sino en la memoria compartida de Elffuss (web/memory/, motor js/engine/memory*.js), que el chat nuevo usa
+// directamente. Las tres operaciones de memoria de aquí quedan solo para las versiones del chat que aún hablen v1,
+// y en modo «casi solo lectura»:
+//   · memory.list  responde desde la memoria compartida: los 8 hechos activos más relevantes, en la forma de
+//                  siempre {id, fact, at};
+//   · memory.save  NO guarda: deja una PROPUESTA etiquetada «no sale de tus palabras» que el usuario confirma
+//                  con un clic en Memoria (aquí no hay evidencia de lo que el usuario escribió);
+//   · memory.forget se rechaza: olvidar se hace desde Memoria, donde el usuario ve lo que olvida.
+// Las peticiones pasan por el almacén con la identidad de la app 'chat' (permiso, límites y reglas del almacén).
+// Este puente de memoria se retira 30 días después de que el chat publique la memoria v2.
 import * as db from './db.js';
 
 // Solo el chat de producción. Las pruebas abren la página con este mismo origen (resolución de nombres
@@ -47,25 +58,51 @@ let canal = null;
 try { canal = new BroadcastChannel(KIND); } catch { /* sin BroadcastChannel */ }
 const avisa = (store) => { try { canal?.postMessage({ kind: 'changed', store }); } catch { /* — */ } };
 
+// La memoria compartida, abierta en este proceso (este iframe es del mismo origen que la página almacén). Se
+// abre al primer uso; si el motor servido no trae los módulos de memoria, las operaciones de memoria fallan
+// cerradas ('failed') y las de apps siguen igual.
+const APP_V1 = 'chat';          // el único origen permitido aquí es el chat de elffuss.com
+const LISTA_V1 = 8;
+let memoria = null;
+function almacen() {
+  if (!memoria) {
+    memoria = (async () => {
+      const [{ default: cfg }, { openStore }] = await Promise.all([
+        import('../memory/memory.config.js'), import('./engine/memory-store.js')]);
+      return openStore(cfg);
+    })();
+    memoria.catch(() => { memoria = null; });
+  }
+  return memoria;
+}
+async function llama(op, args) {
+  let st;
+  try { st = await almacen(); } catch { throw new Rechazo('failed'); }
+  const r = await st.call(op, args, { app: APP_V1 });
+  if (!r.ok) throw new Rechazo(r.error?.code === 'too_long' ? 'too-large' : r.error?.code === 'rate' ? 'rate' : r.error?.code === 'no_grant' ? 'no-grant' : 'failed');
+  return r.result;
+}
+export const MEMORIA_V1 = Object.freeze({
+  noGuardado: 'Pendiente de confirmar en Memoria · Waiting for confirmation in Memory',
+  olvidaEnMemoria: 'Olvídalo desde Memoria · Forget it from Memory',
+});
+
 const OPS = {
-  'memory.list': { keys: [], run: async () =>
-    (await db.all('memory')).sort((a, b) => a.at - b.at).map(({ id, fact, at }) => ({ id, fact, at })) },
+  'memory.list': { keys: [], run: async () => {
+    const r = await llama('search', { query: '', limit: LISTA_V1 });
+    return (r.items || []).map(({ id, fact, at }) => ({ id, fact, at })).sort((a, b) => a.at - b.at);
+  } },
 
   'memory.save': { keys: ['fact'], run: async ({ fact }) => {
     exige(texto(fact, MAX_FACT), fact && fact.length > MAX_FACT ? 'too-large' : 'bad-request');
-    const id = 'm' + Math.random().toString(36).slice(2, 8);
-    const rec = { id, fact: String(fact).slice(0, MAX_FACT), at: Date.now() };
-    await db.set('memory', id, rec);
-    avisa('memory');
-    return rec;
+    const r = await llama('propose', { fact, label: 'from-content' });
+    // Nunca se dice «guardado»: es una propuesta que el usuario tiene que confirmar.
+    throw new Rechazo(r && r.status === 'noop' ? 'failed' : MEMORIA_V1.noGuardado);
   } },
 
   'memory.forget': { keys: ['id'], run: async ({ id }) => {
     exige(typeof id === 'string' && RE_ID.test(id));
-    const habia = !!(await db.get('memory', id));
-    await db.del('memory', id);
-    if (habia) avisa('memory');
-    return { id, existed: habia };
+    throw new Rechazo(MEMORIA_V1.olvidaEnMemoria);
   } },
 
   'apps.list': { keys: [], run: async () =>
