@@ -1779,9 +1779,17 @@ export function init({ onSend, onStop = () => {}, onModelChange, onSettingsChang
   };
 
   // Historial del prompt: ↑/↓ recuperan lo enviado (como una shell). Persistente.
+  // Con cada entrada se guarda si se ESCRIBIÓ (memoria v2): un mensaje pegado
+  // recuperado con ↑ sigue sin contar como escrito, aunque esta vez no haya
+  // evento de pegar. Las entradas de antes no lo saben: no cuentan (falla cerrada).
   const HKEY = 'elffuss.promptHistory';
+  const HKEY_ESCRITO = 'elffuss.promptHistory.escrito';
   let hist = []; try { hist = JSON.parse(localStorage.getItem(HKEY) || '[]'); } catch { /* corrupto */ }
+  if (!Array.isArray(hist)) hist = [];
+  let escrito = []; try { escrito = JSON.parse(localStorage.getItem(HKEY_ESCRITO) || '[]'); } catch { /* corrupto */ }
+  if (!Array.isArray(escrito) || escrito.length !== hist.length) escrito = hist.map(() => false);
   let hIdx = -1, draft = '';
+  let recuperadoSinEscribir = false;   // en la caja hay una entrada del historial que no se escribió
   $('prompt').addEventListener('keydown', e => {
     if (!$('cmd-menu').hidden) return;             // el menú «/» ya usa ↑/↓
     const inp = e.target;
@@ -1789,10 +1797,12 @@ export function init({ onSend, onStop = () => {}, onModelChange, onSettingsChang
       if (!hist.length) return;
       if (hIdx === -1) { draft = inp.value; hIdx = hist.length; }
       hIdx = Math.max(0, hIdx - 1); inp.value = hist[hIdx]; e.preventDefault();
+      recuperadoSinEscribir = escrito[hIdx] !== true;
       requestAnimationFrame(() => inp.setSelectionRange(inp.value.length, inp.value.length));
     } else if (e.key === 'ArrowDown') {
       if (hIdx === -1) return;
       hIdx++; inp.value = hIdx >= hist.length ? (hIdx = -1, draft) : hist[hIdx]; e.preventDefault();
+      recuperadoSinEscribir = hIdx !== -1 && escrito[hIdx] !== true;
     }
   });
   $('send').addEventListener('click', e => {
@@ -1810,19 +1820,21 @@ export function init({ onSend, onStop = () => {}, onModelChange, onSettingsChang
     const text = $('prompt').value.trim();
     if (!text || text === '/') return;     // un «/» suelto es abrir el menú, no un mensaje
     $('prompt').value = '';
-    if (hist[hist.length - 1] !== text) hist.push(text);
-    if (hist.length > 100) hist = hist.slice(-100);
-    try { localStorage.setItem(HKEY, JSON.stringify(hist)); } catch { /* lleno */ }
-    hIdx = -1; draft = '';
     // Solo lo ESCRITO en la caja puede fundamentar un recuerdo: si se pegó o se
-    // soltó algo en este mensaje, no cuenta como escrito (memoria v2).
-    const tecleado = !pegado;
-    pegado = false;
+    // soltó algo en este mensaje, o se recuperó con ↑ algo que no se escribió,
+    // no cuenta como escrito (memoria v2).
+    const tecleado = !pegado && !recuperadoSinEscribir;
+    pegado = false; recuperadoSinEscribir = false;
+    if (hist[hist.length - 1] !== text) { hist.push(text); escrito.push(tecleado); }
+    else escrito[escrito.length - 1] = escrito[escrito.length - 1] === true && tecleado;
+    if (hist.length > 100) { hist = hist.slice(-100); escrito = escrito.slice(-100); }
+    try { localStorage.setItem(HKEY, JSON.stringify(hist)); localStorage.setItem(HKEY_ESCRITO, JSON.stringify(escrito)); } catch { /* lleno */ }
+    hIdx = -1; draft = '';
     onSend(text, { desdeCaja: true, tecleado });     // solo lo escrito en la caja puede ir por Hard Work
   });
   $('prompt').addEventListener('paste', () => { pegado = true; });
   $('prompt').addEventListener('drop', () => { pegado = true; });
-  $('prompt').addEventListener('input', () => { if (!$('prompt').value) pegado = false; });
+  $('prompt').addEventListener('input', () => { if (!$('prompt').value) { pegado = false; recuperadoSinEscribir = false; } });
   // Chips: botones (antes <span> sin foco). «Autoriza una carpeta» abre el
   // selector de carpetas EN el clic: pasándoselo al modelo, el selector nativo
   // llegaba después de su turno y el navegador ya no lo dejaba abrir.
