@@ -21,7 +21,9 @@ import { abrirModal } from './modal.js';
 import { ofrecerInstalar } from './instalar.js';
 import * as memoria from './memory-wire.js';
 
-ofrecerInstalar();   // en el móvil, lo primero: instalarla como app
+// En el móvil, lo primero: instalarla como app. Fuera del móvil no hay aviso
+// solo: la entrada «Instalar Elffuss Claw como app» está en Ajustes.
+ofrecerInstalar({ app: 'Elffuss Claw', idioma: uiLang });
 
 applyI18n(); // traduce el chrome al idioma del navegador antes de nada
 telemetry.init('elffuss-claw'); // opt-in, apagado por defecto — ver Ajustes

@@ -14,6 +14,7 @@ import * as modelos from './model-storage.js';
 import * as workspace from './workspace.js';
 import * as telemetry from './telemetry.js';
 import * as memoria from './memory-wire.js';
+import { entradaInstalar, textoEntrada } from './instalar.js';
 
 let onSettingsChangedCb = () => {};
 let onSkillInstalledCb = () => {};
@@ -1271,6 +1272,15 @@ export function refreshSettings() {
   // Lo que se consulta a menudo va PRIMERO: qué está gastando y cómo limpiarlo.
   // Los proveedores externos son configuración avanzada y bajan al final.
   panel.appendChild(usageCard());
+  // Instalarla como app: mientras no lo esté (también en el ordenador).
+  const instalarBtn = entradaInstalar(el('button', 'ghost', textoEntrada()));
+  instalarBtn.type = 'button';
+  if (!instalarBtn.hidden) {
+    const card = el('div', 'card col install-card');
+    card.append(instalarBtn);
+    addEventListener('appinstalled', () => { card.hidden = true; }, { once: true });
+    panel.appendChild(card);
+  }
   panel.appendChild(workspaceCard());
   panel.appendChild(memoriaCard());
   // Los modelos EXTERNOS (no locales) van al final, en su propia sección
