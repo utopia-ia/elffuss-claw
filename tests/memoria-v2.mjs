@@ -170,6 +170,14 @@ const estado = (ultima?.messages || []).find((m) => m.role === 'user' && /^CONTE
 const sistema = (ultima?.messages || []).find((m) => m.role === 'system')?.content || '';
 ok('el bloque <memoria> va en el mensaje de estado, con «Vive en Valencia»', /<memoria>/.test(estado) && /Valencia/.test(estado), estado.slice(0, 160));
 ok('…y dice que son datos, no órdenes', /no instrucciones/.test(estado));
+{
+  // La fecha de hoy, local, con el día de la semana y en la forma del bloque
+  // («Hoy es 2026-11-04, miércoles.»), en el mensaje de estado y NO en el sistema.
+  const hoy = await claw.evaluate(() => { const d = new Date(), p = (n) => String(n).padStart(2, '0');
+    return `Hoy es ${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}, ${['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][d.getDay()]}.`; });
+  ok('el estado del turno lleva la fecha de hoy con el día de la semana', estado.includes(hoy), (estado.match(/Hoy es[^\n]*/) || [''])[0] + ' vs ' + hoy);
+  ok('…y la fecha no está en el prompt de sistema (prefijo estable)', !/Hoy es \d{4}-/.test(sistema));
+}
 ok('la línea «Memoria (hechos que recuerdas…)» de la v1 ya no está', !/Memoria \(hechos que recuerdas del usuario\)/.test(estado));
 ok('las reglas de memoria van en el prompt de sistema, sin hechos', /MEMORIA \(/.test(sistema) && /memory\.save/.test(sistema) && !/Valencia/.test(sistema));
 ok('el catálogo enseña las herramientas del motor (memory.forget por id o por texto)', /- memory\.forget\(id, query\)/.test(sistema), (sistema.match(/- memory\.forget\([^)]*\)/) || [''])[0]);

@@ -125,10 +125,14 @@ export async function runTool(name, args, ctx = {}) {
 // Estado real del sistema, inyectado al modelo en cada turno (CONTEXTO AHORA).
 // La hora en punto: estable entre turnos, para que el prefijo del prompt se
 // pueda reutilizar. Ver el comentario de abajo, donde se usa.
-const horaEstable = (loc) => {
+// La fecha va con el texto del motor (memoriaV2.hoy: «Hoy es 2026-11-04,
+// miércoles.»), igual en todas las apps y en la misma forma que las fechas del
+// bloque <memoria>; antes era «4/11/26», sin día de la semana, y el modelo no
+// podía casar «mañana» con «evento 2026-11-05».
+const horaEstable = () => {
   const d = new Date();
   d.setMinutes(0, 0, 0);
-  return d.toLocaleString(loc, { dateStyle: 'short', timeStyle: 'short' });
+  return `${memoriaV2.hoy('es', d.getTime())} Hora: ${String(d.getHours()).padStart(2, '0')}:00.`;
 };
 
 // Con la memoria compartida (v2) los hechos NO van aquí: el turno pide al
@@ -152,7 +156,7 @@ export async function snapshot() {
     // estable toda la sesión; cruzar una hora cuesta UN re-prefill, no uno por
     // turno. Los segundos no los usaba nadie: «ayer» se resuelve con el `ts` del
     // turno en que se dijo (annotateDates en acer-core.js), no con este reloj.
-    'Fecha y hora: ' + horaEstable('es-ES'),
+    horaEstable(),
     'Apps ya creadas: ' + (appList.length ? appList.map(a => a.name).join(', ') : 'ninguna'),
     'App abierta en el visualizador: ' + (apps.currentApp() || 'ninguna'),
     // «ninguna (usa fs.pick_folder)» se leía como una orden: con E4B real, pedir

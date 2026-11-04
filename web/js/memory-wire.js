@@ -57,6 +57,17 @@ export function cargar() {
 }
 export const lista = () => M;
 
+// La fecha de hoy para el estado vivo de cada turno, con el texto del motor
+// (memory-text.js `todayLine`): «Hoy es 2026-11-04, miércoles.», la misma forma
+// que el bloque <memoria> usa para los eventos, así «¿qué tengo mañana?» tiene
+// con qué responderse. Si el motor no ha cargado, la misma frase hecha aquí.
+const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+export function hoy(lang = 'es', now = Date.now()) {
+  if (M?.text?.todayLine) return M.text.todayLine(lang, { now, strings: M.cfg?.strings });
+  const d = new Date(now), p = (n) => String(n).padStart(2, '0');
+  return `Hoy es ${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}, ${DIAS[d.getDay()]}.`;
+}
+
 async function abrir() {
   const [{ default: cfg }, memory, storeMod, cards, ui, core, text] = await Promise.all([
     import('../memory/memory.config.js'),
