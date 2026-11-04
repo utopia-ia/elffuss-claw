@@ -67,6 +67,8 @@ function pinta() {
 function quita() { aviso?.remove(); aviso = null; }
 
 export function ofrecerInstalar() {
+  // Dentro de otra página (elffuss.com la abre en un marco) instalar no le toca a ella: lo ofrece la de fuera.
+  try { if (window.top !== window) return; } catch { return; }
   if (instalada()) {
     navigator.storage?.persist?.().catch(() => {});
     return;
