@@ -810,3 +810,47 @@ body.modo-basico .proposal-needs-model { display: flex; }
   /* El alto crece, así que el espacio entre ellos puede bajar sin apelotonarse. */
   #composer { gap: 6px; }
 }
+
+/* ---------- Imagen, audio y vídeo (media-ui.js): la tarjeta de la herramienta y lo adjuntado ---------- */
+.msg.media-card { display: flex; flex-direction: column; gap: 6px; max-width: 34rem; padding: 10px 12px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 12px; background: var(--bg2); }
+.msg.media-card.is-error { border-left-color: var(--warn); }
+.md-head { display: flex; align-items: center; gap: 8px; }
+.md-head svg, .att-card svg, .att-chip svg, .att-menu svg, .att-btn svg, .mic-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; flex: none; }
+.md-kicker { color: var(--muted); font-size: .78rem; font-weight: 600; letter-spacing: .02em; }
+.md-title { font-size: .95rem; line-height: 1.3; overflow-wrap: anywhere; }
+.md-line { color: var(--muted); font-size: .85rem; }
+.md-meter { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.md-meter i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s ease; }
+.md-meter.is-busy i { width: 35% !important; animation: md-busy 1.4s ease infinite; }
+@keyframes md-busy { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
+.md-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.md-download { display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--fg); text-decoration: none; font-size: .85rem; }
+.md-media { margin: 0; }
+.md-media .media-el { display: block; width: 100%; max-height: 26rem; object-fit: contain; border-radius: 10px; background: var(--bg); }
+.md-media audio.media-el { background: none; }
+
+.att-wrap { position: relative; display: inline-flex; }
+.att-menu { position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 30; display: flex; flex-direction: column; min-width: 12rem; padding: 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg2); box-shadow: 0 8px 24px rgba(0, 0, 0, .35); }
+.att-menu[hidden] { display: none; }
+.att-menu button { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 10px; border: 0; border-radius: 8px; background: none; color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.att-menu button[hidden] { display: none; }
+.att-menu button:hover, .att-menu button:focus-visible { background: var(--line); }
+.att-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0 14px; list-style: none; }
+.att-chips[hidden] { display: none; }
+.att-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 4px 0 10px; border: 1px solid var(--line); border-radius: 99px; background: var(--bg2); font-size: .85rem; }
+.att-chip.is-error { border-color: var(--warn); }
+.att-chip.is-rec svg { color: #e5484d; animation: rec-pulse 1.2s ease-in-out infinite; }
+@keyframes rec-pulse { 50% { opacity: .35; } }
+.att-chip-name { max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.att-chip-state, .att-id { color: var(--muted); font: .75rem/1.2 ui-monospace, monospace; }
+.att-chip-x { display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--muted); cursor: pointer; }
+.att-chip-x svg { width: 13px; height: 13px; }
+.mic-btn.is-rec { background: #e5484d; color: #fff; }
+.att-sent { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.att-card { display: flex; flex-direction: column; gap: 4px; padding: 6px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg2); }
+.att-card.att-doc { flex-direction: row; align-items: flex-start; gap: 8px; padding: 8px 10px; }
+.att-body { display: flex; flex-direction: column; gap: 2px; }
+.att-name { font-size: .85rem; overflow-wrap: anywhere; }
+.att-line { color: var(--muted); font-size: .75rem; }
+.att-card .media-el { display: block; max-width: min(16rem, 100%); max-height: 14rem; border-radius: 8px; }
+.att-card audio.media-el { width: 15rem; }

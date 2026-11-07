@@ -21,6 +21,10 @@ let onSkillInstalledCb = () => {};
 
 const $ = id => document.getElementById(id);
 
+// Si hay adjuntos listos en la caja (media-ui.js): entonces un mensaje sin texto también se envía.
+let hayAdjuntos = () => false;
+export function setHayAdjuntos(fn) { hayAdjuntos = fn; }
+
 // ---------- chat ----------
 export function addMsg(cls, text) {
   const div = document.createElement('div');
@@ -1823,12 +1827,13 @@ export function init({ onSend, onStop = () => {}, onModelChange, onSettingsChang
   });
   let pegado = false;
   $('composer').addEventListener('submit', e => {
+    // Solo adjuntos, sin texto: también se envía (media-ui.js dice si hay alguno listo).
     e.preventDefault();
     // Mientras trabaja, aquí solo se llega con Enter (el ■ no envía): con texto
     // va a la cola como siempre, y sin texto no hace nada —un segundo Enter
     // dado por inercia no debe tirar el trabajo en curso—. Parar es el ■.
     const text = $('prompt').value.trim();
-    if (!text || text === '/') return;     // un «/» suelto es abrir el menú, no un mensaje
+    if ((!text && !hayAdjuntos()) || text === '/') return;     // un «/» suelto es abrir el menú, no un mensaje
     $('prompt').value = '';
     // Solo lo ESCRITO en la caja puede fundamentar un recuerdo: si se pegó o se
     // soltó algo en este mensaje, o se recuperó con ↑ algo que no se escribió,

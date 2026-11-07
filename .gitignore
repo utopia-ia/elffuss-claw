@@ -24,3 +24,6 @@ __pycache__/
 # humo manual contra producción, no forma parte de la suite
 tests/claw-*.mjs
 tests/*.tmp.mjs
+
+# media SDK runtimes: restored by ai-sync.mjs from web/vendor/elffuss-ai/PIN.json, checked byte for byte
+web/vendor/elffuss-ai/runtimes/

@@ -20,6 +20,8 @@ import * as rutas from './rutas.js';
 import { abrirModal } from './modal.js';
 import { ofrecerInstalar } from './instalar.js';
 import * as memoria from './memory-wire.js';
+import { configureMedia, isMediaTool, mediaIdIn } from './tools/media.js';
+import * as mediaUi from './media-ui.js';
 
 // En el móvil, lo primero: instalarla como app. Fuera del móvil no hay aviso
 // solo: la entrada «Instalar Elffuss Claw como app» está en Ajustes.
@@ -365,7 +367,8 @@ const bootPromise = new Promise(r => { bootReady = r; });
 // id; restoreQueue las sigue aceptando.
 const persistQueue = () =>
   db.set('kv', 'queue', queue.map(paraGuardar)).catch(() => {});
-const paraGuardar = q => ({ id: q.id, text: q.text, intentos: q.intentos || 0, hard: !!q.hard, propuesta: !!q.propuesta, ...(q.typed ? { typed: true } : {}) });
+const paraGuardar = q => ({ id: q.id, text: q.text, intentos: q.intentos || 0, hard: !!q.hard, propuesta: !!q.propuesta, ...(q.typed ? { typed: true } : {}),
+  ...(q.attach?.length ? { attach: q.attach, context: q.context } : {}) });
 // Lo pendiente ahora mismo (el turno en marcha y lo que espera detrás), en el
 // formato de la cola guardada.
 const pendientesAhora = () => queue.map(paraGuardar);
@@ -379,9 +382,13 @@ const nuevoId = () => (globalThis.crypto?.randomUUID?.() || Date.now().toString(
 // `propuesta`: es una propuesta del cerebro (ver executeProposal).
 // `typed`: el usuario lo ESCRIBIÓ en la caja (ni pegado, ni chip, ni tarea
 // programada, ni propuesta). Solo eso puede fundamentar un recuerdo.
-function send(text, { hard = false, propuesta = false, typed = false } = {}) {
+// `attach`: lo adjuntado (documentos, fotos, vídeos, una nota de voz), ya leído en este navegador (media-ui.js). Lo que
+// el modelo lee de ello va en `context`, delante del mensaje; la burbuja enseña sus tarjetas, no su texto.
+function send(text, { hard = false, propuesta = false, typed = false, attach = [] } = {}) {
   const el = ui.addMsg('user queued', text);
-  const item = { id: nuevoId(), text, el, hard, propuesta, typed: typed === true };
+  const { kept, context } = mediaUi.attachmentContext(attach);
+  if (kept.length) el.append(mediaUi.attachmentsEl(kept));
+  const item = { id: nuevoId(), text, el, hard, propuesta, typed: typed === true, ...(kept.length ? { attach: kept, context } : {}) };
   queue.push(item);
   persistQueue();
   if (queue.length > 1) ui.toast(t('queuedAhead', { n: queue.length - 1 }));
@@ -504,7 +511,7 @@ async function vaciarCola() {
       continue;
     }
     ui.setWorking(true);   // ■ «Parar» para este turno, aunque el anterior dijera «Parando…»
-    await process(item.text, item.id, item.hard, item.typed === true);
+    await process(item.text, item.id, item.hard, item.typed === true, { attach: item.attach, context: item.context });
     // Orden anti-pérdida: el histórico ya está COMMITEADO dentro de process()
     // (incluye este turno como lastDone). Solo entonces sacamos de la cola.
     // Si el refresco cae entre ambos commits, el mensaje aparece en histórico
@@ -519,7 +526,7 @@ async function vaciarCola() {
 
 // `id` es el del mensaje en la cola: se apunta como lastDone al terminar.
 // `hard`: este mensaje va por Hard Work (se decide al enviarlo, ver send()).
-async function process(text, id = null, hard = false, typed = false) {
+async function process(text, id = null, hard = false, typed = false, { attach = null, context = '' } = {}) {
   const signal = (turnCtl = new AbortController()).signal;
   const epoca = epocaHistorial;
   if (hard) return processHardWork(text, signal, epoca, id);
@@ -545,10 +552,11 @@ async function process(text, id = null, hard = false, typed = false) {
       else if (ev.type === 'token') thinking.tick(ev.text);
       if (ev.type === 'text') { ui.addMsg('assistant', ev.text); if (window.__copilotOpener) { try { window.__copilotEmit(ev.text); } catch { /* */ } } }
       if (ev.type === 'tool') { thinking.tool(ev.call.tool); ui.addTool(ev.call); }
-      if (ev.type === 'tool_result') ui.addToolResult(ev.tool, ev.result);
+      // Las herramientas de medios ya pintan su tarjeta (media-ui.js): el resultado en texto sobra.
+      if (ev.type === 'tool_result' && !isMediaTool(ev.tool)) ui.addToolResult(ev.tool, ev.result);
       if (ev.type === 'error') { huboError = true; ui.addMsg('assistant err', ev.text); }
       if (ev.type === 'aborted') { parado = true; avisoParado(thinking); }   // parado: aviso, no error
-    }, { signal, typed, modelo: activeModel });
+    }, { signal, typed, modelo: activeModel, attach, context });
   } catch (e) {
     huboError = true;
     throw e;
@@ -675,7 +683,9 @@ async function restoreQueue() {
   if (!pending.length) { db.set('kv', 'queue', []).catch(() => {}); return; }
   for (const it of pending) {
     const el = ui.addMsg('user queued', it.text);
-    queue.push({ id: it.id || nuevoId(), text: it.text, intentos: it.intentos || 0, el, hard: !!it.hard, propuesta: !!it.propuesta, typed: it.typed === true });
+    if (it.attach?.length) el.append(mediaUi.attachmentsEl(it.attach));
+    queue.push({ id: it.id || nuevoId(), text: it.text, intentos: it.intentos || 0, el, hard: !!it.hard, propuesta: !!it.propuesta, typed: it.typed === true,
+      ...(it.attach?.length ? { attach: it.attach, context: it.context || '' } : {}) });
   }
   ui.toast(t('queueRestored', { n: pending.length }));
   pump();
@@ -690,7 +700,11 @@ async function restoreHistory() {
     if (m.role === 'user') {
       if (m.content.startsWith('[resultado ')) {
         const nl = m.content.indexOf('\n');
-        ui.addToolResult(m.content.slice(11, nl > 0 ? nl - 1 : undefined), nl > 0 ? m.content.slice(nl + 1) : '');
+        const tool = m.content.slice(11, nl > 0 ? nl - 1 : undefined), res = nl > 0 ? m.content.slice(nl + 1) : '';
+        if (isMediaTool(tool)) mediaUi.restoredMediaCard(tool, res, mediaIdIn(res));
+        else ui.addToolResult(tool, res);
+      } else if (m.attach?.length) {
+        ui.addMsg('user', m.shown ?? '').append(mediaUi.attachmentsEl(m.attach));
       } else if (!m.content.startsWith('[…')) {
         ui.addMsg('user', m.content);
       }
@@ -1062,10 +1076,42 @@ async function autorizarCarpeta() {
 // Lo que escribes en la caja: si Hard Work está puesto, ESE mensaje va por Hard
 // Work y el modo se apaga (es para un mensaje).
 function enviarDesdeLaCaja(text, { desdeCaja = false, tecleado = false } = {}) {
-  const hard = desdeCaja && hardMode;
+  const attach = desdeCaja ? mediaUi.takeAttachments() : [];
+  const hard = desdeCaja && hardMode && !attach.length;
   if (hard) apagarHardWork();
-  send(text, { hard, typed: desdeCaja && tecleado });
+  send(text, { hard, typed: desdeCaja && tecleado, attach });
 }
+
+// ---- imagen, audio y vídeo (tools/media.js) ----
+// Mientras corre una tarea de medios, el cerebro suelta la gráfica (en un móvil la pestaña tiene unos 2 GB) y vuelve
+// después. La vuelta es una carga como otra: la cola la espera (cargaEnCurso) antes del turno siguiente.
+let soltadoPorMedios = null;
+configureMedia({
+  lang: () => (uiLang() === 'es' ? 'es' : 'en'),
+  async unloadLlm() {
+    const mod = agent.provider;
+    if (!mod || mod === rules || typeof mod.unload !== 'function') return;
+    soltadoPorMedios = { mod, id: activeModel };
+    try { await mod.unload(); } catch (e) { console.warn('[medios] no se pudo soltar el cerebro', e); }
+    ui.modelStatus('loading', { gpu: isLocal(activeModel) && realGPU, id: activeModel });
+  },
+  reloadLlm() {
+    const s = soltadoPorMedios;
+    soltadoPorMedios = null;
+    if (!s) return;
+    const carga = s.mod.load((p) => ui.modelProgress(p)).then(
+      () => { ui.modelProgress(null); ui.modelStatus(isLocal(s.id) && realGPU ? 'gpu' : 'on'); },
+      (e) => { ui.modelProgress(null); console.warn('[medios] el cerebro no volvió a cargar', e); return changeModel(s.id, { volviendo: true }); });
+    cargaEnCurso = carga.then(() => {}, () => {});
+    return carga;
+  },
+  consent: (q) => ui.askPermission('media', mediaUi.consentMeta(q), ''),
+  card: (call) => mediaUi.mediaCard(call, { onStop: stopCurrent }),
+});
+mediaUi.mountComposer({
+  onVoiceText: (text, voice) => send(text, { attach: [voice] }),
+});
+ui.setHayAdjuntos(mediaUi.hasReadyAttachments);
 ui.init({ onSend: enviarDesdeLaCaja, onStop: stopCurrent, onModelChange: id => changeModel(id, { elegido: true }), onSettingsChanged: refreshModelOptions, onPickFolder: autorizarCarpeta });
 ui.mountDiskChip();   // cuánto ocupan los modelos en este navegador, y cómo vaciarlo
 // Botón «liberar el modelo» del panel de consumo: suelta la RAM sin recargar.

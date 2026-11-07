@@ -5,6 +5,8 @@ import { crearRouter, bloqueEjemplos } from './tool-router.js';
 import { t } from './i18n.js';
 import * as telemetry from './telemetry.js';
 import * as memoria from './memory-wire.js';
+import { isMediaTool, MEDIA_ALIASES } from './tools/media.js';
+import { mediaRule, MEDIA_KEYS } from './tools/media-tools.js';
 
 const MAX_STEPS = 6;
 
@@ -79,7 +81,8 @@ Cómo actuar:
    · Haz lo que pide AHORA: no retomes ni rehagas una tarea anterior (no vuelvas a crear una app ya hecha) si no te lo pide.
    · Si se entiende lo que quiere, HAZLO ya. Lo que falte y no sea imprescindible, asúmelo (lo ya dicho, o lo más habitual) y dilo en una línea; no preguntes gustos ni preferencias que no hagan falta.
    · Nunca digas que has hecho algo («he preparado…», «he creado…») si no has llamado a la herramienta en este turno.
-9) Si quiere una skill CONCRETA de internet: si no tienes su URL en la conversación, web.search; luego skill.install con una URL que haya salido en los resultados. NUNCA inventes una URL. No la imites con skill.create ni digas que no se puede instalar.${bloqueMemoria()}${bloqueEjemplos(RECORTAR_EJEMPLOS ? herramientas : null)}${skillsPromptBlock()}`;
+9) Si quiere una skill CONCRETA de internet: si no tienes su URL en la conversación, web.search; luego skill.install con una URL que haya salido en los resultados. NUNCA inventes una URL. No la imites con skill.create ni digas que no se puede instalar.
+10) Imágenes, música, voz y vídeo los haces SOLO con image.generate, audio.music, audio.sfx, audio.speak, video.animate y video.generate (corren en este navegador; web.images solo BUSCA fotos de otros). El prompt de imagen, música, efectos y vídeo va en INGLÉS; el texto de audio.speak, en el idioma del usuario. ${mediaRule('es')}${bloqueMemoria()}${bloqueEjemplos(RECORTAR_EJEMPLOS ? herramientas : null)}${skillsPromptBlock()}`;
 }
 
 // Las reglas de la memoria compartida (las del motor, siempre los mismos bytes:
@@ -229,7 +232,7 @@ function looseToolCall(raw) {
   const am = raw.match(/"args"\s*:\s*\{/);
   const body = am ? raw.slice(am.index + am[0].length) : raw;
   const args = {};
-  for (const key of ['path', 'content', 'name', 'html', 'prompt', 'text', 'search', 'replace', 'query', 'key', 'value', 'url']) {
+  for (const key of new Set(['path', 'content', 'name', 'html', 'prompt', 'text', 'search', 'replace', 'query', 'key', 'value', 'url', ...MEDIA_KEYS])) {
     const km = body.match(new RegExp('"' + key + '"\\s*:\\s*"'));
     if (!km) continue;
     // El cierre REAL se elige mirando todos los candidatos y quedándose con el
@@ -261,7 +264,7 @@ function looseToolCall(raw) {
     try { val = JSON.parse('"' + val.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t') + '"'); } catch { /* crudo */ }
     args[key] = val;
   }
-  for (const key of ['inMinutes', 'offset', 'limit', 'depth']) {
+  for (const key of ['inMinutes', 'offset', 'limit', 'depth', 'seconds', 'seed', 'steps']) {
     const nm = body.match(new RegExp('"' + key + '"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)'));
     if (nm) args[key] = Number(nm[1]);
   }
@@ -473,22 +476,26 @@ export class Agent {
   // defecto false: si nadie lo dice, no cuenta.
   // `modelo` (opcional): el id del cerebro activo («engine:lfm3-1.7b», …). Con él
   // la memoria dimensiona su bloque según el contexto del modelo en el registro.
-  async handle(userText, onEvent, { signal: deFuera = null, permitir = null, typed = false, modelo = null } = {}) {
+  async handle(userText, onEvent, { signal: deFuera = null, permitir = null, typed = false, modelo = null, attach = null, context = '' } = {}) {
     const aborter = (this._aborter = new AbortController());
     if (deFuera?.aborted) { onEvent({ type: 'aborted', text: t('stopped') }); return; }
     const alAbortar = () => aborter.abort();
     deFuera?.addEventListener?.('abort', alAbortar, { once: true });
-    try { return await this._turno(userText, onEvent, aborter.signal, permitir, { typed, modelo }); }
+    try { return await this._turno(userText, onEvent, aborter.signal, permitir, { typed, modelo, attach, context }); }
     finally { deFuera?.removeEventListener?.('abort', alAbortar); }
   }
 
-  async _turno(userText, onEvent, signal, permitir = null, { typed = false, modelo = null } = {}) {
+  async _turno(userText, onEvent, signal, permitir = null, { typed = false, modelo = null, attach = null, context = '' } = {}) {
     const parado = () => onEvent({ type: 'aborted', text: t('stopped') });
     // La marca temporal se pone AL AÑADIR, que es el único momento en que se
     // sabe: el gestor de contexto resuelve «ayer» con la fecha del turno en que
     // se dijo, no con la de ahora (ver annotateDates en acer-core.js). Sin esto
     // la anotación se calla, que es lo correcto, pero no sirve para nada.
-    this.history.push({ role: 'user', content: userText, ts: Date.now(), ...(typed === true ? { typed: true } : {}) });
+    // Con adjuntos, el modelo lee su texto o sus ids delante del mensaje (`context`); la burbuja enseña `shown` y sus
+    // tarjetas. Un mensaje con adjuntos no cuenta como escrito para la memoria: el texto de un documento no es la
+    // palabra del usuario (falla cerrada).
+    if (context) this.history.push({ role: 'user', content: `${context}\n\n${userText || t('attached')}`, shown: userText, attach, ts: Date.now() });
+    else this.history.push({ role: 'user', content: userText, ts: Date.now(), ...(typed === true ? { typed: true } : {}) });
     // La memoria del turno (memoria v2): el bloque <memoria> se pide UNA vez y se
     // reutiliza en cada paso; la evidencia es lo que el usuario escribió. Sin
     // memoria v2 (motor sin esos módulos) es null y todo sigue como antes.
@@ -576,6 +583,7 @@ export class Agent {
       }
       done.push(sig);
 
+      if (Object.hasOwn(MEDIA_ALIASES, call.tool)) call.tool = MEDIA_ALIASES[call.tool];
       onEvent({ type: 'tool', call });
       let result;
       if (permitir && !permitir(call.tool)) {
@@ -613,6 +621,13 @@ export class Agent {
       // (la instalaba otra vez desde otra URL, abría el selector de carpetas).
       if (['app.create', 'app.open', 'skill.install'].includes(call.tool) && !resultStr.startsWith('ERROR')) {
         await responder(t('done', { result: resultStr }));
+        return;
+      }
+      // Una imagen, un audio o un vídeo: la tarjeta es la respuesta, y el turno acaba sin otro paso del modelo (que
+      // vuelve a cargarse en la gráfica). También si aquí no se puede hacer, o el usuario no quiso descargarlo.
+      if (isMediaTool(call.tool) && !resultStr.startsWith('ERROR')) {
+        await responder(/\b(img|aud|vid)-[a-z2-9]{4}\b/.test(resultStr) ? t('mdDoneLine')
+          : /no ha permitido|did not allow/.test(resultStr) ? t('mdDeniedLine') : resultStr);
         return;
       }
     }

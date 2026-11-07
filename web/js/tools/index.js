@@ -8,7 +8,8 @@ import * as memory from './memory.js';
 import * as watch from './watch.js';
 import * as skills from '../skills.js';
 import * as memoriaV2 from '../memory-wire.js';
-import { t } from '../i18n.js';
+import { t, uiLang } from '../i18n.js';
+import { mediaToolEntries, MEDIA_ALIASES } from './media.js';
 
 export { fs, apps, vault, tasks, web, memory, watch };
 
@@ -43,6 +44,9 @@ export const TOOLS = {
   'memory.save':   { desc: 'Recordar un hecho sobre el usuario PARA SIEMPRE (memoria persistente)', params: { fact: 'el hecho' }, run: (a, ctx) => memory.save(a, ctx) },
   'memory.list':   { desc: 'Ver todo lo recordado', params: {}, run: (a, ctx) => memory.listFacts(a, ctx) },
   'memory.forget': { desc: 'Olvidar un hecho por id', params: { id: 'id del hecho' }, run: (a, ctx) => memory.forget(a, ctx) },
+  // Imagen, música, voz y vídeo, hechos en este navegador con el SDK de elffuss-ai (tools/media.js). La descripción es
+  // la del chat de elffuss.com, en el idioma de la interfaz: pide el prompt en inglés, salvo audio.speak.
+  ...mediaToolEntries(uiLang() === 'es' ? 'es' : 'en'),
 };
 
 // Las tres herramientas de memoria tal como las define el motor cuando la
@@ -117,6 +121,8 @@ span{position:absolute;bottom:0;left:0;right:0;font-size:.6rem;color:#c9d1d9;bac
 // dejaba de esperar (agent.js, hastaQueParen) pero la descarga seguía por
 // detrás hasta el final. (Elffuss Code hace lo mismo con terminal.run.)
 export async function runTool(name, args, ctx = {}) {
+  // Otros nombres que un modelo usa para las herramientas de medios (generate_image, tts…).
+  if (!TOOLS[name] && Object.hasOwn(MEDIA_ALIASES, name)) name = MEDIA_ALIASES[name];
   const tool = TOOLS[name];
   if (!tool) throw new Error(t('toolUnknown', { name }));
   return tool.run(args || {}, ctx);

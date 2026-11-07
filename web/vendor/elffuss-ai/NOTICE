@@ -1,0 +1,54 @@
+Elffuss AI
+Copyright 2026 UtopiaIA
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This repository includes or adapts third-party software.
+
+runonweb (https://github.com/midudev/runonweb.ai, commit 878f193)
+  Copyright (c) 2026 Miguel Ángel Durán. MIT License, see LICENSES/MIT-runonweb.txt.
+  Adapted in sdk/core/device.js, sdk/core/queue.js, sdk/core/tf-env.js,
+  sdk/core/ort-env.js, sdk/detect/decode.js and sdk/ocr/dict.js. Each file says
+  which parts, and where they come from.
+
+Pillow (https://github.com/python-pillow/Pillow)
+  Copyright © 1997-2011 by Secret Labs AB; © 1995-2011 by Fredrik Lundh and contributors;
+  © 2010 by Jeffrey A. Clark and contributors. MIT-CMU License, see LICENSES/MIT-CMU-Pillow.txt.
+  resampleWeights() in sdk/remove-bg/mask.js follows its bilinear resampling
+  (src/libImaging/Resample.c, precompute_coeffs).
+
+Served with the sites from vendor/, unmodified unless noted. Each licence file is
+kept and served next to its files; vendor/manifest.json pins every byte. These
+runtimes and their licence files are not in the source repository: scripts/vendor.mjs
+--fetch downloads them by exact version and checks them against the manifest.
+  Transformers.js 4.3.1 (@huggingface/transformers) - Hugging Face - Apache License 2.0.
+    dist/transformers.web.min.js bundles two libraries of the same authors:
+      @huggingface/jinja 0.5.10 - Copyright (c) 2023 Hugging Face - MIT License;
+      @huggingface/tokenizers 0.2.0 - Hugging Face - Apache License 2.0.
+    Their licences go to vendor/@huggingface/transformers@4.3.1/bundled/ and are served
+    next to the file. The sites serve a modified copy of the file: at build time the two
+    import specifiers that name ONNX Runtime are rewritten to point at the bundled ONNX
+    Runtime Web, and a first line says that the file was modified. Nothing else changes.
+  ONNX Runtime Web 1.30.0 (onnxruntime-web) - Microsoft Corporation - MIT License.
+    The npm package has no licence file: LICENSE.txt and ThirdPartyNotices.txt are taken
+    from the v1.30.0 tag of github.com/microsoft/onnxruntime. Its WebAssembly includes
+    Eigen (Mozilla Public License 2.0). Source code: https://github.com/microsoft/onnxruntime/tree/v1.30.0
+    and, for Eigen, the archive that release builds with (named in its cmake/deps.txt):
+    https://github.com/eigen-mirror/eigen/archive/1d8b82b0740839c0de7f1242a3585e3390ff5f33.zip
+  PDF.js 6.4.299 (pdfjs-dist) - Mozilla Foundation - Apache License 2.0.
+    Bundled decoders: OpenJPEG (BSD-2-Clause), PDFium JBIG2 (BSD-3-Clause), qcms (MIT).
+    Standard fonts: Foxit (BSD-3-Clause, PDFium Authors) and Liberation (SIL Open Font
+    License 1.1). ICC profile: CC0 1.0.
+
+The OCR in sdk/ocr/det.js, sdk/ocr/crop.js and sdk/ocr/rec.js follows the DB
+post-processing, the rotated crop and the CTC decoding of PaddleOCR
+(https://github.com/PaddlePaddle/PaddleOCR), Apache License 2.0. No PaddleOCR code
+is copied.
+
+Used only to draw test fixtures, never served:
+  Archivo (tests/fonts/archivo-latin.woff2) - The Archivo Project Authors - SIL Open
+    Font License 1.1, see tests/fonts/OFL-Archivo.txt.
+
+Model weights are not part of this repository and are not redistributed. The apps
+download them from their original Hugging Face repositories at a pinned revision.
+Their licences are listed in registry/tasks.json and on each page.

@@ -1,0 +1,111 @@
+{
+ "schema": 1,
+ "tasks": {
+  "speech-to-text": {
+   "default": "speech-to-text/whisper-base"
+  }
+ },
+ "models": {
+  "speech-to-text/whisper-base": {
+   "task": "speech-to-text",
+   "name": {
+    "es": "Whisper base",
+    "en": "Whisper base"
+   },
+   "license": "Apache-2.0",
+   "author": "onnx-community",
+   "base": {
+    "name": "whisper-base",
+    "author": "OpenAI",
+    "url": "https://huggingface.co/openai/whisper-base",
+    "license": "Apache-2.0"
+   },
+   "flag": null,
+   "redistributes": true,
+   "runtime": "transformers.js",
+   "pipeline": "automatic-speech-recognition",
+   "parts": {
+    "main": {
+     "repo": "onnx-community/whisper-base",
+     "revision": "27a07b4b52b3a4c5886134bb4320e93e1a4bbc7c",
+     "license": "Apache-2.0",
+     "author": "onnx-community",
+     "files": {
+      "config.json": {
+       "size": 2243,
+       "gitOid": "ce7faf5d5e56e82d4800e55f524582a525639ff7"
+      },
+      "generation_config.json": {
+       "size": 3832,
+       "gitOid": "a57cdbf036979f80bb7ff092a0fee6256a81d329"
+      },
+      "onnx/decoder_model_merged.onnx": {
+       "size": 208521528,
+       "sha256": "514903744bb1b45803ec571af99b31110491c6f77b0a154825866995fb124b73"
+      },
+      "onnx/decoder_model_merged_quantized.onnx": {
+       "size": 53693315,
+       "sha256": "fa3ef9902734ce5ae6f9ef2bdb2ba9a6c4b5785b09f4f420ce036573dc9d090b"
+      },
+      "onnx/encoder_model.onnx": {
+       "size": 82468078,
+       "sha256": "a9f3b752833b49e880dec91ee5b6d936112be7c3ea07c221024ba493439f46fe"
+      },
+      "onnx/encoder_model_quantized.onnx": {
+       "size": 23201314,
+       "sha256": "5862993336bf33acd23736071aae2b32261d3b1b2f37780194460d4ef974dd46"
+      },
+      "preprocessor_config.json": {
+       "size": 339,
+       "gitOid": "91876762a536a746d268353c5cba57286e76b058"
+      },
+      "tokenizer.json": {
+       "size": 2480466,
+       "gitOid": "1e95340ff836fad1b5932e800fb7b8c5e6d78a74"
+      },
+      "tokenizer_config.json": {
+       "size": 282682,
+       "gitOid": "25be523be5ac50a7671a77f55acba082459d6314"
+      }
+     }
+    }
+   },
+   "devices": {
+    "webgpu": [
+     {
+      "dtype": "fp32",
+      "files": [
+       "main:config.json",
+       "main:generation_config.json",
+       "main:preprocessor_config.json",
+       "main:tokenizer.json",
+       "main:tokenizer_config.json",
+       "main:onnx/encoder_model.onnx",
+       "main:onnx/decoder_model_merged.onnx"
+      ],
+      "bytes": 293759168
+     }
+    ],
+    "wasm": [
+     {
+      "dtype": "q8",
+      "files": [
+       "main:config.json",
+       "main:generation_config.json",
+       "main:preprocessor_config.json",
+       "main:tokenizer.json",
+       "main:tokenizer_config.json",
+       "main:onnx/encoder_model_quantized.onnx",
+       "main:onnx/decoder_model_merged_quantized.onnx"
+      ],
+      "bytes": 79664191
+     }
+    ]
+   },
+   "notes": {
+    "es": null,
+    "en": null
+   }
+  }
+ }
+}
