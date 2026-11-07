@@ -20,20 +20,9 @@
   "text-to-image": {
    "default": "text-to-image/sana-sprint-0.6b"
   },
-  "text-to-music": {
-   "default": "text-to-music/stable-audio-3-small-music",
-   "module": "audio"
-  },
-  "text-to-sfx": {
-   "default": "text-to-sfx/stable-audio-3-small-sfx",
-   "module": "audio"
-  },
-  "text-to-speech": {
-   "default": "text-to-speech/kokoro-82m",
-   "module": "audio"
-  },
   "text-to-video": {
-   "default": "text-to-video/wan2.1-t2v-1.3b-rcm"
+   "default": "text-to-video/wan2.1-t2v-1.3b-rcm",
+   "module": "video-gen"
   }
  },
  "models": {
@@ -531,14 +520,6 @@
        "size": 890,
        "gitOid": "b9834570dc12b608f336a00e3f81658d17a85b6c"
       },
-      "text_encoder/model-00001-of-00002.safetensors": {
-       "size": 4988024144,
-       "sha256": "e909230aabafad02d097c7dc02f2ae062b4e6b0593477c1f07679d277e09ce71"
-      },
-      "text_encoder/model-00002-of-00002.safetensors": {
-       "size": 240691624,
-       "sha256": "48e14f6b7a917e54cabc4ff2047ac2bfe0dae663e771eed3a8acf4ea27dcac18"
-      },
       "text_encoder/model.safetensors.index.json": {
        "size": 22495,
        "gitOid": "36d550130eb056ee9c28e438c0e3d1b28fddab84"
@@ -563,17 +544,9 @@
        "size": 648,
        "gitOid": "e0d55e9165c1992b9c98e16afeb397548e705f57"
       },
-      "transformer/diffusion_pytorch_model.safetensors": {
-       "size": 1187078584,
-       "sha256": "9069dd697395b96a59d1f74837461f7aeb3d95e55b67fa85c9f31c9106b65e87"
-      },
       "vae/config.json": {
        "size": 1280,
        "gitOid": "e265030c18bc640fa24267beb2a92c3a187cba5b"
-      },
-      "vae/diffusion_pytorch_model.safetensors": {
-       "size": 1249044836,
-       "sha256": "dfd991d1b54ffabf22745c5885589d8f2a7bc59930d95d92bd741c4fc64454bb"
       }
      }
     },
@@ -644,301 +617,6 @@
     "en": "It understands descriptions in English best."
    }
   },
-  "text-to-music/stable-audio-3-small-music": {
-   "task": "text-to-music",
-   "name": {
-    "es": "Stable Audio 3 Small Music",
-    "en": "Stable Audio 3 Small Music"
-   },
-   "license": "Stability AI Community License",
-   "author": "stabilityai",
-   "base": {
-    "name": "Stable Audio 3 Small Music",
-    "author": "Stability AI",
-    "url": "https://huggingface.co/stabilityai/stable-audio-3-small-music",
-    "license": "Stability AI Community License"
-   },
-   "flag": null,
-   "redistributes": false,
-   "runtime": "onnxruntime-web",
-   "pipeline": null,
-   "parts": {
-    "sa3": {
-     "repo": "stabilityai/stable-audio-3-optimized",
-     "revision": "30cb2644da54bfa63275d1bc7f1fa67fc718680f",
-     "license": "Stability AI Community License",
-     "author": "stabilityai",
-     "files": {
-      "onnx/sa3-sm-music/dit_fp16.onnx": {
-       "size": 921133617,
-       "sha256": "86fd5780edfbe1d4e6758ce8db0c184821783bb4754ba99fd778d87bab277731"
-      },
-      "onnx/same-s/dec_bf16_limiter.onnx": {
-       "size": 218683479,
-       "sha256": "995d40d56e16060340b150291cd4e03f4d9f703d62aab6b0926923c4ea60f84b"
-      },
-      "onnx/t5gemma/encoder.onnx": {
-       "size": 620393530,
-       "sha256": "dc79684b14c9d5647bf3e7870f388837ac4b8d6708ea3ead82a37a0b39803084"
-      },
-      "tokenizer.model": {
-       "size": 4241003,
-       "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2"
-      }
-     }
-    }
-   },
-   "devices": {
-    "webgpu": [
-     {
-      "when": "shader-f16",
-      "dtype": "fp16",
-      "files": [
-       "sa3:tokenizer.model",
-       "sa3:onnx/t5gemma/encoder.onnx",
-       "sa3:onnx/sa3-sm-music/dit_fp16.onnx",
-       "sa3:onnx/same-s/dec_bf16_limiter.onnx"
-      ],
-      "bytes": 1764451629
-     }
-    ]
-   },
-   "notes": {
-    "es": "El modelo entiende descripciones en inglés: género, instrumentos, ambiente y tempo (por ejemplo «120 BPM»). Hace música instrumental, sin voces inteligibles.",
-    "en": "The model understands descriptions in English: genre, instruments, mood and tempo (for example \"120 BPM\"). It makes instrumental music, without intelligible vocals."
-   },
-   "terms": [
-    {
-     "name": "Stability AI Community License",
-     "url": "https://stability.ai/license",
-     "file": "LICENSES/Stability-AI-Community-License.md"
-    },
-    {
-     "name": "Gemma Terms of Use",
-     "url": "https://ai.google.dev/gemma/terms",
-     "file": "LICENSES/Gemma-Terms-of-Use.md",
-     "scope": "onnx/t5gemma/encoder.onnx"
-    }
-   ]
-  },
-  "text-to-sfx/stable-audio-3-small-sfx": {
-   "task": "text-to-sfx",
-   "name": {
-    "es": "Stable Audio 3 Small SFX",
-    "en": "Stable Audio 3 Small SFX"
-   },
-   "license": "Stability AI Community License",
-   "author": "stabilityai",
-   "base": {
-    "name": "Stable Audio 3 Small SFX",
-    "author": "Stability AI",
-    "url": "https://huggingface.co/stabilityai/stable-audio-3-small-sfx",
-    "license": "Stability AI Community License"
-   },
-   "flag": null,
-   "redistributes": false,
-   "runtime": "onnxruntime-web",
-   "pipeline": null,
-   "parts": {
-    "sa3": {
-     "repo": "stabilityai/stable-audio-3-optimized",
-     "revision": "30cb2644da54bfa63275d1bc7f1fa67fc718680f",
-     "license": "Stability AI Community License",
-     "author": "stabilityai",
-     "files": {
-      "onnx/sa3-sm-sfx/dit_fp16.onnx": {
-       "size": 921133617,
-       "sha256": "8154582d5c8e7efc7154469642cb75ce37bb928e2e7658388e910f7ce75b476f"
-      },
-      "onnx/same-s/dec_bf16_limiter.onnx": {
-       "size": 218683479,
-       "sha256": "995d40d56e16060340b150291cd4e03f4d9f703d62aab6b0926923c4ea60f84b"
-      },
-      "onnx/t5gemma/encoder.onnx": {
-       "size": 620393530,
-       "sha256": "dc79684b14c9d5647bf3e7870f388837ac4b8d6708ea3ead82a37a0b39803084"
-      },
-      "tokenizer.model": {
-       "size": 4241003,
-       "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2"
-      }
-     }
-    }
-   },
-   "devices": {
-    "webgpu": [
-     {
-      "when": "shader-f16",
-      "dtype": "fp16",
-      "files": [
-       "sa3:tokenizer.model",
-       "sa3:onnx/t5gemma/encoder.onnx",
-       "sa3:onnx/sa3-sm-sfx/dit_fp16.onnx",
-       "sa3:onnx/same-s/dec_bf16_limiter.onnx"
-      ],
-      "bytes": 1764451629
-     }
-    ]
-   },
-   "notes": {
-    "es": "El modelo entiende descripciones en inglés: qué suena, cómo y dónde (por ejemplo «una puerta de madera que se cierra de golpe en un pasillo de piedra»).",
-    "en": "The model understands descriptions in English: what makes the sound, how and where (for example \"a wooden door slamming shut in a stone hallway\")."
-   },
-   "terms": [
-    {
-     "name": "Stability AI Community License",
-     "url": "https://stability.ai/license",
-     "file": "LICENSES/Stability-AI-Community-License.md"
-    },
-    {
-     "name": "Gemma Terms of Use",
-     "url": "https://ai.google.dev/gemma/terms",
-     "file": "LICENSES/Gemma-Terms-of-Use.md",
-     "scope": "onnx/t5gemma/encoder.onnx"
-    }
-   ]
-  },
-  "text-to-speech/kokoro-82m": {
-   "task": "text-to-speech",
-   "name": {
-    "es": "Kokoro 82M",
-    "en": "Kokoro 82M"
-   },
-   "license": "Apache-2.0",
-   "author": "onnx-community",
-   "base": {
-    "name": "Kokoro 82M",
-    "author": "hexgrad",
-    "url": "https://huggingface.co/hexgrad/Kokoro-82M",
-    "license": "Apache-2.0"
-   },
-   "flag": null,
-   "redistributes": false,
-   "runtime": "onnxruntime-web",
-   "pipeline": null,
-   "parts": {
-    "main": {
-     "repo": "onnx-community/Kokoro-82M-v1.0-ONNX",
-     "revision": "1939ad2a8e416c0acfeecc08a694d14ef25f2231",
-     "license": "Apache-2.0",
-     "author": "onnx-community",
-     "files": {
-      "onnx/model_quantized.onnx": {
-       "size": 92361116,
-       "sha256": "fbae9257e1e05ffc727e951ef9b9c98418e6d79f1c9b6b13bd59f5c9028a1478"
-      },
-      "onnx/model.onnx": {
-       "size": 325532232,
-       "sha256": "8fbea51ea711f2af382e88c833d9e288c6dc82ce5e98421ea61c058ce21a34cb"
-      },
-      "tokenizer.json": {
-       "size": 3497,
-       "gitOid": "4280f55fc1c32211bc9bb4d55545759a00054ecd"
-      },
-      "voices/af_bella.bin": {
-       "size": 522240,
-       "sha256": "f69d836209b78eb8c66e75e3cda491e26ea838a3674257e9d4e5703cbaf55c8b"
-      },
-      "voices/af_heart.bin": {
-       "size": 522240,
-       "sha256": "d583ccff3cdca2f7fae535cb998ac07e9fcb90f09737b9a41fa2734ec44a8f0b"
-      },
-      "voices/af_nicole.bin": {
-       "size": 522240,
-       "sha256": "cd2191ab31b914ed7b318416b0e4440fdf392ddad9106a060819aa600a64f59a"
-      },
-      "voices/am_fenrir.bin": {
-       "size": 522240,
-       "sha256": "c27989f741f7ee34d273a39d8a595cc0837d35f5ced9a29b7cc162614616df43"
-      },
-      "voices/am_michael.bin": {
-       "size": 522240,
-       "sha256": "1d1f21dd8da39c30705cd4c75d039d265e9bc4a2a93ed09bc9e1b1225eb95ba1"
-      },
-      "voices/am_puck.bin": {
-       "size": 522240,
-       "sha256": "fcf73c989033e9233e0b98713eca600c8c74dcc1614b37009d5450ff4a2274a0"
-      },
-      "voices/ef_dora.bin": {
-       "size": 522240,
-       "sha256": "f66ec66bd295acb18372e37008533a9a3228483ccd294e7538d5d9294ac9a532"
-      },
-      "voices/em_alex.bin": {
-       "size": 522240,
-       "sha256": "27809e9eafdcbcfff90a3016c697568676531de2a2c39cee29c96c7bd6b83e95"
-      },
-      "voices/em_santa.bin": {
-       "size": 522240,
-       "sha256": "ad43b774e1ca24d05c6161297d8aeb770ac3d29bb95daf516727af5f7d543683"
-      }
-     }
-    },
-    "g2p": {
-     "repo": "nekwo/misaki-en-us-g2p-onnx",
-     "revision": "4b3a605d2f605318ab4f762ab9855c44106528b7",
-     "license": "Apache-2.0",
-     "author": "nekwo",
-     "files": {
-      "misaki-en_us-g2p.json": {
-       "size": 5724857,
-       "gitOid": "87c21290a560c0fa01771e88e411f89231fd6604"
-      },
-      "misaki-en_us-g2p.onnx": {
-       "size": 3438244,
-       "sha256": "757759c3e3ccb0bf59c379b1671c9834a27543ceaefd6846850823633b9665a1"
-      }
-     }
-    }
-   },
-   "devices": {
-    "webgpu": [
-     {
-      "dtype": "fp32",
-      "files": [
-       "main:onnx/model.onnx",
-       "main:tokenizer.json",
-       "main:voices/ef_dora.bin",
-       "main:voices/em_alex.bin",
-       "main:voices/em_santa.bin",
-       "main:voices/af_heart.bin",
-       "main:voices/af_bella.bin",
-       "main:voices/af_nicole.bin",
-       "main:voices/am_michael.bin",
-       "main:voices/am_fenrir.bin",
-       "main:voices/am_puck.bin",
-       "g2p:misaki-en_us-g2p.json",
-       "g2p:misaki-en_us-g2p.onnx"
-      ],
-      "bytes": 339398990
-     }
-    ],
-    "wasm": [
-     {
-      "dtype": "q8",
-      "files": [
-       "main:onnx/model_quantized.onnx",
-       "main:tokenizer.json",
-       "main:voices/ef_dora.bin",
-       "main:voices/em_alex.bin",
-       "main:voices/em_santa.bin",
-       "main:voices/af_heart.bin",
-       "main:voices/af_bella.bin",
-       "main:voices/af_nicole.bin",
-       "main:voices/am_michael.bin",
-       "main:voices/am_fenrir.bin",
-       "main:voices/am_puck.bin",
-       "g2p:misaki-en_us-g2p.json",
-       "g2p:misaki-en_us-g2p.onnx"
-      ],
-      "bytes": 106227874
-     }
-    ]
-   },
-   "notes": {
-    "es": null,
-    "en": null
-   }
-  },
   "text-to-video/wan2.1-t2v-1.3b-rcm": {
    "task": "text-to-video",
    "name": {
@@ -946,13 +624,36 @@
     "en": "Wan 2.1 T2V 1.3B (rCM, 4 steps)"
    },
    "license": "Apache-2.0",
-   "author": "UtopiaIA",
+   "author": "Wan-AI",
    "base": {
     "name": "Wan2.1-T2V-1.3B",
     "author": "Wan-AI",
     "url": "https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B",
     "license": "Apache-2.0"
    },
+   "bases": [
+    {
+     "name": "Wan2.1-T2V-1.3B",
+     "author": "Wan-AI",
+     "url": "https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B",
+     "license": "Apache-2.0",
+     "part": "tok"
+    },
+    {
+     "name": "rCM Wan2.1 T2V 1.3B 480p",
+     "author": "worstcoder (rCM, NVlabs/Tsinghua)",
+     "url": "https://huggingface.co/worstcoder/rcm-Wan",
+     "license": "Apache-2.0",
+     "part": "web"
+    },
+    {
+     "name": "lighttaew2_1 (TAEHV)",
+     "author": "lightx2v / madebyollin",
+     "url": "https://huggingface.co/lightx2v/Autoencoders",
+     "license": "Apache-2.0",
+     "part": "web"
+    }
+   ],
    "flag": null,
    "redistributes": true,
    "runtime": "onnxruntime-web",
@@ -965,15 +666,79 @@
      "license": "Apache-2.0",
      "author": "Wan-AI",
      "files": {
+      "assets/comp_effic.png": {
+       "size": 1793594,
+       "sha256": "b0e225caffb4b31295ad150f95ee852e4c3dde4a00ac8f79a2ff500f2ce26b8d"
+      },
+      "assets/data_for_diff_stage.jpg": {
+       "size": 528268,
+       "sha256": "59aec08409f2d46b0e640e4e120dc7cca52c08c3de56d026602dbcff1ebf241a"
+      },
+      "assets/i2v_res.png": {
+       "size": 891681,
+       "sha256": "6823b3206d8d0cb18d3b5b949dec1217f1178109ba11f14e977b67e1f7b8a248"
+      },
+      "assets/logo.png": {
+       "size": 56322,
+       "sha256": "96cddc0f667293436d0b9f92a299b6346b65b231d38ee49719a33d46c91fe1e3"
+      },
+      "assets/t2v_res.jpg": {
+       "size": 301030,
+       "sha256": "91db579092446be2a834bc67721a8e4346936f38c4edb912f459ca3e10f8f439"
+      },
+      "assets/vben_1.3b_vs_sota.png": {
+       "size": 515765,
+       "sha256": "b7705db79f2e1428ec7a1e6fff8c4fbde062fb95bb233516ddbd04b20007c845"
+      },
+      "assets/vben_vs_sota.png": {
+       "size": 1552119,
+       "sha256": "9a0e86ca85046d2675f97984b88b6e74df07bba8a62a31ab8a1aef50d4eda44e"
+      },
+      "assets/video_dit_arch.jpg": {
+       "size": 643369,
+       "sha256": "195dceec6570289d8b01cc51d2e28a7786216f19de55b23978a52610d1646a66"
+      },
+      "assets/video_vae_res.jpg": {
+       "size": 212586,
+       "sha256": "d8f9e7f7353848056a615c8ef35ab86ec22976bb46cb27405008b4089701945c"
+      },
+      "config.json": {
+       "size": 249,
+       "gitOid": "d203bef600b2f3c64fe1f5f53d70a2087f4ccd2f"
+      },
+      "examples/i2v_input.JPG": {
+       "size": 250628,
+       "sha256": "077e3d965090c9028c69c00931675f42e1acc815c6eb450ab291b3b72d211a8e"
+      },
+      "google/umt5-xxl/special_tokens_map.json": {
+       "size": 6623,
+       "gitOid": "14855e7052ffbb595057dfd791d293c1c940db2c"
+      },
+      "google/umt5-xxl/spiece.model": {
+       "size": 4548313,
+       "sha256": "e3909a67b780650b35cf529ac782ad2b6b26e6d1f849d3fbb6a872905f452458"
+      },
+      "google/umt5-xxl/tokenizer_config.json": {
+       "size": 61728,
+       "gitOid": "4e1cc1cd85599ce0b47fd0a746af188fe4043ff2"
+      },
       "google/umt5-xxl/tokenizer.json": {
        "size": 16837417,
        "sha256": "6e197b4d3dbd71da14b4eb255f4fa91c9c1f2068b20a2de2472967ca3d22602b"
+      },
+      "LICENSE.txt": {
+       "size": 11357,
+       "gitOid": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64"
+      },
+      "README.md": {
+       "size": 16913,
+       "gitOid": "fbbf7c13900d37f3179c546d09372aeb52e0fae1"
       }
      }
     },
     "web": {
      "repo": "UtopiaIA/Wan2.1-T2V-1.3B-web",
-     "revision": "0000000000000000000000000000000000000000",
+     "revision": "3dbd66ddf838b03a751576500ed6b5e72c53a972",
      "license": "Apache-2.0",
      "author": "UtopiaIA",
      "files": {
@@ -1008,6 +773,18 @@
       "dit/part2.onnx_data": {
        "size": 457526272,
        "sha256": "a3b458b34086202c95d4eb68638b14123de24e771f124d812fcccc122dd41293"
+      },
+      "LICENSE": {
+       "size": 11358,
+       "gitOid": "d645695673349e3947e8e5ae42332d0ac3164cd7"
+      },
+      "NOTICE": {
+       "size": 620,
+       "gitOid": "d9426fc98b59a2aaa0778b9c505a85365e6db9ea"
+      },
+      "README.md": {
+       "size": 1689,
+       "gitOid": "9f8311fa43e079a62fd55b3485fdc930296fee8a"
       },
       "t5/embed_q4.bin": {
        "size": 607117312,
@@ -1060,23 +837,23 @@
       "files": [
        "tok:google/umt5-xxl/tokenizer.json",
        "web:dit/ctx.onnx",
-       "web:dit/ctx.onnx_data",
        "web:dit/part0.onnx",
-       "web:dit/part0.onnx_data",
        "web:dit/part1.onnx",
-       "web:dit/part1.onnx_data",
        "web:dit/part2.onnx",
-       "web:dit/part2.onnx_data",
        "web:t5/embed_q4.bin",
        "web:t5/encoder_0.onnx",
-       "web:t5/encoder_0.onnx_data",
        "web:t5/encoder_1.onnx",
-       "web:t5/encoder_1.onnx_data",
        "web:t5/encoder_2.onnx",
-       "web:t5/encoder_2.onnx_data",
        "web:t5/encoder_3.onnx",
-       "web:t5/encoder_3.onnx_data",
-       "web:vae/taew2_1_light.onnx"
+       "web:vae/taew2_1_light.onnx",
+       "web:dit/ctx.onnx_data",
+       "web:dit/part0.onnx_data",
+       "web:dit/part1.onnx_data",
+       "web:dit/part2.onnx_data",
+       "web:t5/encoder_0.onnx_data",
+       "web:t5/encoder_1.onnx_data",
+       "web:t5/encoder_2.onnx_data",
+       "web:t5/encoder_3.onnx_data"
       ],
       "bytes": 5235652550
      }
@@ -1085,33 +862,6 @@
    "notes": {
     "es": "El codificador de texto va en 4 bits y el transformador en 8 bits: el vídeo de una semilla no es el mismo que el del modelo original, pero sigue la descripción igual de bien.",
     "en": "The text encoder runs in 4 bits and the transformer in 8 bits: the video of a seed is not the one of the original model, but it follows the prompt as well."
-   },
-   "bases": [
-    {
-     "name": "Wan2.1-T2V-1.3B",
-     "author": "Wan-AI",
-     "url": "https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B",
-     "license": "Apache-2.0",
-     "part": "tok"
-    },
-    {
-     "name": "rCM Wan2.1 T2V 1.3B 480p",
-     "author": "worstcoder (rCM, NVlabs/Tsinghua)",
-     "url": "https://huggingface.co/worstcoder/rcm-Wan/tree/142d77a331f1516fea772607c1bf25a2785a2505",
-     "license": "Apache-2.0",
-     "part": "web"
-    },
-    {
-     "name": "lighttaew2_1 (TAEHV)",
-     "author": "lightx2v / madebyollin",
-     "url": "https://huggingface.co/lightx2v/Autoencoders/tree/043793f3b3a2ea8db7d0ed8b5a0e8134436d529b",
-     "license": "Apache-2.0",
-     "part": "web"
-    }
-   ],
-   "pending": {
-    "es": null,
-    "en": "The \"web\" part is our ONNX conversion, not hosted yet: its repo and revision are placeholders until it is published."
    }
   }
  }

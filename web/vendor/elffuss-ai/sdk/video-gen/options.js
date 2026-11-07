@@ -3,7 +3,7 @@
 //
 // What a text-to-video run may ask for, checked before anything loads: the
 // sizes the model was trained near (832 × 480 and its portrait, plus a lighter
-// 640 × 368), 1 to 5 seconds at 16 frames per second, 1 to 4 steps, a seed. The
+// 640 × 368), a length in whole seconds from 1 to 5 (FPS frames each), 1 to 4 steps, a seed. The
 // same shape is the chat tool's arguments: {"prompt", "seconds", "size", "seed", "steps"}.
 
 import { AiError } from '../core/errors.js';

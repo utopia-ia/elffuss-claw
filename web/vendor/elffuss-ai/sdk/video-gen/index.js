@@ -3,7 +3,7 @@
 //
 // Video from text in the browser, with Wan 2.1 T2V 1.3B (Wan-AI, Apache-2.0)
 // distilled to a few steps, on WebGPU. Heavy: it downloads gigabytes once and
-// needs a capable GPU, so ask `estimate()` first; it never pretends to run
+// needs a capable graphics card, so ask `estimate()` first; it never pretends to run
 // where it cannot. The model comes through the Elffuss model store, at pinned
 // revisions; nothing of the prompt or the video leaves the browser.
 
@@ -11,6 +11,15 @@ import { Task, TASK_OPTIONS } from '../core/task.js';
 
 export { estimate, probeGpuMemory } from './estimate.js';
 export { SIZES, SECONDS, STEPS, normalizeOptions } from './options.js';
+
+/**
+ * Whether this browser may run the task at all: WebGPU gives it an adapter. It
+ * downloads nothing; `estimate()` says whether a given video fits this device.
+ * @returns {Promise<boolean>}
+ */
+export async function supported() {
+  try { return Boolean(await globalThis.navigator?.gpu?.requestAdapter()); } catch { return false; }
+}
 
 /** Stages a run reports, in order (`onProgress` events carry `stage`, `index`, `count`). */
 export const STAGES = Object.freeze(['download', 'encode', 'load', 'step', 'decode', 'mux']);
@@ -33,7 +42,7 @@ const withStage = onProgress => onProgress && (p => onProgress(p?.status === 'do
  * `{ prompt, seconds, size, seed, steps, audio }`, every field JSON except
  * `audio` (`{ sampleRate, channels: Float32Array[] }`, fitted to the video).
  * Cancel with the `signal` of the constructor or of `run()`: the Worker is
- * stopped and every GPU buffer goes with it.
+ * stopped and every WebGPU buffer goes with it.
  * @extends Task
  */
 export class TextToVideo extends Task {

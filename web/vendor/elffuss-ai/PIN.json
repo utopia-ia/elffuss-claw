@@ -5,50 +5,35 @@
   "modules": {
     "core": {
       "dir": "sdk/core",
-      "commit": "ebd232f0434086dc323172f9da6a601391efc42f"
+      "commit": "a3a9d9384a5659fb9beeb92180c3612b806e84df"
     },
     "text-to-image": {
       "dir": "sdk/text-to-image",
-      "commit": "e05339ddce1a51f4b98a0107025ee502419b53e6"
+      "commit": "a3a9d9384a5659fb9beeb92180c3612b806e84df"
     },
     "video": {
       "dir": "sdk/video",
-      "commit": "ebd232f0434086dc323172f9da6a601391efc42f"
+      "commit": "a3a9d9384a5659fb9beeb92180c3612b806e84df"
     },
     "video-gen": {
       "dir": "sdk/video-gen",
-      "commit": "fc4b20eab024152baa4018923fe75fc9d4f2eb8d"
+      "commit": "a3a9d9384a5659fb9beeb92180c3612b806e84df"
     },
     "audio": {
       "dir": "sdk/audio",
-      "commit": "897d0b8f91d00ef995a85c1294e83d266e68462c"
+      "commit": null,
+      "omitted": true
     }
   },
   "registry": [
     {
-      "commit": "ebd232f0434086dc323172f9da6a601391efc42f",
-      "path": "registry/tasks.json"
-    },
-    {
-      "commit": "e05339ddce1a51f4b98a0107025ee502419b53e6",
-      "path": "registry/tasks.json"
-    },
-    {
-      "commit": "fc4b20eab024152baa4018923fe75fc9d4f2eb8d",
-      "path": "registry/tasks.json"
-    },
-    {
-      "commit": "fc4b20eab024152baa4018923fe75fc9d4f2eb8d",
-      "path": "registry/pending/text-to-video.json"
-    },
-    {
-      "commit": "897d0b8f91d00ef995a85c1294e83d266e68462c",
+      "commit": "a3a9d9384a5659fb9beeb92180c3612b806e84df",
       "path": "registry/tasks.json"
     }
   ],
   "runtimes": {
     "variant": "webgpu",
-    "manifestCommit": "ebd232f0434086dc323172f9da6a601391efc42f",
+    "manifestCommit": "a3a9d9384a5659fb9beeb92180c3612b806e84df",
     "onnxruntimeWeb": "1.30.0",
     "transformers": "4.3.1"
   },
@@ -59,11 +44,11 @@
     },
     {
       "path": "NOTICE",
-      "sha256": "f6eb46bd1ba58555395775bae79b1a3dcb3480681cb12251e9a7190e54afa2c2"
+      "sha256": "8a9082c7c84990e4089b0d874948f919b63896594a37b4df5ef6441e0397af6b"
     },
     {
       "path": "registry/tasks.json",
-      "sha256": "99945fd02dcc06ece5ca6f8d609690df5aaa305bcdfd0c55a8534379e913296c"
+      "sha256": "6b6d48778c9c474f6a22d7c4825877ad30ffabe5b8835c82b34b409d4a78d6d3"
     },
     {
       "path": "runtimes/@huggingface/transformers@4.3.1+ort1.30.0-webgpu/LICENSE",
@@ -790,86 +775,6 @@
       "sha256": "543923bead225732aba30976690ee89095a19628277b5863efecc2c728d5d7bf"
     },
     {
-      "path": "sdk/audio/g2p-en.js",
-      "sha256": "0ac4a405e30b6ee96241042c061fa2e9c531d7ca0221ca87154dfc518593d23b"
-    },
-    {
-      "path": "sdk/audio/g2p-es.js",
-      "sha256": "9bcbaa256048da8fff2ff57ba3a852794cf3abb0c8fb02a7e0c24b98e3332d0d"
-    },
-    {
-      "path": "sdk/audio/graph-patch.js",
-      "sha256": "3f100d26fbf4da76fc903c8de4839515f1bee33c8d9ac146ed29ea6afbdd2963"
-    },
-    {
-      "path": "sdk/audio/index.js",
-      "sha256": "bc182bac8f636b08f27cc305f9826daa9756a76bed6916df22474a493503c24b"
-    },
-    {
-      "path": "sdk/audio/kokoro.js",
-      "sha256": "deb1e38e31ce77cba514f9979985c435f070c3c993849ce89bb72ace2df7e823"
-    },
-    {
-      "path": "sdk/audio/music.impl.js",
-      "sha256": "85931272c53de9497e09608705c357ddc8df49052caa34763eb2d933dadb012d"
-    },
-    {
-      "path": "sdk/audio/music.worker.js",
-      "sha256": "36ef8d8789725de9dec69d168873444674e4f8409d2efaf607e97a0e481189f5"
-    },
-    {
-      "path": "sdk/audio/numbers.js",
-      "sha256": "6fb02ca1866c8fad93ca9c6962947f2cb9fad1103f93d60d4f81f92a821abb07"
-    },
-    {
-      "path": "sdk/audio/rng.js",
-      "sha256": "d4b451421d55989d19bb213836624996e0e0b34f1073409a02aa8a6ffdff2ff8"
-    },
-    {
-      "path": "sdk/audio/sampler.js",
-      "sha256": "be519bea805731c592ce3e7e6608355dd296c8ce64f1b1b8c3c2c6e663577e19"
-    },
-    {
-      "path": "sdk/audio/sfx.impl.js",
-      "sha256": "1215c25cc76cc22b0c259eb1fa626b017ad3df28ce0d0bc5ee021e0847709999"
-    },
-    {
-      "path": "sdk/audio/sfx.worker.js",
-      "sha256": "ca40cb296772e5132cb1f3221315cb100b762120dd9649de72ad26a6fd1fb48b"
-    },
-    {
-      "path": "sdk/audio/signal.js",
-      "sha256": "2bfe8e5e76b9b0c212e0614f1b606bca8ebd69cd0b4c9cb6526754599a6e882f"
-    },
-    {
-      "path": "sdk/audio/sizes.js",
-      "sha256": "47e04bb8fe1b1be5514c98ccf423135ce58482aa2ba1131398b9c2b24dcce1aa"
-    },
-    {
-      "path": "sdk/audio/speech.impl.js",
-      "sha256": "6f588359f1b013907c88cd5e7e0eb4db0e28f341c0d6a0ea2d794e4f793d5edd"
-    },
-    {
-      "path": "sdk/audio/speech.worker.js",
-      "sha256": "3f5fdfc1ca48526e6d9890c151a3ae9616a08444b203a614dff5a5fb2a7027ac"
-    },
-    {
-      "path": "sdk/audio/spm.js",
-      "sha256": "ca7004fcd95162001892e16e0fa8e64ab10cfd4d30591c7ad765d3dfe895cb9b"
-    },
-    {
-      "path": "sdk/audio/stable-audio.js",
-      "sha256": "236e6fb7d7e745b48cf9386dbe489eeae458729edeb6decf57fbaca269d4d5d5"
-    },
-    {
-      "path": "sdk/audio/text.js",
-      "sha256": "bab757cf15883b4d198c7f4941ae7de05b620d537ce490fe0223342199d59428"
-    },
-    {
-      "path": "sdk/audio/wav.js",
-      "sha256": "4fc8d434866fab3d24d29940fb3074f8a2cbd1bee27abf711cc01adc0715004b"
-    },
-    {
       "path": "sdk/core/device.js",
       "sha256": "6a51fd7ee2bcb33858b1c7d007fa202c950fd5bcd1ee82bd9205be1c244e2f3e"
     },
@@ -1015,11 +920,11 @@
     },
     {
       "path": "sdk/video-gen/index.js",
-      "sha256": "3351fc6d660dcc9ed36a8753331c7553f3d388bd44faae4c5fcc79b3a03a9c0e"
+      "sha256": "a21304df5ec2c1357f55c1b118bec2914f05a48e23eb3764a5d0e3893c23ec6e"
     },
     {
       "path": "sdk/video-gen/latent.js",
-      "sha256": "d626e2ec093bbb436548280caad57ff27669579c5359b0d2723d6cfb6ac196fa"
+      "sha256": "9fa3c42b64ec61e777f3255b442e3284f1fe959d0d5fb49d489565236aa68884"
     },
     {
       "path": "sdk/video-gen/noise.js",
@@ -1027,11 +932,15 @@
     },
     {
       "path": "sdk/video-gen/options.js",
-      "sha256": "bef8e4f5c4b63a35af05501fee2bacb63b8828b774321e04f4f0f26994df5fd2"
+      "sha256": "f013fec1fe2793c28ca688cafc61d4bd123c8eb40adaf9faa2d6522615fdd860"
     },
     {
       "path": "sdk/video-gen/schedule.js",
       "sha256": "f4ad73c7ed45da0afeb0d2aab09c549972871bdf296348832edacc3c70d20f45"
+    },
+    {
+      "path": "sdk/video-gen/sizes.js",
+      "sha256": "b50431910f5d7d8098df3945a25fec8cfa073b97a776413a3bc7f76e5e57354d"
     },
     {
       "path": "sdk/video-gen/t5.js",

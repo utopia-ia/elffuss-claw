@@ -32,7 +32,7 @@ export function grid({ width, height, frames }) {
   return { width, height, frames, f, h, w, ph: h / 2, pw: w / 2, tokensPerFrame: (h / 2) * (w / 2), tokens: f * (h / 2) * (w / 2), latentSize: LATENT_CHANNELS * f * h * w };
 }
 
-/** Frames of a video of about `seconds` at 16 fps: 1 + 4k, at least 5. */
+/** Frames of a video of about `seconds` (FPS frames a second): 1 + 4k, at least 5. */
 export function framesFor(seconds) {
   const k = Math.max(1, Math.round((seconds * FPS) / 4));
   return 1 + 4 * k;

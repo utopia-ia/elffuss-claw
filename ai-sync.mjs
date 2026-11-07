@@ -8,6 +8,8 @@
 //
 //   node ai-sync.mjs                                  re-copy what PIN.json pins
 //   node ai-sync.mjs --pin core=<rev> audio=<rev> …   pin new commits for those modules (the rest keep theirs), copy
+//   node ai-sync.mjs --pin audio=none                 leave a module out (not copied, no registry): for a module the
+//                                                     product does not offer yet; `core` cannot be left out
 //   node ai-sync.mjs --check                          verify <dest> against PIN.json (no git needed)
 //
 // Where it lands: <dest> = site-chat/vendor/elffuss-ai (the chat) or web/vendor/elffuss-ai (Claw, Code). It has to
@@ -79,7 +81,7 @@ if (process.argv[2] === '--check') {
   }
   for (const f of listFiles(DEST)) if (!listed.has(f) && !/(^|\/)\.DS_Store$/.test(f)) { console.error('not pinned, would be served unchecked: ' + shown(join(DEST, f))); bad++; }
   if (bad) process.exit(1);
-  console.log(`ai-sync: ${p.files.length} files match ${shown(PIN)} (${MODULES.map((m) => `${m} ${p.modules[m].commit.slice(0, 12)}`).join(', ')})`);
+  console.log(`ai-sync: ${p.files.length} files match ${shown(PIN)} (${MODULES.map((m) => `${m} ${p.modules[m].omitted ? 'left out' : p.modules[m].commit.slice(0, 12)}`).join(', ')})`);
   process.exit(0);
 }
 
@@ -96,9 +98,15 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 const modules = {};
+const left = (m) => modules[m].omitted;
 for (const m of MODULES) {
-  const r = want[m] || prev?.modules?.[m]?.commit;
+  const r = want[m] || (prev?.modules?.[m]?.omitted ? 'none' : prev?.modules?.[m]?.commit);
   if (!r) die(`no commit for ${m}: pass --pin ${m}=<rev>`);
+  if (r === 'none') {
+    if (m === 'core') die('core cannot be left out');
+    modules[m] = { dir: `sdk/${m}`, commit: null, omitted: true };
+    continue;
+  }
   const commit = rev(r);
   const dir = `sdk/${m}`;
   if (!exists(commit, dir)) die(`${commit.slice(0, 12)} has no ${dir}/`);
@@ -109,6 +117,7 @@ const core = modules.core.commit;
 // ---------- Copy ----------
 const out = new Map();     // path under DEST → bytes
 for (const m of MODULES) {
+  if (left(m)) continue;
   const { dir, commit } = modules[m];
   for (const f of lsTree(commit, dir)) out.set(f, show(commit, f));
 }
@@ -130,7 +139,7 @@ const addRegistry = (commit, path) => {
   }
   registrySources.push({ commit, path });
 };
-for (const commit of [...new Set(MODULES.map((m) => modules[m].commit))]) {
+for (const commit of [...new Set(MODULES.filter((m) => !left(m)).map((m) => modules[m].commit))]) {
   addRegistry(commit, 'registry/tasks.json');
   for (const f of git(['ls-tree', '--name-only', commit, 'registry/pending/']).toString().split('\n').filter((x) => x.endsWith('.json'))) addRegistry(commit, f);
 }
@@ -188,7 +197,7 @@ const pin = {
   files,
 };
 writeFileSync(PIN, JSON.stringify(pin, null, 2) + '\n');
-console.log(`ai-sync: ${files.length} files into ${shown(DEST)} (${MODULES.map((m) => `${m} ${modules[m].commit.slice(0, 12)}`).join(', ')})`);
+console.log(`ai-sync: ${files.length} files into ${shown(DEST)} (${MODULES.map((m) => `${m} ${left(m) ? 'left out' : modules[m].commit.slice(0, 12)}`).join(', ')})`);
 
 // A source module of the pinned commit, written to a temporary directory so it can be imported; `deps` maps an import
 // specifier to a sibling written there too (null: the import is cut, the functions used here do not need it).
