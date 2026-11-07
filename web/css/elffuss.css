@@ -854,3 +854,7 @@ body.modo-basico .proposal-needs-model { display: flex; }
 .att-line { color: var(--muted); font-size: .75rem; }
 .att-card .media-el { display: block; max-width: min(16rem, 100%); max-height: 14rem; border-radius: 8px; }
 .att-card audio.media-el { width: 15rem; }
+
+/* «Hecho con amor en Málaga», bajo la caja: los colores del Málaga CF con la hoja de Elffuss. */
+.made-in { display: flex; align-items: center; gap: 6px; margin: 0; padding: 0 16px 10px; font-size: 12px; color: var(--muted); }
+.made-in-flag { width: 24px; height: 16px; flex: none; border-radius: 2px; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.12); }

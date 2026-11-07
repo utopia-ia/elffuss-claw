@@ -60,7 +60,7 @@ const L = {
     cmNoMemory: 'esta conversación sin memoria (o con ella otra vez)',
     pClock: 'hazme un reloj', pFolder: 'autoriza una carpeta',
     // permisos (modal + panel + detalles por tool)
-    permWord: 'Permiso', permDeny: 'Denegar', permAllow: 'Permitir',
+    permWord: 'Permiso', permDeny: 'Denegar', permAllow: 'Permitir', madeIn: 'Hecho con amor en Málaga',
     permDenied: 'Permiso «{label}» denegado por el usuario',
     scFsL: 'Archivos', scFsD: 'Leer y escribir en las carpetas que autorices',
     scAppsL: 'Apps', scAppsD: 'Crear y mostrar apps HTML en el visualizador',
@@ -474,7 +474,7 @@ const L = {
     cmModel: 'pick the model (at the top)', cmTasks: 'see scheduled tasks', cmVault: 'encrypted secrets', cmClear: 'new conversation',
     cmNoMemory: 'this chat without memory (or with it again)',
     pClock: 'make me a clock', pFolder: 'authorize a folder',
-    permWord: 'Permission', permDeny: 'Deny', permAllow: 'Allow',
+    permWord: 'Permission', permDeny: 'Deny', permAllow: 'Allow', madeIn: 'Made with love in Málaga',
     permDenied: 'Permission “{label}” denied by the user',
     scFsL: 'Files', scFsD: 'Read and write in the folders you authorize',
     scAppsL: 'Apps', scAppsD: 'Create and show HTML apps in the viewer',
@@ -945,7 +945,7 @@ const L = {
     cmNoMemory: "ця розмова без пам’яті (або знову з нею)",
     pFolder: "дозволь теку",
     permDeny: "Відмовити",
-    permAllow: "Дозволити",
+    permAllow: "Дозволити", madeIn: "Зроблено з любов’ю в Малазі",
     scFsD: "Читати й записувати в теках, які ти дозволиш",
     scAppsD: "Створювати й показувати HTML-застосунки в переглядачі",
     scVaultD: "Зберігати й читати зашифровані секрети",
@@ -1568,7 +1568,7 @@ const L = {
     cmNoMemory: "cette conversation sans mémoire (ou de nouveau avec)",
     pFolder: "autorise un dossier",
     permDeny: "Refuser",
-    permAllow: "Autoriser",
+    permAllow: "Autoriser", madeIn: "Fait avec amour à Málaga",
     scFsD: "Lire et écrire dans les dossiers que tu autorises",
     scAppsD: "Créer et afficher des apps HTML dans le visualiseur",
     scVaultD: "Stocker et lire des secrets chiffrés",
@@ -2191,7 +2191,7 @@ const L = {
     cmNoMemory: "diese Unterhaltung ohne Gedächtnis (oder wieder mit)",
     pFolder: "gib einen Ordner frei",
     permDeny: "Ablehnen",
-    permAllow: "Erlauben",
+    permAllow: "Erlauben", madeIn: "Mit Liebe in Málaga gemacht",
     scFsD: "In den Ordnern, die du freigibst, lesen und schreiben",
     scAppsD: "HTML-Apps erstellen und im Viewer zeigen",
     scVaultD: "Verschlüsselte Geheimnisse speichern und lesen",
@@ -2814,7 +2814,7 @@ const L = {
     cmNoMemory: "esta conversa sem memória (ou com ela outra vez)",
     pFolder: "autoriza uma pasta",
     permDeny: "Negar",
-    permAllow: "Permitir",
+    permAllow: "Permitir", madeIn: "Feito com amor em Málaga",
     scFsD: "Ler e escrever nas pastas que autorizares",
     scAppsD: "Criar e mostrar apps HTML no visualizador",
     scVaultD: "Guardar e ler segredos cifrados",
@@ -3394,4 +3394,5 @@ export function applyI18n() {
   const h1 = $('#splash h1'); if (h1) h1.innerHTML = t.hi.replace('Elffuss', '<b>Elffuss Claw</b>');
   set('#perm-deny', t.permDeny);
   set('#perm-allow', t.permAllow);
+  set('.made-in-txt', t.madeIn || L.en.madeIn);
 }
