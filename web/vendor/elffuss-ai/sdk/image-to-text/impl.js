@@ -60,7 +60,7 @@ export function cleanLines(labels) {
 
 /**
  * `opts.want`: 'all' (default: caption and text), 'caption' or 'text'.
- * Resolves to { caption, text, lines, width, height, device, dtype }.
+ * Resolves to { value: { caption, text, lines, width, height, device, dtype } }, as every task's run does.
  */
 export async function run(state, input, opts = {}, ctx) {
   const img = await decodeImage(input, { maxSide: MAX_SIDE });
@@ -71,7 +71,7 @@ export async function run(state, input, opts = {}, ctx) {
   if (want !== 'text') caption = String(await ask(state, image, CAPTION, 160) || '').replace(/<\/?s>/g, '').trim();
   if (want !== 'caption') lines = cleanLines((await ask(state, image, TEXT, 256))?.labels);
   ctx.report('done');
-  return { caption, text: lines.join(' · '), lines, width: img.width, height: img.height, device: ctx.device, dtype: ctx.dtype };
+  return { value: { caption, text: lines.join(' · '), lines, width: img.width, height: img.height, device: ctx.device, dtype: ctx.dtype } };
 }
 
 export async function dispose(state) {

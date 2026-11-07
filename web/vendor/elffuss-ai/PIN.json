@@ -5,38 +5,38 @@
   "modules": {
     "core": {
       "dir": "sdk/core",
-      "commit": "f5481381923c48d279da03671f9afad20ffcc638"
+      "commit": "6868ea5a89befa93ea900b29bf2ff54fc39ff9bd"
     },
     "text-to-image": {
       "dir": "sdk/text-to-image",
-      "commit": "f5481381923c48d279da03671f9afad20ffcc638"
+      "commit": "6868ea5a89befa93ea900b29bf2ff54fc39ff9bd"
     },
     "video": {
       "dir": "sdk/video",
-      "commit": "f5481381923c48d279da03671f9afad20ffcc638"
+      "commit": "6868ea5a89befa93ea900b29bf2ff54fc39ff9bd"
     },
     "video-gen": {
       "dir": "sdk/video-gen",
-      "commit": "f5481381923c48d279da03671f9afad20ffcc638"
+      "commit": "6868ea5a89befa93ea900b29bf2ff54fc39ff9bd"
     },
     "audio": {
       "dir": "sdk/audio",
-      "commit": "f5481381923c48d279da03671f9afad20ffcc638"
+      "commit": "6868ea5a89befa93ea900b29bf2ff54fc39ff9bd"
     },
     "image-to-text": {
       "dir": "sdk/image-to-text",
-      "commit": "f5481381923c48d279da03671f9afad20ffcc638"
+      "commit": "6868ea5a89befa93ea900b29bf2ff54fc39ff9bd"
     }
   },
   "registry": [
     {
-      "commit": "f5481381923c48d279da03671f9afad20ffcc638",
+      "commit": "6868ea5a89befa93ea900b29bf2ff54fc39ff9bd",
       "path": "registry/tasks.json"
     }
   ],
   "runtimes": {
     "variant": "webgpu",
-    "manifestCommit": "f5481381923c48d279da03671f9afad20ffcc638",
+    "manifestCommit": "6868ea5a89befa93ea900b29bf2ff54fc39ff9bd",
     "onnxruntimeWeb": "1.30.0",
     "transformers": "4.3.1"
   },
@@ -963,7 +963,7 @@
     },
     {
       "path": "sdk/image-to-text/impl.js",
-      "sha256": "f36de82358b6f75bd7531a6523c7ad5e409cd6d23993ed789799a99b5e54acc2"
+      "sha256": "7a4928b6f0c95a934296ea1f22988a8cd1d64d36a928bb849502a1f4c1e46ee9"
     },
     {
       "path": "sdk/image-to-text/index.js",
