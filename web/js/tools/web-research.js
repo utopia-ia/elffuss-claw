@@ -863,8 +863,10 @@ export function createResearch({ get, parseHTML, terms, buildBM25, Readability =
       return extractPage(x.text, x.url, { parseHTML, Readability, thinBelow: 0 }).chunks;
     };
     if (page.hints.amp) tries.push({ via: 'amp', url: page.hints.amp, read: async (x) => html2chunks(x, false) });
-    if (page.hints.feeds[0]) tries.push({ via: 'feed', url: page.hints.feeds[0], read: async (x) => (x.ok ? feedChunks(parseFeed(x.text)) : []) });
-    if (guessAmp && !/[?#]/.test(page.url)) tries.push({ via: 'format=amp', url: page.url + '?format=amp', read: async (x) => html2chunks(x, true) });
+    // The feed and the ?format=amp guess only for a page built by JavaScript: a short page that is not (a Wikipedia
+    // disambiguation page, measured) got the site's RecentChanges feed as its «content».
+    if (page.hints.feeds[0] && page.jsOnly) tries.push({ via: 'feed', url: page.hints.feeds[0], read: async (x) => (x.ok ? feedChunks(parseFeed(x.text)) : []) });
+    if (guessAmp && page.jsOnly && !/[?#]/.test(page.url)) tries.push({ via: 'format=amp', url: page.url + '?format=amp', read: async (x) => html2chunks(x, true) });
     let ampOk = false;
     for (const t of tries) {
       if (s.left <= 0) break;
