@@ -49,6 +49,14 @@ Used only to draw test fixtures, never served:
   Archivo (tests/fonts/archivo-latin.woff2) - The Archivo Project Authors - SIL Open
     Font License 1.1, see tests/fonts/OFL-Archivo.txt.
 
+The Spanish phonemiser of sdk/audio/g2p-es.js writes the symbols eSpeak NG gives for
+Spanish, mapped as misaki maps them for Kokoro; it is written from those rules and
+contains no code or data of eSpeak NG. sdk/audio/g2p-en.js follows the lexicon rules
+of misaki (https://github.com/hexgrad/misaki), Apache License 2.0, by hexgrad;
+sdk/audio/sampler.js follows the sampler and schedule of Stability AI's
+stable-audio-3 pipeline (https://github.com/Stability-AI/stable-audio-3). No code of
+either is copied.
+
 Model weights are not part of this repository. The apps download them from Hugging
 Face at a pinned revision: from their original repositories, or, for SANA-Sprint
 0.6B (image), from a conversion to ONNX published by UtopiaIA
@@ -56,3 +64,21 @@ Face at a pinned revision: from their original repositories, or, for SANA-Sprint
 text encoder is Gemma 2 2B IT, provided under and subject to the Gemma Terms of Use
 (ai.google.dev/gemma/terms). Their licences are listed in registry/tasks.json and
 on each page. scripts/text-to-image/ holds the scripts that made that conversion.
+
+sdk/audio/moss.js and sdk/audio/speech-moss.impl.js run MOSS-TTS-Nano (OpenMOSS,
+Apache License 2.0) as its official ONNX runtime does (onnx_tts_runtime.py and
+ort_cpu_runtime.py of https://github.com/OpenMOSS/MOSS-TTS-Nano); they are written
+from what that runtime does, and no code of it is copied. sdk/audio/moss-voice-es.js
+holds the voice prompt of Elffuss's Spanish voice: the codes MOSS-Audio-Tokenizer-Nano
+gives for a recording made with Qwen3-TTS 1.7B VoiceDesign (Qwen, Apache License 2.0)
+from a written description of a voice. It is a synthetic voice and not the voice of
+any person. scripts/audio/moss_fixtures.py makes it and the test references.
+
+Stable Audio 3 Small Music and Stable Audio 3 Small SFX (Stability AI), used by the
+audio site from stabilityai/stable-audio-3-optimized:
+  This Stability AI Model is licensed under the Stability AI Community License,
+  Copyright © Stability AI Ltd. All Rights Reserved.
+  Powered by Stability AI. The Agreement is in LICENSES/Stability-AI-Community-License.md
+  and is served with the site.
+  Their text encoder, T5Gemma, is provided under and subject to the Gemma Terms of Use
+  found at ai.google.dev/gemma/terms (copy in LICENSES/Gemma-Terms-of-Use.md).

@@ -5,35 +5,34 @@
   "modules": {
     "core": {
       "dir": "sdk/core",
-      "commit": "a3a9d9384a5659fb9beeb92180c3612b806e84df"
+      "commit": "4c79b0a4b165f9f017241f73ba8385a8a15e9080"
     },
     "text-to-image": {
       "dir": "sdk/text-to-image",
-      "commit": "a3a9d9384a5659fb9beeb92180c3612b806e84df"
+      "commit": "4c79b0a4b165f9f017241f73ba8385a8a15e9080"
     },
     "video": {
       "dir": "sdk/video",
-      "commit": "a3a9d9384a5659fb9beeb92180c3612b806e84df"
+      "commit": "4c79b0a4b165f9f017241f73ba8385a8a15e9080"
     },
     "video-gen": {
       "dir": "sdk/video-gen",
-      "commit": "a3a9d9384a5659fb9beeb92180c3612b806e84df"
+      "commit": "4c79b0a4b165f9f017241f73ba8385a8a15e9080"
     },
     "audio": {
       "dir": "sdk/audio",
-      "commit": null,
-      "omitted": true
+      "commit": "4c79b0a4b165f9f017241f73ba8385a8a15e9080"
     }
   },
   "registry": [
     {
-      "commit": "a3a9d9384a5659fb9beeb92180c3612b806e84df",
+      "commit": "4c79b0a4b165f9f017241f73ba8385a8a15e9080",
       "path": "registry/tasks.json"
     }
   ],
   "runtimes": {
     "variant": "webgpu",
-    "manifestCommit": "a3a9d9384a5659fb9beeb92180c3612b806e84df",
+    "manifestCommit": "4c79b0a4b165f9f017241f73ba8385a8a15e9080",
     "onnxruntimeWeb": "1.30.0",
     "transformers": "4.3.1"
   },
@@ -44,11 +43,11 @@
     },
     {
       "path": "NOTICE",
-      "sha256": "8a9082c7c84990e4089b0d874948f919b63896594a37b4df5ef6441e0397af6b"
+      "sha256": "702c69d82db44251367a8c25c4c16de8785729667fae9a5a98220da80adbaf09"
     },
     {
       "path": "registry/tasks.json",
-      "sha256": "6b6d48778c9c474f6a22d7c4825877ad30ffabe5b8835c82b34b409d4a78d6d3"
+      "sha256": "d0528972df3e4e209e06ca42bc4a427302e73c4bc5b8534d0f9a7f5d5ab12173"
     },
     {
       "path": "runtimes/@huggingface/transformers@4.3.1+ort1.30.0-webgpu/LICENSE",
@@ -773,6 +772,102 @@
     {
       "path": "runtimes/pdfjs-dist@6.4.299/cmaps/WP-Symbol.bcmap",
       "sha256": "543923bead225732aba30976690ee89095a19628277b5863efecc2c728d5d7bf"
+    },
+    {
+      "path": "sdk/audio/g2p-en.js",
+      "sha256": "0ac4a405e30b6ee96241042c061fa2e9c531d7ca0221ca87154dfc518593d23b"
+    },
+    {
+      "path": "sdk/audio/g2p-es.js",
+      "sha256": "9bcbaa256048da8fff2ff57ba3a852794cf3abb0c8fb02a7e0c24b98e3332d0d"
+    },
+    {
+      "path": "sdk/audio/graph-patch.js",
+      "sha256": "3f100d26fbf4da76fc903c8de4839515f1bee33c8d9ac146ed29ea6afbdd2963"
+    },
+    {
+      "path": "sdk/audio/index.js",
+      "sha256": "e2e34eb6d39c8a564dc5087c2a4645983587788a46c7d0ab6a6223c8935e397e"
+    },
+    {
+      "path": "sdk/audio/kokoro.js",
+      "sha256": "deb1e38e31ce77cba514f9979985c435f070c3c993849ce89bb72ace2df7e823"
+    },
+    {
+      "path": "sdk/audio/moss-voice-es.js",
+      "sha256": "311d29c09dd7a35d3bb10bd0de727a72ad739cbf1109addc7be19e2a0da523b7"
+    },
+    {
+      "path": "sdk/audio/moss.js",
+      "sha256": "991f08255ea5a85aa20b839cb01907d86efbcaa8d8189e2c9dcc3b7c2170446d"
+    },
+    {
+      "path": "sdk/audio/music.impl.js",
+      "sha256": "85931272c53de9497e09608705c357ddc8df49052caa34763eb2d933dadb012d"
+    },
+    {
+      "path": "sdk/audio/music.worker.js",
+      "sha256": "36ef8d8789725de9dec69d168873444674e4f8409d2efaf607e97a0e481189f5"
+    },
+    {
+      "path": "sdk/audio/numbers.js",
+      "sha256": "6fb02ca1866c8fad93ca9c6962947f2cb9fad1103f93d60d4f81f92a821abb07"
+    },
+    {
+      "path": "sdk/audio/rng.js",
+      "sha256": "d4b451421d55989d19bb213836624996e0e0b34f1073409a02aa8a6ffdff2ff8"
+    },
+    {
+      "path": "sdk/audio/sampler.js",
+      "sha256": "be519bea805731c592ce3e7e6608355dd296c8ce64f1b1b8c3c2c6e663577e19"
+    },
+    {
+      "path": "sdk/audio/sfx.impl.js",
+      "sha256": "1215c25cc76cc22b0c259eb1fa626b017ad3df28ce0d0bc5ee021e0847709999"
+    },
+    {
+      "path": "sdk/audio/sfx.worker.js",
+      "sha256": "ca40cb296772e5132cb1f3221315cb100b762120dd9649de72ad26a6fd1fb48b"
+    },
+    {
+      "path": "sdk/audio/signal.js",
+      "sha256": "2bfe8e5e76b9b0c212e0614f1b606bca8ebd69cd0b4c9cb6526754599a6e882f"
+    },
+    {
+      "path": "sdk/audio/sizes.js",
+      "sha256": "da1faafa17ba9558d56768460c33a40f900d6e6a72ca15f40f9cfb78138418de"
+    },
+    {
+      "path": "sdk/audio/speech-moss.impl.js",
+      "sha256": "45ea3af32686ea9e697edda1ace20d9242e3ab928f35444a0361642ff4ce12d4"
+    },
+    {
+      "path": "sdk/audio/speech-moss.worker.js",
+      "sha256": "9ebf1a0484a0426aec233796999e2becab3b232338f12e86aa70625236f3e03c"
+    },
+    {
+      "path": "sdk/audio/speech.impl.js",
+      "sha256": "6f588359f1b013907c88cd5e7e0eb4db0e28f341c0d6a0ea2d794e4f793d5edd"
+    },
+    {
+      "path": "sdk/audio/speech.worker.js",
+      "sha256": "3f5fdfc1ca48526e6d9890c151a3ae9616a08444b203a614dff5a5fb2a7027ac"
+    },
+    {
+      "path": "sdk/audio/spm.js",
+      "sha256": "9455ac481cb2f87f728e6ff1256bdd05d29df41f3b80080ba9cd4f4e8ae88812"
+    },
+    {
+      "path": "sdk/audio/stable-audio.js",
+      "sha256": "236e6fb7d7e745b48cf9386dbe489eeae458729edeb6decf57fbaca269d4d5d5"
+    },
+    {
+      "path": "sdk/audio/text.js",
+      "sha256": "bab757cf15883b4d198c7f4941ae7de05b620d537ce490fe0223342199d59428"
+    },
+    {
+      "path": "sdk/audio/wav.js",
+      "sha256": "4fc8d434866fab3d24d29940fb3074f8a2cbd1bee27abf711cc01adc0715004b"
     },
     {
       "path": "sdk/core/device.js",
