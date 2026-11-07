@@ -27,7 +27,7 @@ const STORE = 'media';
 // The audio tools (audio.music, audio.sfx, audio.speak) wait for their Spanish voice. While this is false they are
 // not offered: not in MEDIA_TOOL_NAMES, not in the tool lines of the prompt, and their aliases go nowhere, so a call
 // to one is an unknown tool. Voice notes (transcribe) do not depend on it.
-export const AUDIO_TOOLS = false;
+export const AUDIO_TOOLS = true;
 const isAudioTool = (name) => name.startsWith('audio.');
 const offered = (name) => AUDIO_TOOLS || !isAudioTool(name);
 export const MEDIA_TOOL_NAMES = ['image.generate', 'audio.music', 'audio.sfx', 'audio.speak', 'video.animate', 'video.generate'].filter(offered);
@@ -113,7 +113,8 @@ const SPEC = {
     // The language of the chat when the model leaves it out: in Spanish the SDK reads with a voice from Spain.
     args: (a, lang) => ({ text: str(a.text ?? a.prompt), lang: ['es', 'en'].includes(str(a.lang)) ? str(a.lang) : lang }),
     need: (o) => (o.text ? null : 'text'),
-    estimate: (mod, o, env) => mod.Speech.estimate(env),
+    // The language picks the model (Elffuss's own voice in Spanish, Kokoro in English): the estimate is that model's.
+    estimate: (mod, o, env) => mod.Speech.estimate({ ...env, lang: o.lang }),
     exec: (task, o, _img, signal) => task.run({ text: o.text, lang: o.lang }, { signal }),
   },
   'video.animate': {
