@@ -30,11 +30,12 @@ const STORE = 'media';
 export const AUDIO_TOOLS = true;
 const isAudioTool = (name) => name.startsWith('audio.');
 const offered = (name) => AUDIO_TOOLS || !isAudioTool(name);
-export const MEDIA_TOOL_NAMES = ['image.generate', 'audio.music', 'audio.sfx', 'audio.speak', 'video.animate', 'video.generate'].filter(offered);
+export const MEDIA_TOOL_NAMES = ['image.generate', 'image.describe', 'audio.music', 'audio.sfx', 'audio.speak', 'video.animate', 'video.generate'].filter(offered);
 
 const CATALOG = {
   en: [
     '- image.generate(prompt, aspect?): make a picture. Write `prompt` in ENGLISH (translate the user\'s request): subject, style, light, colours. aspect: "1:1", "16:9" or "9:16"',
+    '- image.describe(image, question?): look at a picture of this chat again (its id, img-…): what it shows and the text written in it. For a picture whose description you do not have, or a detail of it (what a sign says)',
     '- audio.music(prompt, seconds?): make music. `prompt` in ENGLISH: genre, instruments, mood, tempo. seconds 5 to 60',
     '- audio.sfx(prompt, seconds?): make a sound effect. `prompt` in ENGLISH. seconds 1 to 20',
     '- audio.speak(text, lang?): read a text aloud. `text` in the user\'s language, as it should be heard; lang "es" or "en"',
@@ -43,6 +44,7 @@ const CATALOG = {
   ],
   es: [
     '- image.generate(prompt, aspect?): hacer una imagen. Escribe `prompt` en INGLÉS (traduce lo que pide el usuario): tema, estilo, luz, colores. aspect: "1:1", "16:9" o "9:16"',
+    '- image.describe(image, question?): volver a mirar una imagen de esta conversación (su id, img-…): lo que muestra y el texto escrito en ella. Para una imagen cuya descripción no tienes, o un detalle (qué pone en un cartel)',
     '- audio.music(prompt, seconds?): hacer música. `prompt` en INGLÉS: género, instrumentos, ánimo, tempo. seconds de 5 a 60',
     '- audio.sfx(prompt, seconds?): hacer un efecto de sonido. `prompt` en INGLÉS. seconds de 1 a 20',
     '- audio.speak(text, lang?): leer un texto en voz alta. `text` en el idioma del usuario, tal como debe sonar; lang "es" o "en"',
@@ -68,12 +70,13 @@ export const MEDIA_ALIASES = Object.fromEntries(Object.entries({
   music: 'audio.music', make_music: 'audio.music', generate_music: 'audio.music', 'audio.generate_music': 'audio.music',
   sfx: 'audio.sfx', sound_effect: 'audio.sfx', make_sound: 'audio.sfx', 'audio.sound': 'audio.sfx',
   speak: 'audio.speak', tts: 'audio.speak', text_to_speech: 'audio.speak', say: 'audio.speak', 'audio.tts': 'audio.speak',
+  describe_image: 'image.describe', image_describe: 'image.describe', 'image.look': 'image.describe', 'image.read': 'image.describe', look_at_image: 'image.describe', see_image: 'image.describe', 'image.see': 'image.describe',
   animate: 'video.animate', animate_image: 'video.animate', image_to_video: 'video.animate', 'image.animate': 'video.animate',
   generate_video: 'video.generate', make_video: 'video.generate', text_to_video: 'video.generate', 'video.create': 'video.generate',
 }).filter(([, tool]) => offered(tool)));
 
 /** The argument keys of the media tools, for parsers that read loose JSON by key. */
-export const MEDIA_KEYS = ['prompt', 'text', 'image', 'aspect', 'preset', 'lang', 'size', 'voice', 'path'];
+export const MEDIA_KEYS = ['prompt', 'text', 'image', 'aspect', 'preset', 'lang', 'size', 'voice', 'path', 'question'];
 
 export const isMediaTool = (name) => MEDIA_TOOL_NAMES.includes(name);
 
@@ -93,6 +96,12 @@ const SPEC = {
     need: (o) => (o.prompt ? null : 'prompt'),
     estimate: (mod, o, env) => mod.TextToImage.estimate(env),
     exec: (task, o, _img, signal) => task.generate({ prompt: o.prompt, ...(o.aspect ? { aspect: o.aspect } : {}), ...(o.seed != null ? { seed: o.seed } : {}) }, { signal }),
+  },
+  // Looking again at a picture: Florence-2 (elffuss-ai image-to-text), its description kept with the picture (describe()).
+  'image.describe': {
+    module: 'image-to-text', cls: 'ImageToText', kind: 'image', prefix: 'img', image: true, describe: true,
+    args: (a) => ({ image: str(a.image ?? a.id ?? a.media), question: str(a.question ?? a.q) }),
+    need: () => null,
   },
   'audio.music': {
     module: 'audio', cls: 'Music', kind: 'audio', prefix: 'aud',
@@ -147,6 +156,8 @@ const W = {
     stopped: 'Stopped',
     denied: 'The user did not allow the download, so nothing was made. Say so and do not try again.',
     made: { image: 'Picture', audio: 'Audio', video: 'Video' },
+    seen: (id, d) => describedLine({ id, described: d }, 'en'),
+    unseen: (r) => `(the picture could not be looked at${r ? `: ${r}` : ''}; say so if asked what it shows, and do not guess)`,
     done: (kind, id, extra) => `${W.en.made[kind]} ${id} made${extra ? ` (${extra})` : ''} and shown to the user, with a download button. To use it later, pass "${id}".`,
     failed: (m) => `It could not be made: ${m}`,
     reasons: {
@@ -166,7 +177,7 @@ const W = {
       encode: 'Reading the description…', step: (i, n) => `Step ${i} of ${n}`, decode: 'Decoding…', 'encode-png': 'Saving the picture…',
       depth: 'Measuring the depth…', inpaint: 'Painting behind what is near…', render: (i, n) => `Frame ${i} of ${n}`, mux: 'Writing the video file…',
       phonemes: 'Reading the text…', chunk: (i, n) => `Sentence ${i} of ${n}`, load: 'Loading the model…', download: 'Downloading the model…',
-      unload: 'Freeing the graphics card…', working: 'Working…',
+      unload: 'Freeing the graphics card…', working: 'Working…', running: 'Looking at the picture…',
     },
   },
   es: {
@@ -176,6 +187,8 @@ const W = {
     stopped: 'Parado',
     denied: 'El usuario no ha permitido la descarga, así que no se ha hecho nada. Dilo y no vuelvas a intentarlo.',
     made: { image: 'Imagen', audio: 'Audio', video: 'Vídeo' },
+    seen: (id, d) => describedLine({ id, described: d }, 'es'),
+    unseen: (r) => `(no se pudo describir la imagen${r ? `: ${r}` : ''}; si te preguntan qué muestra, dilo así y no lo inventes)`,
     done: (kind, id, extra) => `${W.es.made[kind]} ${id} hecho${extra ? ` (${extra})` : ''} y mostrado al usuario, con un botón para descargarlo. Para usarlo después, pasa "${id}".`,
     failed: (m) => `No se ha podido hacer: ${m}`,
     reasons: {
@@ -195,7 +208,7 @@ const W = {
       encode: 'Leyendo la descripción…', step: (i, n) => `Paso ${i} de ${n}`, decode: 'Decodificando…', 'encode-png': 'Guardando la imagen…',
       depth: 'Midiendo la profundidad…', inpaint: 'Pintando lo que queda detrás…', render: (i, n) => `Fotograma ${i} de ${n}`, mux: 'Escribiendo el vídeo…',
       phonemes: 'Leyendo el texto…', chunk: (i, n) => `Frase ${i} de ${n}`, load: 'Cargando el modelo…', download: 'Descargando el modelo…',
-      unload: 'Liberando la tarjeta gráfica…', working: 'Trabajando…',
+      unload: 'Liberando la tarjeta gráfica…', working: 'Trabajando…', running: 'Mirando la imagen…',
     },
   },
 };
@@ -286,6 +299,22 @@ function newMediaId(prefix) {
   return prefix + '-' + [...r].map((b) => ID_CHARS[b % ID_CHARS.length]).join('');
 }
 export const PREFIX = { image: 'img', audio: 'aud', video: 'vid', doc: 'doc' };
+
+/**
+ * The line the model reads about a picture it has looked at (rec.described = { caption, text } from image.describe),
+ * or null when it has not. The caption is English, as the model writes it; the chat model answers in the user's
+ * language.
+ */
+export function describedLine(rec, lang) {
+  const d = rec?.described;
+  if (!d || !(d.caption || d.text)) return null;
+  const es = lang === 'es';
+  const cap = String(d.caption || '').trim();
+  const txt = String(d.text || '').trim();
+  return es
+    ? `[${rec.id}] Lo que se ve (descrito en inglés): ${cap || '—'}${txt ? ` · Texto visible: «${txt}»` : ' · Sin texto visible.'}`
+    : `[${rec.id}] What it shows: ${cap || '—'}${txt ? ` · Visible text: "${txt}"` : ' · No visible text.'}`;
+}
 
 /**
  * Keep a media item: { kind: image|audio|video|doc, mime, blob, name?, chat?, source: 'made'|'attached'|'voice', meta? }.
@@ -391,6 +420,15 @@ export function createMediaTools(hooks) {
     }
     const stop = () => Object.assign(new Error('stopped'), { name: 'AbortError' });
     if (signal?.aborted) throw stop();
+    // Looking again at a picture: the description, kept with it, is what the model reads; the turn goes on.
+    if (spec.describe) {
+      const d = await describe(summary.image, { signal, onProgress, lang, fresh: !!o.question && !(await getMedia(summary.image))?.described?.text });
+      if (d.error != null || d.reason) {
+        const say = d.reason === 'denied' ? w.unseen('') : w.unseen(d.error || '');
+        return { text: say, say: '', result: { ...summary, error: d.reason === 'denied' ? '' : d.error, denied: d.reason === 'denied', need: d.bytes || null, kindNeeded: 'vision' } };
+      }
+      return { text: w.seen(summary.image, d), result: { ...summary, described: { caption: d.caption, text: d.text } } };
+    }
     while (busy) { try { await busy; } catch { /* the previous one reported its own end */ } }
     let release;
     busy = new Promise((r) => { release = r; });
@@ -413,7 +451,7 @@ export function createMediaTools(hooks) {
       if (toGet > 0) {
         const ok = await hooks.consent({ tool: call.tool, kind: spec.kind, bytes: toGet, total: est.downloadBytes || toGet });
         if (signal?.aborted) throw stop();
-        if (!ok) return { text: w.denied, say: '', result: { ...summary, denied: true }, end: true };
+        if (!ok) return { text: w.denied, say: '', result: { ...summary, denied: true, need: toGet, kindNeeded: spec.kind }, end: true };
       }
       // 3. The chat model leaves the graphics card to the task.
       onProgress({ text: w.stage.unload, pct: null });
@@ -443,6 +481,53 @@ export function createMediaTools(hooks) {
       release(); busy = null;
       // Not awaited: the card is the answer and shows at once; the model loads again meanwhile (from this browser).
       if (unloaded) Promise.resolve().then(() => hooks.reloadLlm()).catch(() => { /* the next message loads it */ });
+    }
+  }
+
+  /**
+   * What a picture of this browser shows, in words: { caption, text } (English; `text` the lines written in it, joined
+   * with « · »), kept with the picture so it is looked at once. The first time, the product's consent for the
+   * download (kind 'vision'); on a phone the chat model steps aside while it runs. Returns { caption, text } or
+   * { error, reason, bytes? } (reason 'denied' when the user said no). Throws an AbortError when `signal` stops it.
+   */
+  async function describe(id, { signal, onProgress = () => {}, lang = hooks.lang(), fresh = false } = {}) {
+    const w = words(lang);
+    const stop = () => Object.assign(new Error('stopped'), { name: 'AbortError' });
+    const rec = await getMedia(id);
+    if (!rec || rec.kind !== 'image') return { error: w.notImage(id), reason: 'not-image' };
+    if (rec.described && !fresh) return { caption: rec.described.caption || '', text: rec.described.text || '', cached: true };
+    while (busy) { try { await busy; } catch { /* the previous one reported its own end */ } }
+    let release;
+    busy = new Promise((r) => { release = r; });
+    let unloaded = false, task = null;
+    try {
+      let mod, e;
+      try { mod = await module('image-to-text'); e = await env(); } catch (err) { console.warn('[media] image-to-text did not load', err); }
+      if (!mod || !e) return { error: w.reasons['sdk-unavailable'], reason: 'sdk-unavailable' };
+      const est = await mod.ImageToText.estimate({ store: e.store }).catch(() => ({ fits: false, reason: 'device-unsupported' }));
+      if (!est.fits) return { error: w.reasons[est.reason] || est.reason || w.reasons['device-unsupported'], reason: est.reason || 'device-unsupported' };
+      const toGet = est.missingBytes == null ? est.downloadBytes : est.missingBytes;
+      if (toGet > 0) {
+        const ok = await hooks.consent({ tool: 'image.describe', kind: 'vision', bytes: toGet, total: est.downloadBytes || toGet });
+        if (signal?.aborted) throw stop();
+        if (!ok) return { error: '', reason: 'denied', bytes: toGet };
+      }
+      // On a phone the tab's memory is the chat model's: it steps aside while the picture is looked at.
+      if (globalThis.matchMedia?.('(pointer: coarse)').matches) { onProgress({ text: w.stage.unload, pct: null }); await hooks.unloadLlm(); unloaded = true; }
+      task = new mod.ImageToText({ store: e.store, runtime: e.runtime, onProgress: (p) => { try { onProgress(progressWords(p, lang)); } catch { /* painting */ } } });
+      let out;
+      try { out = await task.run(rec.blob, { signal }); } catch (err) {
+        if (signal?.aborted || err?.code === 'aborted' || err?.name === 'AbortError') throw stop();
+        return { error: err?.message || String(err), reason: 'failed' };
+      }
+      const described = { caption: String(out?.caption || '').trim(), text: String(out?.text || '').trim(), at: Date.now() };
+      const fresh2 = await getMedia(id);
+      if (fresh2) { fresh2.described = described; await tx('readwrite', (s) => (s ? s.put(fresh2) : (mem.set(id, fresh2), null))).catch(() => {}); }
+      return described;
+    } finally {
+      try { await task?.dispose(); } catch { /* releasing */ }
+      release(); busy = null;
+      if (unloaded) Promise.resolve().then(() => hooks.reloadLlm()).catch(() => {});
     }
   }
 
@@ -487,5 +572,5 @@ export function createMediaTools(hooks) {
     }
   }
 
-  return { run, transcribe, base, isMediaTool, lines: mediaToolLines, rule: mediaRule };
+  return { run, transcribe, describe, base, isMediaTool, lines: mediaToolLines, rule: mediaRule };
 }

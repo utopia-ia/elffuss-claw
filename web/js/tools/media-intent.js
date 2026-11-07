@@ -114,8 +114,10 @@ const BARE = new RegExp(`^ (?:una?|unas|unos|otra|otro|a|an|another)? ?(?:${[KIN
  * @returns {{ media: boolean, why: 'attachment'|'id'|'reference'|'request'|'phrase'|null }}
  */
 export function needsMediaTools(text, { attachments = 0, hasMedia = false } = {}) {
-  if (attachments > 0) return { media: true, why: 'attachment' };
   const raw = String(text || '');
+  // An attachment with words is about it (animate it, what is in it…); an attachment alone is not a request to make
+  // anything (measured on elffuss.com: a photo sent alone got animated).
+  if (attachments > 0 && raw.trim()) return { media: true, why: 'attachment' };
   if (MEDIA_ID.test(raw.toLowerCase())) return { media: true, why: 'id' };
   const t = normalize(raw);
   if (hasMedia && REFERS.some((re) => re.test(t))) return { media: true, why: 'reference' };

@@ -7,6 +7,9 @@
   "detect": {
    "default": "detect/rfdetr-nano"
   },
+  "image-to-text": {
+   "default": "image-to-text/florence-2-base-ft"
+  },
   "image-to-video": {
    "default": "image-to-video/depth-parallax",
    "module": "video"
@@ -187,6 +190,151 @@
        "main:onnx/model_quantized.onnx"
       ],
       "bytes": 28829667
+     }
+    ]
+   },
+   "notes": {
+    "es": null,
+    "en": null
+   }
+  },
+  "image-to-text/florence-2-base-ft": {
+   "task": "image-to-text",
+   "name": {
+    "es": "Florence-2 base",
+    "en": "Florence-2 base"
+   },
+   "license": "MIT",
+   "author": "onnx-community",
+   "base": {
+    "name": "Florence-2 base (fine-tuned)",
+    "author": "microsoft",
+    "url": "https://huggingface.co/microsoft/Florence-2-base-ft",
+    "license": "MIT"
+   },
+   "flag": null,
+   "redistributes": false,
+   "runtime": "transformers.js",
+   "pipeline": null,
+   "parts": {
+    "main": {
+     "repo": "onnx-community/Florence-2-base-ft",
+     "revision": "e88a44eaf3791a35eae0c5a47b3dbcd36e67eb6f",
+     "license": "MIT",
+     "author": "onnx-community",
+     "files": {
+      "config.json": {
+       "size": 5432,
+       "gitOid": "f73f68ab97b370d4e70759c1be2967d891726ad8"
+      },
+      "generation_config.json": {
+       "size": 292,
+       "gitOid": "44ad5ddf0872b609295be720feab64296f6bb238"
+      },
+      "onnx/decoder_model_merged_q4.onnx": {
+       "size": 64393474,
+       "sha256": "be7a2f33e65f8d65538024772fda4d1c5a7752d60a7159aadf53f9f4798b90fa"
+      },
+      "onnx/decoder_model_merged_quantized.onnx": {
+       "size": 98177697,
+       "sha256": "f22f52f980c33df0efa15932c2f3db6d9d3595ce6387eca938b8cfe23dc4c641"
+      },
+      "onnx/embed_tokens_fp16.onnx": {
+       "size": 78780290,
+       "sha256": "da2607930eea5e21e4a2bd5fd069de550f1acc30316a4e8f824551a95232ba39"
+      },
+      "onnx/embed_tokens_q4.onnx": {
+       "size": 157560063,
+       "sha256": "f972f338dedea6b67e10e87aacc0dfd4e247f1e18c60d3911af9e6b9edb68f32"
+      },
+      "onnx/embed_tokens_quantized.onnx": {
+       "size": 39390433,
+       "sha256": "6b2258db1c8ee9b160576ccde3cd3814d83a2edaed0dd1c6ca9ff3c38fa62214"
+      },
+      "onnx/encoder_model_q4.onnx": {
+       "size": 30058778,
+       "sha256": "34b17bcf191dacb79bd482b94bad5cf1ba39bc770f6a4c9ae26f28b89c235e4b"
+      },
+      "onnx/encoder_model_quantized.onnx": {
+       "size": 43651493,
+       "sha256": "f4ad7a68f1fb875d3bcf735ea14a7021b7ba7e83baf7cf10289881b4ed6d9b85"
+      },
+      "onnx/vision_encoder_fp16.onnx": {
+       "size": 183930536,
+       "sha256": "a7abcd77199c5d0089cf985ede4dd8089acd84f30fb3fb1462d5930345c688b3"
+      },
+      "onnx/vision_encoder_q4.onnx": {
+       "size": 81236858,
+       "sha256": "8f211dfc176996d14e24d551f8e02530de781dd8b30d9e7d35b69b7c2d0340ce"
+      },
+      "onnx/vision_encoder_quantized.onnx": {
+       "size": 93746540,
+       "sha256": "3b79d54f23f666f731549db23cb070c35a979ce19cbd9720e90e67a78dc9768c"
+      },
+      "preprocessor_config.json": {
+       "size": 2673,
+       "gitOid": "f0262fff97911d278f7ae3b3447f04c74a3c032c"
+      },
+      "tokenizer_config.json": {
+       "size": 197658,
+       "gitOid": "c6d6ca1e273fdccf972eeca8f0b75672f8ee575f"
+      },
+      "tokenizer.json": {
+       "size": 2297961,
+       "gitOid": "c6919f318f277e660b557212ed1edaf28b037fc8"
+      }
+     }
+    }
+   },
+   "devices": {
+    "webgpu": [
+     {
+      "when": "shader-f16",
+      "dtype": "fp16+q4",
+      "files": [
+       "main:config.json",
+       "main:generation_config.json",
+       "main:preprocessor_config.json",
+       "main:tokenizer.json",
+       "main:tokenizer_config.json",
+       "main:onnx/vision_encoder_fp16.onnx",
+       "main:onnx/embed_tokens_fp16.onnx",
+       "main:onnx/encoder_model_q4.onnx",
+       "main:onnx/decoder_model_merged_q4.onnx"
+      ],
+      "bytes": 359667094
+     },
+     {
+      "dtype": "q4",
+      "files": [
+       "main:config.json",
+       "main:generation_config.json",
+       "main:preprocessor_config.json",
+       "main:tokenizer.json",
+       "main:tokenizer_config.json",
+       "main:onnx/vision_encoder_q4.onnx",
+       "main:onnx/embed_tokens_q4.onnx",
+       "main:onnx/encoder_model_q4.onnx",
+       "main:onnx/decoder_model_merged_q4.onnx"
+      ],
+      "bytes": 335753189
+     }
+    ],
+    "wasm": [
+     {
+      "dtype": "q8",
+      "files": [
+       "main:config.json",
+       "main:generation_config.json",
+       "main:preprocessor_config.json",
+       "main:tokenizer.json",
+       "main:tokenizer_config.json",
+       "main:onnx/vision_encoder_quantized.onnx",
+       "main:onnx/embed_tokens_quantized.onnx",
+       "main:onnx/encoder_model_quantized.onnx",
+       "main:onnx/decoder_model_merged_quantized.onnx"
+      ],
+      "bytes": 277470179
      }
     ]
    },

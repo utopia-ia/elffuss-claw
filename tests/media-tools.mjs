@@ -75,7 +75,7 @@ const scripted = () => {
       const last = real[real.length - 1];
       if (last.role === 'user' && last.content.startsWith('[resultado')) return 'Hecho.';
       const all = history.map((m) => m.content).join('\n');
-      const u = last.content.replace(/^\[(?:document|documento) [\s\S]*?\[(?:end of document|fin del documento)\]\s*/g, '').replace(/^(\[(?:attached|adjunto|nota de voz|voice note)[^\]]*\]\s*)+/, '');
+      const u = last.content.replace(/^\[(?:document|documento) [\s\S]*?\[(?:end of document|fin del documento)\]\s*/g, '').replace(/^(\[(?:attached|adjunto|nota de voz|voice note)[^\]]*\](?:\s*\((?:sin mirar todavía|not looked at yet)[^)]*\))?\s*)+/, '');
       if (/^\[img\]/.test(u)) return call('image.generate', { prompt: 'a red fox in the snow', aspect: '16:9' });
       if (/^\[speak\]/.test(u)) return call('audio.speak', { text: u.replace(/^\[speak\]\s*/, '') });
       if (/^\[gen\]/.test(u)) return call('video.generate', { prompt: u.replace(/^\[gen\]\s*/, ''), seconds: 2 });

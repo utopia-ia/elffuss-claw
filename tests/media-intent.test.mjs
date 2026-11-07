@@ -28,7 +28,7 @@ const POSITIVE = [
   ['usa img-k3x9 para el vídeo'], ['anima vid-ab23 otra vez'],
   ['anima esta foto', { hasMedia: true }], ['haz que la imagen de antes se mueva', { hasMedia: true }],
   ['¿puedes animar la primera imagen?', { hasMedia: true }], ['use the same picture again', { hasMedia: true }],
-  ['qué opinas de esto', { attachments: 1 }], ['', { attachments: 2 }],
+  ['qué opinas de esto', { attachments: 1 }], ['¿qué hay en esta foto?', { attachments: 1 }],
   // Typing slips on the verb, and bare requests (measured on elffuss.com, 2026-11-07).
   ['creame una imagen de malaga y paris juntas'], ['cfera una imagen de pars'], ['has una foto de un perro en la playa'],
   ['dibujme una imagen de un gato'], ['genra un dibujo de un barco'], ['hazmw un video de una ola'], ['craea una ilustración de un castillo'],
@@ -51,6 +51,7 @@ const NEGATIVE = [
   ['speak to me about history'], ['what does this image processing code do'], ['optimiza las imágenes de la carpeta'],
   ['convierte este png a jpg'], ['hola, ¿qué tal?'], ['recuerda que me gusta la música clásica'],
   ['anima esta foto'], ['use the same picture again'],
+  ['', { attachments: 1 }], ['', { attachments: 2 }], ['   ', { attachments: 1 }],
   ['creo que una foto vale más que mil palabras'], ['¿has visto la foto de ayer?'], ['para una imagen iso usa dd'],
   ['imagen de docker para node'], ['la cara de la foto sale borrosa'], ['cree una cuenta y subí una foto'],
   ['¿qué imagen de disco necesito?'], ['una imagen vale más que mil palabras'], ['the image is blurry'],

@@ -8,7 +8,7 @@
 // PDF text comes from PDF.js and Word text from the document's own XML, both pinned with the SDK copy
 // (vendor/elffuss-ai/, ai-sync.mjs). Nothing here uploads, and a file the browser cannot read says so.
 
-import { putMedia } from './media-tools.js';
+import { putMedia, describedLine } from './media-tools.js';
 
 /** How much of a document the model reads with the message (characters); the rest is cut and the card says so. */
 export const DOC_BUDGET = 8000;
@@ -152,8 +152,13 @@ export function mediaContext(rec, lang) {
   const secs = m.seconds ? `${Math.round(m.seconds)} s` : '';
   if (rec.source === 'voice') return es ? `[nota de voz ${rec.id}${secs ? ` (${secs})` : ''}, escrita en este dispositivo: es el mensaje del usuario]` : `[voice note ${rec.id}${secs ? ` (${secs})` : ''}, written down on this device: it is the user's message]`;
   const what = es ? { image: 'foto', video: 'vídeo', audio: 'audio' }[rec.kind] : { image: 'photo', video: 'video', audio: 'audio' }[rec.kind];
-  const use = rec.kind === 'image' ? (es ? ' Para animarla: video.animate con image "' + rec.id + '".' : ' To animate it: video.animate with image "' + rec.id + '".') : '';
-  return `[${es ? 'adjunto' : 'attached'} ${what} ${rec.id}${[size, secs].filter(Boolean).length ? ` (${[size, secs].filter(Boolean).join(', ')})` : ''}.${use} ${es ? 'No puedes ver su contenido.' : 'You cannot see its content.'}]`;
+  // Nothing here says what to do with it (it used to end «To animate it: video.animate…», and a photo sent alone got
+  // animated) or that it cannot be seen: what a picture shows comes on its own line once it is looked at
+  // (media-tools.js describedLine).
+  const seen = rec.kind === 'image' ? describedLine(rec, lang) : null;
+  // A picture not looked at yet says how to look (the chat looks before answering and takes this note away).
+  const unseen = rec.kind === 'image' && !seen ? (es ? ` (sin mirar todavía: para saber qué muestra, image.describe con image "${rec.id}")` : ` (not looked at yet: to know what it shows, image.describe with image "${rec.id}")`) : '';
+  return `[${es ? 'adjunto' : 'attached'} ${what} ${rec.id}${[size, secs].filter(Boolean).length ? ` (${[size, secs].filter(Boolean).join(', ')})` : ''}]${unseen}${seen ? '\n' + seen : ''}`;
 }
 
 async function imageMeta(file) {

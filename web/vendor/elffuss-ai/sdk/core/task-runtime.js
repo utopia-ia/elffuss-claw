@@ -111,6 +111,17 @@ export class TaskContext {
     return createPipeline({ tf, model: this.model, choice: { device: this.device, dtype: this.dtype }, fetch });
   }
 
+  /**
+   * Transformers.js with its fetch going to the store at this variant's pinned files, for a task that loads its model
+   * by class (`from_pretrained`) rather than as a pipeline.
+   */
+  async modelFetch() {
+    const tf = await this.transformers();
+    tf.env.fetch = createStoreFetch({ model: this.model, files: this.files, store: this.#store, memo: this.#memo, progress: this.#progress, cached: this.#cached, log: this.#log });
+    this.#progress.status('loading');
+    return tf;
+  }
+
   /** ONNX Runtime Web, pinned and set up (direct use). */
   ort() {
     return loadOrt(this.#runtime, { pins: this.#pins });

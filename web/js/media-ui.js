@@ -99,9 +99,16 @@ function paintDone(card, kind, what, r) {
     toEnd();
     return;
   }
+  if (r.described) {
+    // Mirada otra vez (image.describe): lo que leyó el modelo, en una tarjeta corta, no un fallo.
+    kicker.textContent = `${tr('mdLooked')} · ${r.image || ''}`;
+    card.append(el('span', 'md-line', [r.described.caption, r.described.text && `«${r.described.text}»`].filter(Boolean).join(' ').slice(0, 300)));
+    return;
+  }
   card.classList.add('is-error');
   kicker.textContent = r.stopped ? tr('mdStopped') : r.cannot ? tr('mdCannot') : '⚠️';
-  if (r.denied) card.append(el('span', 'md-line', tr('mdDeniedLine')));
+  // Sin la descarga: lo que hace falta y qué hacer, no «no ha funcionado».
+  if (r.denied) card.append(el('span', 'md-line', r.need ? tr('mdNeedLine', { size: formatBytes(r.need, uiLang()) }) : tr('mdDeniedLine')));
   else if (!r.stopped && r.error) card.append(el('span', 'md-line', r.error));
 }
 

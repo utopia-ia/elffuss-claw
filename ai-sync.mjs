@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 UtopiaIA
 //
-// Copies the media task modules of the elffuss-ai SDK (text-to-image, video, video-gen, audio and the core they
+// Copies the media task modules of the elffuss-ai SDK (text-to-image, video, video-gen, audio, image-to-text and the core they
 // share) into this product from PINNED COMMITS, with the registry they read and the runtimes they run on, and records
 // every file with its sha256 in <dest>/PIN.json. The same script lives in the chat (elffuss-home), Claw and Code.
 //
@@ -45,7 +45,7 @@ const die = (m) => { console.error('ai-sync: ' + m); process.exit(1); };
 
 // The modules a product's media tools import, and the core they are built on. `core` first: the runtimes' manifest
 // and the licence come from its commit.
-const MODULES = ['core', 'text-to-image', 'video', 'video-gen', 'audio'];
+const MODULES = ['core', 'text-to-image', 'video', 'video-gen', 'audio', 'image-to-text'];
 // Registries merged into registry/tasks.json: each module's commit's tasks.json, and the entries a module ships as
 // pending (video-gen keeps its model in registry/pending/ until its weights are published).
 const RUNTIME_VARIANT = 'webgpu';   // brings WebGPU and WebAssembly; every media model declares WebGPU

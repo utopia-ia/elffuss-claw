@@ -5,34 +5,38 @@
   "modules": {
     "core": {
       "dir": "sdk/core",
-      "commit": "4c79b0a4b165f9f017241f73ba8385a8a15e9080"
+      "commit": "f5481381923c48d279da03671f9afad20ffcc638"
     },
     "text-to-image": {
       "dir": "sdk/text-to-image",
-      "commit": "4c79b0a4b165f9f017241f73ba8385a8a15e9080"
+      "commit": "f5481381923c48d279da03671f9afad20ffcc638"
     },
     "video": {
       "dir": "sdk/video",
-      "commit": "4c79b0a4b165f9f017241f73ba8385a8a15e9080"
+      "commit": "f5481381923c48d279da03671f9afad20ffcc638"
     },
     "video-gen": {
       "dir": "sdk/video-gen",
-      "commit": "4c79b0a4b165f9f017241f73ba8385a8a15e9080"
+      "commit": "f5481381923c48d279da03671f9afad20ffcc638"
     },
     "audio": {
       "dir": "sdk/audio",
-      "commit": "4c79b0a4b165f9f017241f73ba8385a8a15e9080"
+      "commit": "f5481381923c48d279da03671f9afad20ffcc638"
+    },
+    "image-to-text": {
+      "dir": "sdk/image-to-text",
+      "commit": "f5481381923c48d279da03671f9afad20ffcc638"
     }
   },
   "registry": [
     {
-      "commit": "4c79b0a4b165f9f017241f73ba8385a8a15e9080",
+      "commit": "f5481381923c48d279da03671f9afad20ffcc638",
       "path": "registry/tasks.json"
     }
   ],
   "runtimes": {
     "variant": "webgpu",
-    "manifestCommit": "4c79b0a4b165f9f017241f73ba8385a8a15e9080",
+    "manifestCommit": "f5481381923c48d279da03671f9afad20ffcc638",
     "onnxruntimeWeb": "1.30.0",
     "transformers": "4.3.1"
   },
@@ -47,7 +51,7 @@
     },
     {
       "path": "registry/tasks.json",
-      "sha256": "d0528972df3e4e209e06ca42bc4a427302e73c4bc5b8534d0f9a7f5d5ab12173"
+      "sha256": "38c8f3247267731c970ca868e84880e3db444bf4055266510d5d907ef7ab0899"
     },
     {
       "path": "runtimes/@huggingface/transformers@4.3.1+ort1.30.0-webgpu/LICENSE",
@@ -931,7 +935,7 @@
     },
     {
       "path": "sdk/core/task-runtime.js",
-      "sha256": "d4ceaa1cc74ab42790212d7b584102d9f9754274e9efada633ba31373a5198ec"
+      "sha256": "afd4150f4671702ec5eea9c626f96494b79fffa156b27fd5172f261b73dda40a"
     },
     {
       "path": "sdk/core/task.js",
@@ -956,6 +960,22 @@
     {
       "path": "sdk/core/zip.js",
       "sha256": "0b48855acee455db80a69e3634232eac0314a07c61da521483ddc23bf2e2e3e1"
+    },
+    {
+      "path": "sdk/image-to-text/impl.js",
+      "sha256": "f36de82358b6f75bd7531a6523c7ad5e409cd6d23993ed789799a99b5e54acc2"
+    },
+    {
+      "path": "sdk/image-to-text/index.js",
+      "sha256": "862b37d7350029733b93467fafe8000bebbb37fa8cb69b6f7b04306077e57fdc"
+    },
+    {
+      "path": "sdk/image-to-text/sizes.js",
+      "sha256": "77cc946b25e105b5741207b5367bdbec6c091ca47000e0c613e988ecf4c6173c"
+    },
+    {
+      "path": "sdk/image-to-text/worker.js",
+      "sha256": "1b1f9d11e407533bbdab3c459aeb1612fd4fc679f4e915f72c91d6aac19c6861"
     },
     {
       "path": "sdk/text-to-image/impl.js",
