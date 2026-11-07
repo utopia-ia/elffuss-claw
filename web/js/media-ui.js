@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 UtopiaIA
-// Lo que se ve de las herramientas de medios y de los adjuntos en el chat de Claw:
+// Lo que se ve de las herramientas de medios y de los adjuntos en el chat (el mismo fichero en Claw y en Code; cada uno
+// le dice dónde está su registro de mensajes con configureUi):
 //   · la tarjeta de una imagen, un audio o un vídeo (progreso por etapas y Parar mientras se hace; el medio, su id y
 //     el botón de descargar cuando está), también al restaurar la conversación, leída de este navegador;
 //   · el «+» de la caja (Documento, Foto o vídeo, y Cámara en el móvil), los adjuntos esperando como fichas, y el
@@ -9,7 +10,7 @@
 import { t as tr, uiLang } from './i18n.js';
 import { mediaUrl, mediaKindOf, downloadName, formatBytes } from './tools/media-tools.js';
 import { attachFile, docContext, mediaContext, kindOf, DOC_ACCEPT, canRecord, startRecording, toMono16k, keepVoiceNote } from './tools/attach.js';
-import { AI_BASE, transcribe } from './tools/media.js';
+import { AI_BASE, transcribe, CHAT } from './tools/media.js';
 
 const $ = (id) => document.getElementById(id);
 const lang = () => (uiLang() === 'es' ? 'es' : 'en');
@@ -29,7 +30,10 @@ const ICON = {
   mic: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg>',
   x: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
 };
-const log = () => $('log');
+let ui = { log: () => $('log'), append: (node) => $('log')?.appendChild(node) };
+/** Dónde pinta: el registro del chat (`log()`) y cómo se añade a él (`append(node)`). Por defecto, #log. */
+export function configureUi(o) { ui = { ...ui, ...o }; }
+const log = () => ui.log();
 const toEnd = () => { const l = log(); if (l) l.scrollTop = l.scrollHeight; };
 
 // ---------- El medio de un id ----------
@@ -65,7 +69,7 @@ export function mediaCard(call, { onStop = () => {} } = {}) {
   stop.addEventListener('click', () => onStop());
   acts.append(stop);
   card.append(line, meter, acts);
-  log()?.appendChild(card);
+  ui.append(card);
   toEnd();
   return {
     progress(p) {
@@ -109,7 +113,7 @@ export function restoredMediaCard(tool, text, id) {
   head.insertAdjacentHTML('afterbegin', ICON[kind]);
   head.append(el('span', 'md-kicker', ''));
   card.append(head);
-  log()?.appendChild(card);
+  ui.append(card);
   if (id) paintDone(card, kind, '', { media: { id, kind, mime: '', name: id } });
   else paintDone(card, kind, '', { cannot: /no se puede|cannot be made/i.test(text), error: text });
   return card;
@@ -184,7 +188,7 @@ function addFiles(files) {
     const p = { file, rec: null, error: null };
     pending.push(p);
     if (!kindOf(file)) { p.error = tr('attUnsupported'); continue; }
-    attachFile(file, { base: AI_BASE, chat: 'claw' })
+    attachFile(file, { base: AI_BASE, chat: CHAT })
       .then((r) => { p.rec = r; }, (e) => { console.warn('[claw] adjunto', e); p.error = tr('attFailed'); })
       .finally(paintChips);
   }
@@ -236,7 +240,7 @@ async function finishRecording() {
     const samples = await toMono16k(blob);
     const out = await transcribe(samples, { signal: ctl.signal, lang: lang(), language: lang(), onProgress: () => {} });
     if (out.text) {
-      const voice = await keepVoiceNote(blob, seconds, { chat: 'claw', transcript: out.text });
+      const voice = await keepVoiceNote(blob, seconds, { chat: CHAT, transcript: out.text });
       rec.state = null; paintChips();
       onVoice(out.text, voice);
     } else if (out.reason === 'denied') { rec.state = null; paintChips(); }
@@ -268,6 +272,7 @@ export function mountComposer({ onVoiceText = () => {}, onChange = () => {} } = 
     b.innerHTML = ICON[icon]; b.append(el('span', null, label));
     const inp = el('input'); inp.type = 'file'; inp.hidden = true; inp.id = 'att-' + key; inp.accept = accept;
     if (capture) inp.setAttribute('capture', 'environment'); else inp.multiple = true;
+    inp.className = 'att-input';
     inp.addEventListener('change', () => { addFiles([...inp.files]); inp.value = ''; $('prompt')?.focus(); });
     b.addEventListener('click', () => { close(); inp.click(); });
     inputs[key] = inp;

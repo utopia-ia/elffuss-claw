@@ -20,6 +20,9 @@ let hooks = {
 };
 export function configureMedia(h) { hooks = { ...hooks, ...h }; }
 
+/** Con qué «conversación» se guardan los medios de esta app (todas las de Claw comparten la suya). */
+export const CHAT = 'claw';
+
 /** La URL de vendor/elffuss-ai/ de esta web. */
 export const AI_BASE = new URL('../../vendor/elffuss-ai/', import.meta.url);
 
@@ -51,7 +54,7 @@ export function mediaToolEntries(lang = 'es') {
 export async function runMedia(tool, args = {}, ctx = {}) {
   const card = hooks.card({ tool, args });
   try {
-    const r = await media.run({ tool, args }, { signal: ctx.signal, chat: 'claw', lang: hooks.lang(), onProgress: (p) => card.progress(p) });
+    const r = await media.run({ tool, args }, { signal: ctx.signal, chat: CHAT, lang: hooks.lang(), onProgress: (p) => card.progress(p) });
     card.done(r.result);
     if (r.result?.error && !r.end) return 'ERROR: ' + r.result.error;
     return r.text;
