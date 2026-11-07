@@ -6,18 +6,12 @@
 // tools/index.js): con ■, la descarga en curso se corta en vez de seguir por
 // detrás hasta el final.
 import { require as requirePerm } from '../permissions.js';
-import { t } from '../i18n.js';
+import { t, uiLang } from '../i18n.js';
+import { terms, buildBM25 } from '../acer-core.js';
+import { createResearch, decodeBody, parseSearx, WORDS, renderSearch, renderPage } from './web-research.js';
 
-const MAX = 8000; // caracteres devueltos al agente
 const PROXY_MB = 2; // el tope del proxy: MAX_PROXY_BYTES de server/serve.py
 
-function toText(html) {
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  doc.querySelectorAll('script,style,noscript,svg,iframe').forEach(n => n.remove());
-  const text = (doc.body?.innerText || doc.body?.textContent || '')
-    .replace(/\n{3,}/g, '\n\n').trim();
-  return text || html.slice(0, MAX);
-}
 
 const parado = (e, signal) => signal?.aborted || e?.name === 'AbortError';
 const hostDe = url => { try { return new URL(url).host; } catch { return url; } };
@@ -85,58 +79,132 @@ async function proxyGet(url, { signal } = {}) {
   throw new Error(t('webBoth', { host: hostDe(url), direct: directo?.message || t('webNoAnswer'), proxy: 'HTTP ' + r.status }));
 }
 
-export async function fetchUrl({ url } = {}, { signal } = {}) {
-  if (!/^https?:\/\//.test(url || '')) throw new Error(t('webBadUrl'));
-  await requirePerm('web', url);
-  const { text: html, truncated } = await proxyGet(url, { signal });
-  const text = toText(html);
-  const out = `[${url}]\n` + (text.length > MAX ? text.slice(0, MAX) + '\n' + t('cutMark') : text);
-  return truncated ? out + '\n' + t('webProxyCut', { mb: PROXY_MB }) : out;
+// ---------------------------------------------------------------- web.fetch y web.search
+// Sobre el módulo compartido de Elffuss (web-research.js, copia exacta del de elffuss.com, rama web-avanzada de
+// elffuss-home, donde se prueba contra páginas reales guardadas: cambiarlo allí y copiarlo). web.search pregunta
+// primero al buscador propio (/websearch, SearXNG en este mismo origen; site: pasa tal cual) y, si falla, responde
+// 429 o no encuentra nada, a DuckDuckGo lite por el proxy; lee por su cuenta las dos primeras páginas (las que su
+// robots.txt deja) y añade sus párrafos para la pregunta. Una búsqueda site: vacía sigue: las palabras del
+// usuario, la búsqueda dentro del sitio, una vez sin site:. web.fetch devuelve los párrafos de la página que
+// responden a lo que escribió el usuario; las páginas hechas con JavaScript se leen por sus datos (JSON-LD,
+// noscript, feed, AMP, la API pública de Mastodon o Bluesky). La pregunta del usuario no sale: solo ordena aquí.
+
+const TIMEOUT_MS = 25000;
+const lengua = () => (uiLang() === 'es' ? 'es' : 'en');
+const palabras = () => WORDS[lengua()];
+
+function parseWithBase(html, url) {
+  const doc = new DOMParser().parseFromString(String(html || ''), 'text/html');
+  if (!doc.querySelector('base[href]') && doc.head) {
+    const b = doc.createElement('base');
+    b.setAttribute('href', url);
+    doc.head.prepend(b);
+  }
+  return doc;
 }
 
-// Búsqueda web REAL. Parseo TOLERANTE (independiente de clases): DuckDuckGo
-// envuelve cada resultado en un enlace con ?uddg=<url real>. Buscamos esos.
-// Si ningún buscador contesta se dice por qué, en vez de «Sin resultados» (que
-// solo vale cuando el buscador SÍ contestó y no encontró nada). Y la página de
-// verificación anti-bot de DuckDuckGo no es una lista vacía: es un bloqueo.
-// Llega con un 202 (el proxy endurecido pasa el estado de la web; el viejo lo
-// cambiaba por 200, y por eso también se mira el texto).
-const BLOQUEO_DDG = /anomaly|unusual traffic|are you a human|bots use duckduckgo/i;
-export async function search({ query } = {}, { signal } = {}) {
-  if (!query) throw new Error(t('webNoQuery'));
-  await requirePerm('web', t('pdWebSearch', { q: query }));
-  let html = '', ultimoError = null, bloqueado = false;
-  for (const ep of ['https://html.duckduckgo.com/html/?q=', 'https://lite.duckduckgo.com/lite/?q=']) {
+async function conPlazo(signal, fn) {
+  const ctl = new AbortController();
+  const stop = () => ctl.abort();
+  signal?.addEventListener('abort', stop, { once: true });
+  const timer = setTimeout(stop, TIMEOUT_MS);
+  try { return await fn(ctl.signal); } finally { clearTimeout(timer); signal?.removeEventListener('abort', stop); }
+}
+
+// Un GET para el módulo de investigación, con las mismas reglas y los mismos mensajes que proxyGet (arriba):
+// directo si el sitio deja (CORS), si no por el proxy; el texto en el juego de caracteres de la página. Nunca lanza
+// por un estado HTTP: devuelve { ok:false, status, code, message } con el mensaje de siempre, porque el módulo
+// necesita ver, por ejemplo, el 404 de un robots.txt (= no hay reglas).
+async function respuesta(r, url, viaProxy) {
+  const type = r.headers.get('Content-Type') || '';
+  const deLaWeb = viaProxy ? Number(r.headers.get('X-Proxy-Upstream-Status')) || 0 : 0;
+  return {
+    ok: true, status: deLaWeb || r.status, code: '', type,
+    url: (viaProxy ? r.headers.get('X-Proxy-Final-Url') : r.url) || url,
+    text: decodeBody(await r.arrayBuffer(), type),
+    truncated: viaProxy && r.headers.get('X-Proxy-Truncated') === '1',
+  };
+}
+const fallo = (status, code, message) => ({ ok: false, status, code, message, type: '', url: '', text: '', truncated: false });
+
+async function get(url, { signal } = {}) {
+  return conPlazo(signal, async (sig) => {
+    let directo, estado = 0;
     try {
-      const { text: h, status } = await proxyGet(ep + encodeURIComponent(query), { signal });
-      if (!h.includes('uddg=') && (status === 202 || BLOQUEO_DDG.test(h))) { bloqueado = true; continue; }
-      html = h;
-      if (html.includes('uddg=') || html.includes('result')) break;
+      const d = await fetch(url, { signal: sig });
+      if (d.ok) return respuesta(d, url, false);
+      estado = d.status; directo = new Error('HTTP ' + d.status);
     } catch (e) {
       if (parado(e, signal)) throw e;
-      ultimoError = e;
+      directo = e;
     }
+    if (estado === 404 || estado === 410) return fallo(estado, '', t('webGone', { url, status: estado }));
+    let r;
+    try { r = await fetch('/proxy?url=' + encodeURIComponent(url), { signal: sig }); }
+    catch (e) {
+      if (parado(e, signal)) throw e;
+      return fallo(0, 'network', t('webBoth', { host: hostDe(url), direct: directo?.message || t('webNoAnswer'), proxy: e?.message || t('webNoAnswer') }));
+    }
+    const codigo = r.headers.get('X-Proxy-Error');
+    const deLaWeb = Number(r.headers.get('X-Proxy-Upstream-Status')) || 0;
+    if (r.ok) return respuesta(r, url, true);
+    if (codigo) return fallo(r.status, codigo, t('webProxyRefused', { host: hostDe(url), status: r.status, code: codigo, why: (await motivo(r)) || codigo }));
+    if (deLaWeb) return fallo(deLaWeb, '', deLaWeb === 404 || deLaWeb === 410 ? t('webGone', { url, status: deLaWeb }) : t('webSiteStatus', { host: hostDe(url), status: deLaWeb }));
+    if (r.status === 404 || r.status === 405 || r.status === 501) {
+      return fallo(r.status, 'no-proxy', estado ? t('webNoProxyStatus', { host: hostDe(url), status: estado, proxy: r.status }) : t('webNoProxy', { host: hostDe(url), proxy: r.status }));
+    }
+    return fallo(r.status, '', t('webBoth', { host: hostDe(url), direct: directo?.message || t('webNoAnswer'), proxy: 'HTTP ' + r.status }));
+  });
+}
+
+const websearchUrl = (q) => `/websearch?q=${encodeURIComponent(q)}&format=json&language=${lengua()}`;
+const searchEngine = {
+  url: (q) => new URL(websearchUrl(q), location.origin).href,
+  run: (q, { signal } = {}) => conPlazo(signal, async (sig) => {
+    const r = await fetch(websearchUrl(q), { signal: sig, headers: { Accept: 'application/json' } });
+    if (!r.ok) throw Object.assign(new Error('websearch ' + r.status), { code: r.status === 429 ? 'rate-limited' : 'down' });
+    if (!/json/i.test(r.headers.get('Content-Type') || '')) throw Object.assign(new Error('websearch not json'), { code: 'down' });
+    return parseSearx(await r.text());
+  }),
+};
+
+let research = null;
+async function lab() {
+  if (research) return research;
+  const Readability = await import('../../vendor/readability/readability.js').then((m) => m.default, () => null);
+  research = createResearch({ get, parseHTML: parseWithBase, terms, buildBM25, Readability, searchEngine });
+  return research;
+}
+
+const recorta = (text, n) => (text.length > n ? text.slice(0, n) + '\n' + palabras().cut : text);
+const sitio = (u) => { try { const x = new URL(/^https?:\/\//i.test(u) ? u : 'https://' + u); return x.hostname.replace(/^www\./, '') + x.pathname.replace(/\/$/, ''); } catch { return String(u || '').trim(); } };
+
+export async function fetchUrl({ url } = {}, { signal, question = '' } = {}) {
+  if (!/^https?:\/\//.test(url || '')) throw new Error(t('webBadUrl'));
+  await requirePerm('web', url);
+  const R = await lab();
+  const r = await R.fetch(url, { question, signal });
+  if (r.error) throw new Error(r.error.message || renderPage(r, palabras(), ''));
+  return recorta(renderPage(r, palabras(), question), R.limits.fetchChars + 600) + (r.truncated ? '\n' + t('webProxyCut', { mb: PROXY_MB }) : '');
+}
+
+// Un modelo que pide buscar dentro de una web ({ url | site, query }) recibe una búsqueda con site:.
+export async function search({ query, url, site } = {}, { signal, question = '' } = {}) {
+  let q = String(query || '').trim();
+  const donde = String(url || site || '').trim();
+  if (donde && !/(^|\s)site:/i.test(q)) q = `site:${sitio(donde)} ${q}`.trim();
+  if (!q) throw new Error(t('webNoQuery'));
+  await requirePerm('web', t('pdWebSearch', { q }));
+  const R = await lab();
+  const r = await R.search(q, { question, read: 2, signal });
+  if (!r.items.length) {
+    // Nadie quiso buscar: si el proxy rechazó la petición a DuckDuckGo, su motivo (límite, ocupado…); si
+    // DuckDuckGo pidió la verificación anti-bot, eso. Un «Sin resultados» es solo cuando alguien buscó.
+    const rechazo = (r.notes || []).find((n) => n.ddg && n.message);
+    if (rechazo) throw new Error(rechazo.message);
+    if (r.blocked) throw new Error(t('webSearchBlocked', { q }));
   }
-  if (!html) {
-    if (bloqueado) throw new Error(t('webSearchBlocked', { q: query }));
-    throw ultimoError || new Error(t('webSearchFailed', { q: query }));
-  }
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  const seen = new Set(), out = [];
-  for (const a of doc.querySelectorAll('a[href*="uddg="]')) {
-    const m = a.getAttribute('href').match(/uddg=([^&]+)/);
-    if (!m) continue;
-    const href = decodeURIComponent(m[1]);
-    const title = a.textContent.trim();
-    if (!title || title.length < 3 || seen.has(href)) continue;
-    seen.add(href);
-    // fragmento: el texto del contenedor del resultado, sin el título
-    const block = a.closest('tr, div, article') || a.parentElement;
-    const snip = (block?.textContent || '').replace(title, '').replace(/\s+/g, ' ').trim().slice(0, 160);
-    out.push(`• ${title}\n  ${href}${snip ? '\n  ' + snip : ''}`);
-    if (out.length >= 8) break;
-  }
-  return out.length ? t('webResults', { q: query }) + '\n\n' + out.join('\n\n') : t('webNoResults', { q: query });
+  return recorta(renderSearch(r, palabras()), R.limits.searchChars + 1200);
 }
 
 // Búsqueda de IMÁGENES (Openverse, CC) → URLs para montar una galería.

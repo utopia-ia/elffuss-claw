@@ -235,7 +235,9 @@ function looseToolCall(raw) {
   const am = raw.match(/"args"\s*:\s*\{/);
   const body = am ? raw.slice(am.index + am[0].length) : raw;
   const args = {};
-  for (const key of new Set(['path', 'content', 'name', 'html', 'prompt', 'text', 'search', 'replace', 'query', 'key', 'value', 'url', ...MEDIA_KEYS])) {
+  // `site` and `question`: what a model writes when it searches inside a web (web.site-style calls, run as a site:
+  // search); the same keys as the chat's mirror of this parser (elffuss.com site-chat/chat/tools.js).
+  for (const key of new Set(['path', 'content', 'name', 'html', 'prompt', 'text', 'search', 'replace', 'query', 'key', 'value', 'url', 'site', 'question', ...MEDIA_KEYS])) {
     const km = body.match(new RegExp('"' + key + '"\\s*:\\s*"'));
     if (!km) continue;
     // El cierre REAL se elige mirando todos los candidatos y quedándose con el
@@ -601,7 +603,8 @@ export class Agent {
         // conversación —ni la dio el usuario ni vino en un resultado— no se intenta.
         result = 'ERROR: esa URL no ha salido en la conversación (¿inventada?). Búscala con web.search y usa una de los resultados.';
       } else {
-        try { result = await hastaQueParen(runTool(call.tool, call.args, { signal, memoria: mt }), signal); }
+        // `question`: lo que escribió el usuario, para que web.* ordene aquí los párrafos de lo que lee (no sale).
+        try { result = await hastaQueParen(runTool(call.tool, call.args, { signal, memoria: mt, question: userText }), signal); }
         catch (e) {
           // Parado con la herramienta en marcha: el turno acaba aquí y no apunta
           // nada de este paso (la herramienta puede acabar por detrás).
