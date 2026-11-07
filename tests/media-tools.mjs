@@ -78,6 +78,7 @@ const scripted = () => {
       const u = last.content.replace(/^\[(?:document|documento) [\s\S]*?\[(?:end of document|fin del documento)\]\s*/g, '').replace(/^(\[(?:attached|adjunto|nota de voz|voice note)[^\]]*\]\s*)+/, '');
       if (/^\[img\]/.test(u)) return call('image.generate', { prompt: 'a red fox in the snow', aspect: '16:9' });
       if (/^\[speak\]/.test(u)) return call('audio.speak', { text: u.replace(/^\[speak\]\s*/, '') });
+      if (/^\[gen\]/.test(u)) return call('video.generate', { prompt: u.replace(/^\[gen\]\s*/, ''), seconds: 2 });
       if (/^\[animate\]/.test(u)) { const ids = [...all.matchAll(/\bimg-[a-z0-9]{4}\b/g)].map((x) => x[0]); return call('video.animate', { image: ids.pop() || '', preset: 'orbit' }); }
       if (/^\[doc\]/.test(u)) { const m = [...all.matchAll(/\[(?:documento|document) doc-[^\n]*\n([\s\S]*?)\n\[(?:fin del documento|end of document)\]/g)].pop(); return 'DOC: ' + (m ? m[1].replace(/\s+/g, ' ').trim().slice(0, 60) : '(nada)'); }
       if (/hola desde la nota de voz/.test(u)) return 'VOZ: ' + u;
@@ -163,17 +164,21 @@ try {
   // 5. Parar.
   await p.evaluate(() => { window.__mediaStub = { slow: true }; });
   await p.evaluate(() => window.elffuss.agent.setProvider(window.__scripted));
-  await p.fill('#prompt', '[speak] Hola, esto es una prueba');
+  await p.fill('#prompt', '[gen] hazme un vídeo de un zorro corriendo');
   await p.press('#prompt', 'Enter');
   ok('la tarjeta enseña el progreso por etapas', await until(() => ultimaTarjeta().locator('.md-progress').innerText().then((s) => /Paso \d de 4/.test(s)), { tries: 80 }));
   const antesParar = (await events()).length;
   await ultimaTarjeta().locator('.md-stop').click();
   await until(reposo, { tries: 100 });
-  ok('Parar aborta la tarea por su señal y la libera', await until(async () => (await mediaLog()).filter((x) => x.task === 'text-to-speech').map((x) => x.ev).join(',').endsWith('abort,dispose')));
+  ok('Parar aborta la tarea por su señal y la libera', await until(async () => (await mediaLog()).filter((x) => x.task === 'text-to-video').map((x) => x.ev).join(',').endsWith('abort,dispose')));
   ok('la tarjeta dice Parado', /Parado/.test(await ultimaTarjeta().innerText()), await ultimaTarjeta().innerText());
   ok('el cerebro vuelve tras parar', await until(async () => (await events()).slice(antesParar - 1).join(',') === 'unload,load'), (await events()).join(','));
-  ok('audio.speak lleva el idioma del usuario', (await mediaLog()).find((x) => x.ev === 'run' && x.task === 'text-to-speech')?.input?.lang === 'es');
   await p.evaluate(() => { window.__mediaStub = {}; });
+  // 5b. El audio está apagado (AUDIO_TOOLS en media-tools.js): no se ofrece ni se ejecuta.
+  const sysMedios = await p.evaluate(() => window.__sys.filter((s) => /image\.generate/.test(s)).pop() || '');
+  ok('el audio no está en el prompt de un turno de medios', !!sysMedios && !/audio\.(?:music|sfx|speak)/.test(sysMedios) && /video\.generate/.test(sysMedios));
+  await decir('[speak] Hola, esto es una prueba');
+  ok('una llamada a audio.speak no corre ninguna tarea', !(await mediaLog()).some((x) => /^text-to-(?:speech|music|sfx)$/.test(x.task)));
 
   // 6. Recargar.
   await p.reload({ waitUntil: 'domcontentloaded' });

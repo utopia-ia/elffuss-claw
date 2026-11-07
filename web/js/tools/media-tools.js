@@ -24,7 +24,13 @@ const STORE = 'media';
 // ---------- The tools, as the model reads them ----------
 // Image and audio models follow English best: the description is written in English whatever the user's language,
 // except speech, which reads the user's own words.
-export const MEDIA_TOOL_NAMES = ['image.generate', 'audio.music', 'audio.sfx', 'audio.speak', 'video.animate', 'video.generate'];
+// The audio tools (audio.music, audio.sfx, audio.speak) wait for their Spanish voice. While this is false they are
+// not offered: not in MEDIA_TOOL_NAMES, not in the tool lines of the prompt, and their aliases go nowhere, so a call
+// to one is an unknown tool. Voice notes (transcribe) do not depend on it.
+export const AUDIO_TOOLS = false;
+const isAudioTool = (name) => name.startsWith('audio.');
+const offered = (name) => AUDIO_TOOLS || !isAudioTool(name);
+export const MEDIA_TOOL_NAMES = ['image.generate', 'audio.music', 'audio.sfx', 'audio.speak', 'video.animate', 'video.generate'].filter(offered);
 
 const CATALOG = {
   en: [
@@ -46,7 +52,7 @@ const CATALOG = {
 };
 
 /** The tool lines for the system prompt. */
-export function mediaToolLines(lang) { return CATALOG[lang === 'es' ? 'es' : 'en']; }
+export function mediaToolLines(lang) { return CATALOG[lang === 'es' ? 'es' : 'en'].filter((l) => offered(/^- ([\w.]+)\(/.exec(l)[1])); }
 
 /** The rule that goes with them: what the ids are for. */
 export function mediaRule(lang) {
@@ -55,8 +61,8 @@ export function mediaRule(lang) {
     : 'Pictures, audio and videos in the conversation (the ones you make and the ones the user attaches) have an id like img-k3x9, aud-… or vid-…: to use one, pass its id. After making one, do not describe it at length: the card shows it.';
 }
 
-/** Other names a model may use for the same tools. */
-export const MEDIA_ALIASES = {
+/** Other names a model may use for the same tools (only those of the tools on offer). */
+export const MEDIA_ALIASES = Object.fromEntries(Object.entries({
   generate_image: 'image.generate', image_generate: 'image.generate', make_image: 'image.generate', create_image: 'image.generate',
   text_to_image: 'image.generate', 'image.create': 'image.generate', 'image.make': 'image.generate', draw: 'image.generate',
   music: 'audio.music', make_music: 'audio.music', generate_music: 'audio.music', 'audio.generate_music': 'audio.music',
@@ -64,7 +70,7 @@ export const MEDIA_ALIASES = {
   speak: 'audio.speak', tts: 'audio.speak', text_to_speech: 'audio.speak', say: 'audio.speak', 'audio.tts': 'audio.speak',
   animate: 'video.animate', animate_image: 'video.animate', image_to_video: 'video.animate', 'image.animate': 'video.animate',
   generate_video: 'video.generate', make_video: 'video.generate', text_to_video: 'video.generate', 'video.create': 'video.generate',
-};
+}).filter(([, tool]) => offered(tool)));
 
 /** The argument keys of the media tools, for parsers that read loose JSON by key. */
 export const MEDIA_KEYS = ['prompt', 'text', 'image', 'aspect', 'preset', 'lang', 'size', 'voice', 'path'];

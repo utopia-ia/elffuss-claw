@@ -6,7 +6,7 @@ import { t } from './i18n.js';
 import * as telemetry from './telemetry.js';
 import * as memoria from './memory-wire.js';
 import { isMediaTool, MEDIA_ALIASES } from './tools/media.js';
-import { mediaRule, MEDIA_KEYS } from './tools/media-tools.js';
+import { mediaRule, MEDIA_KEYS, AUDIO_TOOLS } from './tools/media-tools.js';
 import { needsMediaTools, hasMediaIn } from './tools/media-intent.js';
 
 const MAX_STEPS = 6;
@@ -85,7 +85,7 @@ Cómo actuar:
    · Si se entiende lo que quiere, HAZLO ya. Lo que falte y no sea imprescindible, asúmelo (lo ya dicho, o lo más habitual) y dilo en una línea; no preguntes gustos ni preferencias que no hagan falta.
    · Nunca digas que has hecho algo («he preparado…», «he creado…») si no has llamado a la herramienta en este turno.
 9) Si quiere una skill CONCRETA de internet: si no tienes su URL en la conversación, web.search; luego skill.install con una URL que haya salido en los resultados. NUNCA inventes una URL. No la imites con skill.create ni digas que no se puede instalar.${medios ? `
-10) Imágenes, música, voz y vídeo los haces SOLO con image.generate, audio.music, audio.sfx, audio.speak, video.animate y video.generate (corren en este navegador; web.images solo BUSCA fotos de otros). El prompt de imagen, música, efectos y vídeo va en INGLÉS; el texto de audio.speak, en el idioma del usuario. ${mediaRule('es')}` : ''}${bloqueMemoria()}${bloqueEjemplos(RECORTAR_EJEMPLOS ? herramientas : null)}${skillsPromptBlock()}`;
+10) ${AUDIO_TOOLS ? 'Imágenes, música, voz y vídeo los haces SOLO con image.generate, audio.music, audio.sfx, audio.speak, video.animate y video.generate (corren en este navegador; web.images solo BUSCA fotos de otros). El prompt de imagen, música, efectos y vídeo va en INGLÉS; el texto de audio.speak, en el idioma del usuario.' : 'Imágenes y vídeo los haces SOLO con image.generate, video.animate y video.generate (corren en este navegador; web.images solo BUSCA fotos de otros). El prompt va en INGLÉS.'} ${mediaRule('es')}` : ''}${bloqueMemoria()}${bloqueEjemplos(RECORTAR_EJEMPLOS ? herramientas : null)}${skillsPromptBlock()}`;
 }
 
 // Las reglas de la memoria compartida (las del motor, siempre los mismos bytes:
