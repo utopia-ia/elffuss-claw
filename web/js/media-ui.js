@@ -252,10 +252,11 @@ async function finishRecording() {
 }
 
 /**
- * Monta el «+», las fichas y el micrófono en la caja (#composer). `onVoiceText(text, rec)` envía una nota de voz ya
- * escrita; `onChange()` avisa cuando cambia lo que está listo para enviar.
+ * Monta el «+», las fichas y el micrófono en la caja (#composer, #prompt). `onVoiceText(text, rec)` envía una nota de
+ * voz ya escrita; `onChange()` avisa cuando cambia lo que está listo para enviar; el micrófono va delante de
+ * `sendButton()` (#send por defecto).
  */
-export function mountComposer({ onVoiceText = () => {}, onChange = () => {} } = {}) {
+export function mountComposer({ onVoiceText = () => {}, onChange = () => {}, sendButton = () => $('send') } = {}) {
   onVoice = onVoiceText; changed = onChange;
   const form = $('composer');
   if (!form || $('att-btn')) return;
@@ -301,7 +302,7 @@ export function mountComposer({ onVoiceText = () => {}, onChange = () => {} } = 
     mic.addEventListener('pointerup', () => { if (!rec.ctl || !rec.held) return; rec.held = false; if (performance.now() - rec.at >= 400) finishRecording(); });
     mic.addEventListener('click', (e) => { if (e.detail !== 0 || rec.ctlVoice) return; if (rec.ctl) finishRecording(); else beginRecording().then(() => { rec.held = false; }); });
     addEventListener('keydown', (e) => { if (e.key === 'Escape' && rec.ctl) cancelRecording(); });
-    $('send')?.before(mic);
+    sendButton()?.before(mic);
   }
 }
 
