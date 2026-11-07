@@ -111,8 +111,13 @@ try {
   const mediaLog = () => p.evaluate(() => (window.__media || []).slice());
   const events = () => p.evaluate(() => window.__llmEvents.slice());
   let dialogos = 0;
+  // Un tic a la vez: con dos tics solapados (el callback es async) los dos veían el mismo diálogo abierto y lo contaban dos veces.
+  let respondiendo = false;
   const responder = setInterval(async () => {
-    try { if (await p.evaluate(() => document.getElementById('perm-dialog').open)) { dialogos++; await p.click('#perm-allow'); } } catch { /* cerrada */ }
+    if (respondiendo) return;
+    respondiendo = true;
+    try { if (await p.evaluate(() => document.getElementById('perm-dialog').open)) { dialogos++; await p.click('#perm-allow'); await p.waitForFunction(() => !document.getElementById('perm-dialog').open, null, { timeout: 5000 }); } } catch { /* cerrada */ }
+    finally { respondiendo = false; }
   }, 60);
   async function decir(texto) {
     // El arranque elige su cerebro (Básico aquí) cuando quiere: el de guion se pone justo antes de cada mensaje.
@@ -174,11 +179,12 @@ try {
   ok('la tarjeta dice Parado', /Parado/.test(await ultimaTarjeta().innerText()), await ultimaTarjeta().innerText());
   ok('el cerebro vuelve tras parar', await until(async () => (await events()).slice(antesParar - 1).join(',') === 'unload,load'), (await events()).join(','));
   await p.evaluate(() => { window.__mediaStub = {}; });
-  // 5b. El audio está apagado (AUDIO_TOOLS en media-tools.js): no se ofrece ni se ejecuta.
+  // 5b. El audio está encendido (AUDIO_TOOLS en media-tools.js): se ofrece y audio.speak lleva el idioma del usuario.
   const sysMedios = await p.evaluate(() => window.__sys.filter((s) => /image\.generate/.test(s)).pop() || '');
-  ok('el audio no está en el prompt de un turno de medios', !!sysMedios && !/audio\.(?:music|sfx|speak)/.test(sysMedios) && /video\.generate/.test(sysMedios));
+  ok('el audio está en el prompt de un turno de medios', /audio\.speak/.test(sysMedios) && /audio\.music/.test(sysMedios) && /audio\.sfx/.test(sysMedios));
   await decir('[speak] Hola, esto es una prueba');
-  ok('una llamada a audio.speak no corre ninguna tarea', !(await mediaLog()).some((x) => /^text-to-(?:speech|music|sfx)$/.test(x.task)));
+  ok('audio.speak lleva el idioma del usuario', (await mediaLog()).find((x) => x.ev === 'run' && x.task === 'text-to-speech')?.input?.lang === 'es');
+  ok('y deja una tarjeta de audio', await until(() => ultimaTarjeta().locator('audio.media-el').count().then((n) => n === 1)));
 
   // 6. Recargar.
   await p.reload({ waitUntil: 'domcontentloaded' });
