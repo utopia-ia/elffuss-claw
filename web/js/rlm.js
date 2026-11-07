@@ -68,6 +68,8 @@ function chunk(text, chunkChars, overlapChars) {
 // detrás con su reloj ya en marcha: un solo trozo lento hacía caducar a los de
 // después en la cola, Hard Work acababa en «no encontré nada» y el motor seguía
 // ocupado con turnos que nadie iba a leer, retrasando el siguiente mensaje.
+// `provider` es el proveedor, o una función con la forma de su `chat` (la de un
+// hilo, ver `abreHilos`).
 async function sub(provider, system, prompt, timeoutMs, signal = null) {
   siParado(signal);
   const ctl = new AbortController();
@@ -75,7 +77,8 @@ async function sub(provider, system, prompt, timeoutMs, signal = null) {
   signal?.addEventListener?.('abort', enlazar, { once: true });
   let to;
   try {
-    const run = provider.chat([{ role: 'user', content: prompt }], system, () => {}, ctl.signal);
+    const llama = typeof provider === 'function' ? provider : (h, s, cb, sig) => provider.chat(h, s, cb, sig);
+    const run = llama([{ role: 'user', content: prompt }], system, () => {}, ctl.signal);
     if (!timeoutMs) { const r = await run; siParado(signal); return r; }
     Promise.resolve(run).catch(() => {});   // si gana la guarda, el rechazo de la llamada abortada no queda suelto
     const guard = new Promise((_, rej) => { to = setTimeout(() => rej(new Error('sub-llamada agotó el tiempo')), timeoutMs); });
@@ -87,6 +90,37 @@ async function sub(provider, system, prompt, timeoutMs, signal = null) {
     signal?.removeEventListener?.('abort', enlazar);
     ctl.abort();   // terminada no le hace nada; colgada tras la guarda, la para
   }
+}
+
+// HILOS: con el motor propio en la tarjeta (`abreHilo`), varias sub-llamadas
+// escriben a la vez: un paso para varias conversaciones cuesta poco más que para
+// una, y las que llevan el mismo sistema lo leen una sola vez. Con cualquier otro
+// proveedor (remoto, la CPU, un motor sin hilos) devuelve null y todo va en serie,
+// como siempre. `con(fn)` presta un hilo libre a `fn` (o espera a que lo haya).
+async function abreHilos(provider) {
+  if (typeof provider?.abreHilo !== 'function') return null;
+  const n = provider.hilosRecomendados?.() || 0;
+  if (n < 2) return null;
+  const hs = [];
+  for (let i = 0; i < n; i++) { try { hs.push(await provider.abreHilo({ contextLen: 4096 })); } catch { break; } }
+  if (hs.length < 2) { hs.forEach((h) => h.close()); return null; }
+  const libres = [...hs], esperan = [];
+  return {
+    n: hs.length,
+    async con(fn) {
+      const h = libres.pop() || await new Promise((r) => esperan.push(r));
+      try { return await fn((hi, s, cb, sig) => h.chat(hi, s, cb, { signal: sig })); }
+      finally { const w = esperan.shift(); if (w) w(h); else libres.push(h); }
+    },
+    cerrar() { hs.forEach((h) => h.close()); },
+  };
+}
+
+// Cada elemento con `fn(elemento, índice, llama)`: en paralelo sobre los hilos si
+// los hay, si no en serie con el proveedor. Devuelve los resultados en orden.
+async function cadaUno(items, hilos, provider, fn) {
+  if (!hilos) { const r = []; for (let i = 0; i < items.length; i++) r.push(await fn(items[i], i, provider)); return r; }
+  return Promise.all(items.map((x, i) => hilos.con((llama) => fn(x, i, llama))));
 }
 
 const MAP_SYS = 'Eres un analista minucioso. Te doy UN fragmento de un material más grande y una pregunta. Responde SOLO con lo que ESTE fragmento aporte a la pregunta: datos concretos, en pocas frases, con cita textual breve si procede. No inventes lo que no esté en el fragmento. Si el fragmento no aporta nada a la pregunta, responde exactamente: NADA';
@@ -107,36 +141,40 @@ export async function hardWork({ question, context, provider, onProgress = () =>
   if (truncated) parts = parts.slice(0, o.maxChunks);
   onProgress({ phase: 'plan', chunks: parts.length, chars: ctx.length, truncated });
 
-  // MAP — un modelo local es UN motor, así que las sub-llamadas van en serie.
-  const findings = [];
-  for (let i = 0; i < parts.length; i++) {
-    siParado(signal);
-    onProgress({ phase: 'map', i: i + 1, n: parts.length });
-    let ans;
-    try { ans = await sub(provider, MAP_SYS, `PREGUNTA:\n${q}\n\nFRAGMENTO ${i + 1}/${parts.length}:\n${parts[i]}`, o.callTimeoutMs, signal); }
-    catch (e) {
-      // Un trozo que falla no tumba el resto; parar, sí. También cuando la
-      // parada viene del proveedor (AbortError sin que `signal` se abortara: el
-      // motor propio corta así su turno al descargarse). Seguir pidiendo trozos
-      // a un modelo descargado solo acumularía «no está cargado» hasta acabar
-      // en «no encontré nada».
+  // MAP — con hilos, varios trozos a la vez en la tarjeta; sin ellos, en serie.
+  const hilos = await abreHilos(provider);
+  try {
+    let empezados = 0;
+    const respuestas = await cadaUno(parts, hilos, provider, async (part, i, llama) => {
       siParado(signal);
-      if (e?.name === 'AbortError') throw e;
-      ans = 'NADA';
-    }
-    ans = String(ans || '').trim();
-    if (ans && !/^NADA\b/i.test(ans)) findings.push(`[${i + 1}] ${ans}`);
-  }
-  onProgress({ phase: 'mapped', kept: findings.length, of: parts.length });
-  if (!findings.length) return { answer: 'Revisé el material por partes y no encontré nada relevante para eso.', chunks: parts.length, kept: 0, truncated };
+      onProgress({ phase: 'map', i: ++empezados, n: parts.length });
+      let ans;
+      try { ans = await sub(llama, MAP_SYS, `PREGUNTA:\n${q}\n\nFRAGMENTO ${i + 1}/${parts.length}:\n${part}`, o.callTimeoutMs, signal); }
+      catch (e) {
+        // Un trozo que falla no tumba el resto; parar, sí. También cuando la
+        // parada viene del proveedor (AbortError sin que `signal` se abortara: el
+        // motor propio corta así su turno al descargarse). Seguir pidiendo trozos
+        // a un modelo descargado solo acumularía «no está cargado» hasta acabar
+        // en «no encontré nada».
+        siParado(signal);
+        if (e?.name === 'AbortError') throw e;
+        ans = 'NADA';
+      }
+      return String(ans || '').trim();
+    });
+    const findings = [];
+    respuestas.forEach((ans, i) => { if (ans && !/^NADA\b/i.test(ans)) findings.push(`[${i + 1}] ${ans}`); });
+    onProgress({ phase: 'mapped', kept: findings.length, of: parts.length });
+    if (!findings.length) return { answer: 'Revisé el material por partes y no encontré nada relevante para eso.', chunks: parts.length, kept: 0, truncated };
 
-  const answer = await reduce(provider, q, findings, o, onProgress, 0, signal);
-  return { answer: String(answer || '').trim(), chunks: parts.length, kept: findings.length, truncated };
+    const answer = await reduce(provider, q, findings, o, onProgress, 0, signal, hilos);
+    return { answer: String(answer || '').trim(), chunks: parts.length, kept: findings.length, truncated };
+  } finally { hilos?.cerrar(); }
 }
 
 // REDUCE jerárquico: si los hallazgos caben, funde en uno; si no, agrupa,
 // funde cada grupo y recurre con las respuestas parciales.
-async function reduce(provider, q, findings, o, onProgress, depth, signal = null) {
+async function reduce(provider, q, findings, o, onProgress, depth, signal = null, hilos = null) {
   siParado(signal);
   const budget = o.chunkTokens * CHARS_PER_TOK * 2; // el reduce puede ver algo más que un trozo
   const joined = findings.join('\n');
@@ -153,14 +191,14 @@ async function reduce(provider, q, findings, o, onProgress, depth, signal = null
   }
   if (cur.length) groups.push(cur);
   onProgress({ phase: 'reduce', depth, groups: groups.length, final: false });
-  const partials = [];
-  for (let g = 0; g < groups.length; g++) {
+  // Los grupos de un mismo nivel no se ven entre sí: con hilos, a la vez.
+  const partials = await cadaUno(groups, hilos, provider, async (grupo, g, llama) => {
     siParado(signal);
     onProgress({ phase: 'reduce-group', depth, g: g + 1, n: groups.length });
-    const p = await sub(provider, REDUCE_SYS, `PREGUNTA:\n${q}\n\nHALLAZGOS (grupo ${g + 1}/${groups.length}):\n${groups[g].join('\n')}`, o.callTimeoutMs, signal);
-    partials.push(`[g${g + 1}] ${String(p || '').trim()}`);
-  }
-  return reduce(provider, q, partials, o, onProgress, depth + 1, signal);
+    const p = await sub(llama, REDUCE_SYS, `PREGUNTA:\n${q}\n\nHALLAZGOS (grupo ${g + 1}/${groups.length}):\n${grupo.join('\n')}`, o.callTimeoutMs, signal);
+    return `[g${g + 1}] ${String(p || '').trim()}`;
+  });
+  return reduce(provider, q, partials, o, onProgress, depth + 1, signal, hilos);
 }
 
 // ── Hard Work · CREACIÓN: borrador → autocrítica → reescritura ──────────────
