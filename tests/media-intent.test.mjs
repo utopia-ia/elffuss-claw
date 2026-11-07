@@ -29,6 +29,12 @@ const POSITIVE = [
   ['anima esta foto', { hasMedia: true }], ['haz que la imagen de antes se mueva', { hasMedia: true }],
   ['¿puedes animar la primera imagen?', { hasMedia: true }], ['use the same picture again', { hasMedia: true }],
   ['qué opinas de esto', { attachments: 1 }], ['', { attachments: 2 }],
+  // Typing slips on the verb, and bare requests (measured on elffuss.com, 2026-11-07).
+  ['creame una imagen de malaga y paris juntas'], ['cfera una imagen de pars'], ['has una foto de un perro en la playa'],
+  ['dibujme una imagen de un gato'], ['genra un dibujo de un barco'], ['hazmw un video de una ola'], ['craea una ilustración de un castillo'],
+  ['cerame una foto de la alhambra'], ['geenra un logo para mi tienda'], ['mkae a picture of a lighthouse'], ['craete an image of a fox'],
+  ['una imagen de Málaga y París juntas'], ['imagen de un zorro en la nieve'], ['foto de un atardecer en la playa'], ['un dibujo de un dragón'],
+  ['an image of a cat wearing a hat'], ['un vídeo de un cohete despegando'],
 ];
 // → must NOT get them
 const NEGATIVE = [
@@ -45,6 +51,9 @@ const NEGATIVE = [
   ['speak to me about history'], ['what does this image processing code do'], ['optimiza las imágenes de la carpeta'],
   ['convierte este png a jpg'], ['hola, ¿qué tal?'], ['recuerda que me gusta la música clásica'],
   ['anima esta foto'], ['use the same picture again'],
+  ['creo que una foto vale más que mil palabras'], ['¿has visto la foto de ayer?'], ['para una imagen iso usa dd'],
+  ['imagen de docker para node'], ['la cara de la foto sale borrosa'], ['cree una cuenta y subí una foto'],
+  ['¿qué imagen de disco necesito?'], ['una imagen vale más que mil palabras'], ['the image is blurry'],
 ];
 
 let fails = 0;

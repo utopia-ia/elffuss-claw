@@ -68,6 +68,44 @@ const REFERS = [
 // unless what is drawn is code's («un círculo en el canvas», «a chart»).
 const DRAW = /\b(?:dibuja|dibujame|pinta|pintame|draw|paint)\s+(?:me\s+)?(?:un|una|unos|unas|el|la|mi|a|an|the|my|some)\s+((?:\S+\s*){1,4})/;
 
+// Typing slips on the verb («cfera una imagen», «has una foto», «dibujme»): a word one edit away from a creation verb
+// (two once the word or the verb has five letters or more, with its first letter) counts as that verb, except the real words that sit that close to one
+// («creo», «cree», «para», «cara»…). Measured on elffuss.com: «cfera una imagen de pars» got no media tools.
+const VERBS = ['haz', 'hazme', 'hacer', 'hacerme', 'crea', 'creame', 'crear', 'crearme', 'genera', 'generame', 'generar', 'dibuja', 'dibujame',
+  'dibujar', 'pinta', 'pintame', 'pintar', 'compon', 'componme', 'disena', 'disename', 'make', 'create', 'generate', 'draw', 'paint', 'compose'];
+const NOT_A_SLIP = new Set(['creo', 'cree', 'crees', 'creen', 'creer', 'cera', 'cerca', 'cara', 'para', 'pinto', 'pinte', 'tinta', 'punta', 'paint', 'hay',
+  'has', 'haya', 'hace', 'hago', 'hizo', 'hice', 'casa', 'cosa', 'crema', 'cream', 'great', 'treat', 'mate', 'make', 'cake', 'take', 'lake', 'made', 'mike',
+  'gener', 'genero', 'genere', 'drew', 'dram', 'drag', 'raw', 'pain', 'pants', 'saint', 'disco', 'diseno', 'dibujo', 'dibujos', 'pintura', 'compro', 'como',
+  'cuenta', 'creas', 'crean', 'credo', 'grea', 'area', 'idea', 'zona', 'cena', 'cerda', 'cuerda']);
+function distance(a, b, max) {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let older = null, prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    let best = i;
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (older && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) cur[j] = Math.min(cur[j], older[j - 2] + 1);   // two letters swapped
+      best = Math.min(best, cur[j]);
+    }
+    if (best > max) return max + 1;
+    older = prev; prev = cur;
+  }
+  return prev[b.length];
+}
+/** The creation verb a slipped word stands for, or null. «has» counts only before «un/una» («has una foto»). */
+function slip(word, next) {
+  if (word === 'has' || word === 'as') return /^(?:un|una|unos|unas|me)$/.test(next || '') ? 'haz' : null;
+  if (word.length < 4 || NOT_A_SLIP.has(word) || VERBS.includes(word)) return null;
+  // One edit for a short word, two once the word typed or the verb has five letters or more («cfera» is «crea»).
+  // Two only with the same first letter: a real word two letters from a verb («lista», «pinta») is not a slip of it.
+  if (BLOCK.test(word)) return null;
+  for (const v of VERBS) { const max = (word.length >= 5 || v.length >= 7) && word[0] === v[0] ? 2 : 1; if (distance(word, v, max) <= max) return v; }
+  return null;
+}
+// A bare request with no verb, at the start of the message: «una imagen de Málaga y París juntas», «foto de un gato».
+const BARE = new RegExp(`^ (?:una?|unas|unos|otra|otro|a|an|another)? ?(?:${[KIND.image, KIND.video].join('|')}) (?:de|del|con|en|of|with|showing) `);
+
 /**
  * Does this turn need the media tools in its prompt?
  * @param {string} text the user's message, as typed
@@ -84,10 +122,15 @@ export function needsMediaTools(text, { attachments = 0, hasMedia = false } = {}
   if (ONLY_MEDIA.some((re) => re.test(t))) return { media: true, why: 'phrase' };
   const d = DRAW.exec(t);
   if (d && !d[1].trim().split(' ').some((w) => BLOCK.test(w))) return { media: true, why: 'request' };
+  if (BARE.test(t) && !/\b(?:iso|docker|disco|disk|contenedor|container|sistema)\b/.test(t)) return { media: true, why: 'request' };
+  // The verbs as typed, and the slips of them (see slip()), each with what follows it.
+  const starts = [];
   CREATE.lastIndex = 0;
-  let m;
-  while ((m = CREATE.exec(t))) {
-    const after = t.slice(m.index + m[0].length).trim().split(' ');
+  for (let m; (m = CREATE.exec(t));) starts.push(m.index + m[0].length);
+  const words = t.trim().split(' ');
+  for (let i = 0, at = 1; i < words.length; at += words[i].length + 1, i++) if (slip(words[i], words[i + 1])) starts.push(at + words[i].length);
+  for (const end of starts) {
+    const after = t.slice(end).trim().split(' ');
     for (let i = 0; i < Math.min(NEAR, after.length); i++) {
       const rest = after.slice(i).join(' ');
       if (BLOCK.test(after[i])) break;
