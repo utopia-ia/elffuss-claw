@@ -235,7 +235,9 @@ function looseToolCall(raw) {
   const am = raw.match(/"args"\s*:\s*\{/);
   const body = am ? raw.slice(am.index + am[0].length) : raw;
   const args = {};
-  for (const key of new Set(['path', 'content', 'name', 'html', 'prompt', 'text', 'search', 'replace', 'query', 'key', 'value', 'url', ...MEDIA_KEYS])) {
+  // `site` and `question`: what a model writes when it searches inside a web (web.site-style calls, run as a site:
+  // search); the same keys as the chat's mirror of this parser (elffuss.com site-chat/chat/tools.js).
+  for (const key of new Set(['path', 'content', 'name', 'html', 'prompt', 'text', 'search', 'replace', 'query', 'key', 'value', 'url', 'site', 'question', ...MEDIA_KEYS])) {
     const km = body.match(new RegExp('"' + key + '"\\s*:\\s*"'));
     if (!km) continue;
     // El cierre REAL se elige mirando todos los candidatos y quedándose con el
@@ -427,9 +429,25 @@ export function parseToolCall(text) {
 }
 
 // Cierre amable cuando el bucle se corta: usa el último resultado útil.
-function closingLine(done, lastResult) {
+// `fuentes`: las páginas que trajeron las herramientas web en este turno. Un resultado web es texto de páginas para
+// el modelo, nunca una respuesta para el usuario: si el turno se cierra sobre él, se cierra con una frase y las
+// fuentes (el mismo cierre que el chat de elffuss.com; antes salía la página entera, medido con LFM3).
+export function closingLine(done, lastResult, fuentes = []) {
+  if (fuentes.length) return t('webClose') + '\n' + fuentes.slice(0, 5).map((f) => `- [${f.title.replace(/[[\]]/g, '').slice(0, 120)}](${f.url})`).join('\n');
   if (lastResult && !lastResult.startsWith('ERROR')) return lastResult;
   return t('anythingElse');
+}
+
+// Las páginas de un resultado de web.search / web.fetch (tools/web-research.js): «[url] título» y «• título\n  url».
+export function fuentesDe(texto) {
+  const out = [];
+  const add = (title, url) => { if (url && !out.some((x) => x.url === url)) out.push({ title: String(title || url).trim() || url, url }); };
+  let m;
+  const item = /^•\s*(.+)\n\s+(https?:\/\/\S+)/gm;
+  while ((m = item.exec(texto))) add(m[1], m[2]);
+  const cabeza = /^\[(https?:\/\/[^\]\s]+)\]\s*(.*)$/gm;
+  while ((m = cabeza.exec(texto))) add(m[2], m[1]);
+  return out;
 }
 
 // Espera a `p` salvo que paren el turno antes: entonces rechaza en el acto con
@@ -518,6 +536,7 @@ export class Agent {
     };
     const done = [];            // firmas de tool calls ya ejecutadas este turno
     let lastResult = '';
+    const fuentesWeb = [];      // páginas que trajeron web.search / web.fetch, por si el turno se cierra sobre ellas
     // Una sola decisión por turno, sobre lo que pidió el usuario. El prompt no
     // debe cambiar entre los pasos de un mismo turno: un resultado de herramienta
     // podría esconderle al modelo la herramienta que necesita en el paso siguiente.
@@ -594,7 +613,7 @@ export class Agent {
       // cierra con una respuesta en vez de girar hasta agotar los pasos.
       const sig = call.tool + ':' + JSON.stringify(call.args || {});
       if (done.includes(sig)) {
-        await responder(closingLine(done, lastResult));
+        await responder(closingLine(done, lastResult, fuentesWeb));
         return;
       }
       done.push(sig);
@@ -610,7 +629,8 @@ export class Agent {
         // conversación —ni la dio el usuario ni vino en un resultado— no se intenta.
         result = 'ERROR: esa URL no ha salido en la conversación (¿inventada?). Búscala con web.search y usa una de los resultados.';
       } else {
-        try { result = await hastaQueParen(runTool(call.tool, call.args, { signal, memoria: mt }), signal); }
+        // `question`: lo que escribió el usuario, para que web.* ordene aquí los párrafos de lo que lee (no sale).
+        try { result = await hastaQueParen(runTool(call.tool, call.args, { signal, memoria: mt, question: userText }), signal); }
         catch (e) {
           // Parado con la herramienta en marcha: el turno acaba aquí y no apunta
           // nada de este paso (la herramienta puede acabar por detrás).
@@ -625,6 +645,9 @@ export class Agent {
       mt?.herramienta(call.tool);
       const resultStr = typeof result === 'string' ? result : JSON.stringify(result);
       lastResult = resultStr;
+      if (/^web\.(search|fetch)$/.test(call.tool) && !resultStr.startsWith('ERROR')) {
+        for (const f of fuentesDe(resultStr)) if (!fuentesWeb.some((x) => x.url === f.url)) fuentesWeb.push(f);
+      } else if (!resultStr.startsWith('ERROR')) fuentesWeb.length = 0;   // otra herramienta habló la última
       onEvent({ type: 'tool_result', tool: call.tool, result: resultStr });
 
       this.history.push({ role: 'assistant', content: out, ts: Date.now() });
@@ -648,6 +671,6 @@ export class Agent {
       }
     }
     if (signal.aborted) return parado();
-    await responder(closingLine(done, lastResult));
+    await responder(closingLine(done, lastResult, fuentesWeb));
   }
 }

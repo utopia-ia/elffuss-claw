@@ -410,6 +410,14 @@ class Redirects(ProxyCase):
         self.assertEqual(self.dialer.calls[-1], (PUBLIC_V4_B, 443))
         self.assertEqual(self.upstream.requests[-1]['headers']['host'], 'other.example.org')
 
+    def test_the_final_address_is_told(self):
+        self.redirect('/moved', 'https://other.example.org/ok?x=1', status=301)
+        got, hdrs, _ = self.get('http://example.com/moved')
+        self.assertEqual(got, 200)
+        self.assertEqual(hdrs['x-proxy-final-url'], 'https://other.example.org/ok?x=1')
+        _, hdrs, _ = self.get('http://bücher.example.com/ok')
+        self.assertEqual(hdrs['x-proxy-final-url'], 'http://xn--bcher-kva.example.com/ok', 'ASCII: el host en IDNA')
+
 
 class NormalFetch(ProxyCase):
     def test_public_http_fetch(self):
@@ -482,7 +490,7 @@ class NormalFetch(ProxyCase):
             'Content-Security-Policy': "script-src *", 'Link': '</x>; rel=preload'}, b'cuerpo')
         status, hdrs, body = self.get('http://example.com/noisy')
         self.assertEqual((status, body), (200, b'cuerpo'))
-        allowed = {'content-type', 'content-length', 'x-proxy-truncated', 'x-proxy-upstream-status',
+        allowed = {'content-type', 'content-length', 'x-proxy-truncated', 'x-proxy-upstream-status', 'x-proxy-final-url',
                    'x-content-type-options', 'content-security-policy', 'cross-origin-resource-policy',
                    'referrer-policy', 'cache-control', 'server', 'date'}
         self.assertLessEqual(set(hdrs), allowed)

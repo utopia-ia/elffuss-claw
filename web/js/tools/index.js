@@ -31,9 +31,9 @@ export const TOOLS = {
   'tasks.add':    { desc: 'Programar una tarea futura (Elffuss se enviará ese prompt)', params: { inMinutes: 'minutos desde ahora', at: 'fecha ISO (alternativa)', prompt: 'qué hacer' }, run: a => tasks.add(a) },
   'tasks.list':   { desc: 'Ver las tareas programadas', params: {}, run: () => tasks.listTasks() },
   'tasks.remove': { desc: 'Borrar una tarea programada', params: { id: 'id de la tarea' }, run: a => tasks.removeTask(a) },
-  'web.search': { desc: 'Buscar en internet (texto): devuelve títulos, enlaces y fragmentos', params: { query: 'qué buscar' }, run: (a, ctx) => web.search(a, ctx) },
+  'web.search': { desc: 'Buscar en internet (texto; site:dominio en la búsqueda la limita a una web; no pongas años que el usuario no dijo): devuelve títulos, enlaces, fragmentos y lo que dicen las primeras páginas', params: { query: 'qué buscar' }, run: (a, ctx) => web.search(a, ctx) },
   'web.images': { desc: 'Buscar imágenes en internet y mostrarlas en una galería', params: { query: 'qué imágenes' }, run: (a, ctx) => imagesGallery(a, ctx) },
-  'web.fetch': { desc: 'Visitar una URL concreta y devolver su texto', params: { url: 'https://…' }, run: (a, ctx) => web.fetchUrl(a, ctx) },
+  'web.fetch': { desc: 'Visitar una URL concreta y devolver sus partes que responden a la pregunta', params: { url: 'https://…' }, run: (a, ctx) => web.fetchUrl(a, ctx) },
   'skill.create': { desc: 'CREAR una skill propia: instrucciones especializadas que seguirás siempre (para automatizar/optimizar lo que el usuario pida)', params: { name: 'nombre corto', description: 'para qué sirve', instructions: 'instrucciones detalladas en markdown' }, run: a => skills.createSkill(a) },
   'skill.install': { desc: 'INSTALAR una skill que ya existe en internet, a partir de su URL (GitHub, skills.sh, ui-skills.com). Si el usuario quiere una skill concreta, esta y no skill.create', params: { url: 'URL de la skill o de su repo', name: 'opcional: cuál, si el repo trae varias' }, run: a => skills.installFromUrl(a) },
   'skill.list':   { desc: 'Ver las skills instaladas', params: {}, run: async () => { const s = skills.installed(); return s.length ? s.map(x => `• ${x.name}: ${x.description || ''}`).join('\n') : t('skNoneTool'); } },
@@ -125,6 +125,8 @@ span{position:absolute;bottom:0;left:0;right:0;font-size:.6rem;color:#c9d1d9;bac
 export async function runTool(name, args, ctx = {}) {
   // Otros nombres que un modelo usa para las herramientas de medios (generate_image, tts…).
   if (!TOOLS[name] && Object.hasOwn(MEDIA_ALIASES, name)) name = MEDIA_ALIASES[name];
+  // Buscar dentro de una web no es una herramienta aparte: web.search con site: (tools/web.js lo monta con la url).
+  if (!TOOLS[name] && /^(web\.site|web\.site_search|web\.search_site|site_search|search_site|web_site)$/.test(name)) name = 'web.search';
   const tool = TOOLS[name];
   if (!tool) throw new Error(t('toolUnknown', { name }));
   return tool.run(args || {}, ctx);

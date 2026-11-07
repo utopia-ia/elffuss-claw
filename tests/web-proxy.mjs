@@ -128,7 +128,7 @@ for (const [modo, codigo] of [['limite', 'rate-limited'], ['ocupado', 'busy']]) 
 ddg = 'ok';
 const s3 = await llamar(p, 'search', { query: 'historia del reloj' });
 ok('con el buscador contestando salen los resultados con su enlace',
-  s3.ok && /Resultados para «historia del reloj»/.test(s3.res) && /https:\/\/ejemplo\.org\/historia-del-reloj/.test(s3.res), s3.ok ? s3.res : s3.err);
+  s3.ok && /Resultados (de la web )?para «historia del reloj»/.test(s3.res) && /https:\/\/ejemplo\.org\/historia-del-reloj/.test(s3.res), s3.ok ? s3.res : s3.err);
 ok('sin errores de página', errores.length === 0, errores.join(' | '));
 await ctx.close();
 

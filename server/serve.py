@@ -143,7 +143,7 @@ _UPSTREAM_HEADERS = {   # lo ÚNICO que se manda al destino, además de Host
 _AI_FLAGS = getattr(socket, 'AI_ADDRCONFIG', 0)
 
 Target = namedtuple('Target', 'scheme host port path url addrs')
-ProxyResult = namedtuple('ProxyResult', 'status upstream_status content_type body truncated')
+ProxyResult = namedtuple('ProxyResult', 'status upstream_status content_type body truncated final_url')
 
 
 class ProxyRefused(Exception):
@@ -594,7 +594,7 @@ def _fetch(url, deadline):
             # El estado real del destino (un 404 es un 404, no un 200 ni un
             # 502); lo que no es un final normal (1xx, 3xx sueltos) es un 502.
             status = resp.status if 200 <= resp.status < 300 or 400 <= resp.status < 600 else 502
-            return ProxyResult(status, resp.status, content_type, body, truncated)
+            return ProxyResult(status, resp.status, content_type, body, truncated, target.url)
         finally:
             conn.close()
     raise ProxyRefused(502, 'too-many-redirects', 'demasiadas redirecciones')
@@ -841,6 +841,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Content-Length', str(len(body)))
         self.send_header('X-Proxy-Truncated', '1' if res.truncated else '0')
         self.send_header('X-Proxy-Upstream-Status', str(res.upstream_status))
+        # Dónde acabaron las redirecciones: sin esto, el cliente resuelve los
+        # enlaces relativos de la página contra la url que pidió y no contra la
+        # que respondió (web-research.js de las apps). Es ASCII siempre: el host
+        # va en IDNA y la ruta citada; nunca lleva caracteres de control.
+        self.send_header('X-Proxy-Final-Url', res.final_url)
         self._proxy_safety_headers()
         self.end_headers()
         self.wfile.write(body)
