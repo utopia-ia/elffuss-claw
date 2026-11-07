@@ -227,33 +227,51 @@ export function progressWords(p, lang) {
 }
 
 // ---------- The media store (IndexedDB) ----------
+// The connection is forgotten when the browser closes it (Safari does it on its own: a tab asleep in the background,
+// memory pressure, storage evicted; every later transaction() threw «The database connection is closing») or when
+// another tab asks for a new version, and a transaction that could not start or that the browser aborted runs ONCE
+// more on a new connection. An aborted transaction wrote nothing, so nothing is written twice.
 let dbp = null;
 const mem = new Map();          // when the browser refuses IndexedDB: this visit only
 function openDb() {
   if (dbp) return dbp;
-  dbp = new Promise((resolve) => {
+  const p = dbp = new Promise((resolve) => {
     let req;
     try { req = indexedDB.open(DB, 1); } catch { resolve(null); return; }
     req.onupgradeneeded = () => {
       const s = req.result.createObjectStore(STORE, { keyPath: 'id' });
       s.createIndex('chat', 'chat', { unique: false });
     };
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => {
+      const db = req.result;
+      db.onclose = () => { if (dbp === p) dbp = null; };
+      db.onversionchange = () => { db.close(); if (dbp === p) dbp = null; };
+      resolve(db);
+    };
     req.onerror = () => resolve(null);
     req.onblocked = () => resolve(null);
   });
-  return dbp;
+  return p;
 }
+const CONNECTION_LOST = new Set(['InvalidStateError', 'AbortError', 'UnknownError']);
 async function tx(mode, fn) {
-  const db = await openDb();
-  if (!db) return fn(null);
-  return new Promise((resolve, reject) => {
-    const t = db.transaction(STORE, mode);
-    const out = fn(t.objectStore(STORE));
-    t.oncomplete = () => resolve(out && 'result' in out ? out.result : out);
-    t.onerror = () => reject(t.error);
-    t.onabort = () => reject(t.error);
-  });
+  for (let retried = false; ; retried = true) {
+    const p = openDb();
+    const db = await p;
+    if (!db) { const out = fn(null); return out && 'result' in out ? out.result : out; }
+    try {
+      return await new Promise((resolve, reject) => {
+        const t = db.transaction(STORE, mode);
+        const out = fn(t.objectStore(STORE));
+        t.oncomplete = () => resolve(out && 'result' in out ? out.result : out);
+        t.onabort = () => reject(t.error || new Error('transaction aborted'));
+      });
+    } catch (e) {
+      if (retried || !CONNECTION_LOST.has(e?.name)) throw e;
+      if (dbp === p) dbp = null;
+      try { db.close(); } catch { /* already closing */ }
+    }
+  }
 }
 const ID_CHARS = 'abcdefghijkmnpqrstuvwxyz23456789';
 function newMediaId(prefix) {
