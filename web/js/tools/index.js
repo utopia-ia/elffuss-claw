@@ -9,7 +9,7 @@ import * as watch from './watch.js';
 import * as skills from '../skills.js';
 import * as memoriaV2 from '../memory-wire.js';
 import { t, uiLang } from '../i18n.js';
-import { mediaToolEntries, MEDIA_ALIASES } from './media.js';
+import { mediaToolEntries, MEDIA_ALIASES, isMediaTool } from './media.js';
 
 export { fs, apps, vault, tasks, web, memory, watch };
 
@@ -90,9 +90,11 @@ export const PARAM_EXACTO = {
 export const PARAM_NUMERO = { 'tasks.add': ['inMinutes'] };
 export const PARAM_BOOLEANO = { 'skill.edit': ['append'] };
 
-export function toolHelp() {
+// `medios`: las herramientas de imagen, audio y vídeo entran en el catálogo solo en los turnos que las necesitan
+// (tools/media-intent.js). Sin ellas el catálogo es el de antes, byte a byte.
+export function toolHelp({ medios = false } = {}) {
   catalogoMemoria();
-  return Object.entries(TOOLS).map(([n, t]) =>
+  return Object.entries(TOOLS).filter(([n]) => medios || !isMediaTool(n)).map(([n, t]) =>
     `- ${n}(${Object.keys(t.params).join(', ')}): ${t.desc}`).join('\n');
 }
 

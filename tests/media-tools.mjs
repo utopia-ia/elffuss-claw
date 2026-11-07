@@ -68,8 +68,9 @@ const scripted = () => {
   const call = (tool, args) => '```tool\n' + JSON.stringify({ tool, args }) + '\n```';
   window.__scripted = {
     label: 'guion', load: async () => { events.push('load'); }, unload: async () => { events.push('unload'); },
-    chat: async (history) => {
+    chat: async (history, system) => {
       calls.push(history.map((m) => ({ role: m.role, content: m.content })));
+      (window.__sys = window.__sys || []).push(system);
       const real = history.filter((m) => !(m.role === 'user' && /^CONTEXTO AHORA/.test(m.content)));
       const last = real[real.length - 1];
       if (last.role === 'user' && last.content.startsWith('[resultado')) return 'Hecho.';
@@ -122,8 +123,14 @@ try {
   }
   const ultimaTarjeta = () => p.locator('#log .media-card').last();
 
+  // 0. Un turno corriente: sin herramientas de medios en el prompt (tools/media-intent.js).
+  await decir('¿qué es una imagen ISO?');
+  const llano = await p.evaluate(() => window.__sys[window.__sys.length - 1]);
+  ok('un turno corriente no lleva las herramientas de medios', !/image\.generate|10\) Imágenes/.test(llano) && /9\) Si quiere una skill/.test(llano));
+  const n0 = await p.evaluate(() => window.__llm.length);
   // 1. Una imagen.
-  await decir('[img] hazme un zorro');
+  await decir('[img] hazme una imagen de un zorro');
+  ok('pedir una imagen las pone en el prompt de ese turno', /image\.generate/.test(await p.evaluate(() => window.__sys[window.__sys.length - 1])));
   ok('la primera imagen pregunta la descarga', dialogos === 1, String(dialogos));
   const t1 = ultimaTarjeta();
   ok('la llamada deja una tarjeta con la imagen', await until(() => t1.locator('img.media-el').evaluate((i) => i.complete && i.naturalWidth > 0)));
@@ -134,7 +141,7 @@ try {
   ok('estimate, tarea y dispose', /estimate.*construct.*run.*dispose/.test(log.map((x) => x.ev).join(',')));
   ok('el prompt va en inglés tal cual', log.find((x) => x.ev === 'run')?.args?.prompt === 'a red fox in the snow');
   const sys = await p.evaluate(() => window.elffuss.agent.history.length);
-  ok('el turno acaba en la tarjeta (un paso del modelo)', (await p.evaluate(() => window.__llm.length)) === 1 && sys >= 3);
+  ok('el turno acaba en la tarjeta (un paso del modelo)', (await p.evaluate(() => window.__llm.length)) === n0 + 1 && sys >= 3);
 
   // 2. Otra: ya no pregunta. 3. Animar la primera por su id.
   await decir('[img] otro');
@@ -207,6 +214,7 @@ try {
   const asr = (await mediaLog()).filter((x) => x.ev === 'asr').pop();
   ok('la primera nota pregunta el modelo de voz', dialogos === dAntes + 1, `${dAntes} → ${dialogos}`);
   ok('Whisper recibe 16 kHz y el idioma (es)', asr?.language === 'es' && asr.rate16k && asr.samples > 12000, JSON.stringify(asr));
+  ok('un mensaje con adjunto lleva las herramientas de medios', await p.evaluate(() => /video\.animate/.test(window.__sys[window.__sys.length - 1])));
   ok('la nota llega al modelo como mensaje del usuario', /VOZ: hola desde la nota de voz/.test(await p.locator('#log .msg.assistant').last().innerText()));
   ok('y se ve como tarjeta de audio', await p.evaluate(() => !![...document.querySelectorAll('#log .msg.user')].pop()?.querySelector('.att-card audio')));
   clearInterval(responder);

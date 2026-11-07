@@ -7,6 +7,7 @@ import * as telemetry from './telemetry.js';
 import * as memoria from './memory-wire.js';
 import { isMediaTool, MEDIA_ALIASES } from './tools/media.js';
 import { mediaRule, MEDIA_KEYS } from './tools/media-tools.js';
+import { needsMediaTools, hasMediaIn } from './tools/media-intent.js';
 
 const MAX_STEPS = 6;
 
@@ -33,7 +34,9 @@ export function userLang() {
 // que toca lo que el modelo imita. Con false van los cinco siempre, como antes.
 const RECORTAR_EJEMPLOS = false;
 
-export function systemPrompt(context = '', { herramientas = null } = {}) {
+// `medios`: este turno lleva las herramientas de imagen, audio y vídeo y su regla (tools/media-intent.js lo decide
+// antes del turno, sin modelo). Sin ellas el prompt es el de antes, byte a byte, y el prefijo se reutiliza.
+export function systemPrompt(context = '', { herramientas = null, medios = false } = {}) {
   const lang = userLang();
   // Versión corta para modelos LENTOS. No es el prompt de siempre recortado: se
   // quitan prosa y ejemplos, NO capacidades.
@@ -57,7 +60,7 @@ export function systemPrompt(context = '', { herramientas = null } = {}) {
   return `Eres Elffuss: un sistema operativo con alma que vive en el navegador del usuario. Cálida y luminosa, pero tremendamente resolutiva. Hablas SIEMPRE en el idioma del navegador del usuario: ${lang.name} (${lang.code}) — breve y con cariño. Si el usuario cambia de idioma, síguele. El chat es la única interfaz: las apps no existen, las creas tú.
 
 HERRAMIENTAS (el sistema pide los permisos, tú solo llama):
-${herramientas ? herramientas.join('\n') : toolHelp()}
+${herramientas ? herramientas.join('\n') : toolHelp({ medios })}
 
 Cómo actuar:
 1) Para usar una herramienta responde SOLO con:
@@ -81,8 +84,8 @@ Cómo actuar:
    · Haz lo que pide AHORA: no retomes ni rehagas una tarea anterior (no vuelvas a crear una app ya hecha) si no te lo pide.
    · Si se entiende lo que quiere, HAZLO ya. Lo que falte y no sea imprescindible, asúmelo (lo ya dicho, o lo más habitual) y dilo en una línea; no preguntes gustos ni preferencias que no hagan falta.
    · Nunca digas que has hecho algo («he preparado…», «he creado…») si no has llamado a la herramienta en este turno.
-9) Si quiere una skill CONCRETA de internet: si no tienes su URL en la conversación, web.search; luego skill.install con una URL que haya salido en los resultados. NUNCA inventes una URL. No la imites con skill.create ni digas que no se puede instalar.
-10) Imágenes, música, voz y vídeo los haces SOLO con image.generate, audio.music, audio.sfx, audio.speak, video.animate y video.generate (corren en este navegador; web.images solo BUSCA fotos de otros). El prompt de imagen, música, efectos y vídeo va en INGLÉS; el texto de audio.speak, en el idioma del usuario. ${mediaRule('es')}${bloqueMemoria()}${bloqueEjemplos(RECORTAR_EJEMPLOS ? herramientas : null)}${skillsPromptBlock()}`;
+9) Si quiere una skill CONCRETA de internet: si no tienes su URL en la conversación, web.search; luego skill.install con una URL que haya salido en los resultados. NUNCA inventes una URL. No la imites con skill.create ni digas que no se puede instalar.${medios ? `
+10) Imágenes, música, voz y vídeo los haces SOLO con image.generate, audio.music, audio.sfx, audio.speak, video.animate y video.generate (corren en este navegador; web.images solo BUSCA fotos de otros). El prompt de imagen, música, efectos y vídeo va en INGLÉS; el texto de audio.speak, en el idioma del usuario. ${mediaRule('es')}` : ''}${bloqueMemoria()}${bloqueEjemplos(RECORTAR_EJEMPLOS ? herramientas : null)}${skillsPromptBlock()}`;
 }
 
 // Las reglas de la memoria compartida (las del motor, siempre los mismos bytes:
@@ -511,6 +514,10 @@ export class Agent {
     // podría esconderle al modelo la herramienta que necesita en el paso siguiente.
     const ruta = herramientasPara(userText, this.provider);
     const herramientas = ruta?.lineas?.length ? ruta.lineas : null;
+    // Las herramientas de medios, solo si este turno las necesita (un adjunto, un medio nombrado, o que pida hacer uno).
+    const medios = needsMediaTools(userText, { attachments: attach?.length || 0, hasMedia: hasMediaIn(this.history.map((m) => m.content).join('\n')) }).media;
+    // Con el recuperador de herramientas encendido, sus líneas no traen las de medios: se añaden.
+    const lineasTurno = medios && herramientas ? [...herramientas, ...toolHelp({ medios: true }).split('\n').filter((l) => /^- (?:image|audio|video)\./.test(l))] : herramientas;
     for (let step = 0; step < MAX_STEPS; step++) {
       let out;
       if (signal.aborted) return parado();
@@ -541,7 +548,7 @@ export class Agent {
         // turno y el aviso de avance del prefill (el motor propio admite
         // también la señal sola).
         out = await this.provider.chat(conContexto(this.history, context, ETIQUETA_CONTEXTO),
-          systemPrompt('', { herramientas }),
+          systemPrompt('', { herramientas: lineasTurno, medios }),
           t => { if (!signal.aborted) onEvent({ type: 'token', text: t }); },
           // `reserveTokens`: sitio para lo que el proveedor mete en el prompt
           // FUERA de lo que ajusta. El bloque de memoria va DENTRO del mensaje de
