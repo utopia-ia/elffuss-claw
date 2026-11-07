@@ -155,5 +155,16 @@ ok('16 · una continuación de línea de shell sobrevive',
 r = parseToolCall('```tool\n{"tool": "fs.write", "args": {"path": "a.js", "content": "empieza y se corta');
 ok('17 · un mensaje truncado de verdad NO se recupera', !r?.args?.content, ver(r?.args?.content));
 
+// ── 18-21. La forma de LFM3 (el cerebro de arranque desde el 2-nov-2026), tal cual la escribe su plantilla.
+let fs3 = parseFunctionTags('<tool_call>\n<function=image.generate>\n<parameter=prompt>\nA fox in an autumn forest\n</parameter>\n<parameter=aspect>\n1:1\n</parameter>\n</function>\n</tool_call>');
+ok('18 · LFM3: <function=…><parameter=…> se lee', fs3.length === 1 && fs3[0].tool === 'image.generate' && fs3[0].args.prompt === 'A fox in an autumn forest' && fs3[0].args.aspect === '1:1', ver(fs3));
+r = parseToolCall('<tool_call> <function=image.generate> <parameter=prompt> A fox in an autumn forest </parameter> </function> </tool_call>');
+ok('19 · LFM3 en una línea: parseToolCall la ejecuta', r?.tool === 'image.generate' && r?.args?.prompt === 'A fox in an autumn forest', ver(r));
+const L3 = 'export const a = 1\n';
+fs3 = parseFunctionTags(`<tool_call>\n<function=fs.write>\n<parameter=path>\nsrc/a.js\n</parameter>\n<parameter=content>\n${L3}\n</parameter>\n</function>\n</tool_call>`);
+ok('20 · LFM3: el contenido sale exacto (sin los dos saltos de la plantilla)', fs3[0]?.args?.content === L3, ver(fs3[0]?.args?.content));
+fs3 = parseFunctionTags('<tool_call>\n<function=fs.write>\n<parameter=path>\na.js\n</parameter>\n<parameter=content>\nse corta');
+ok('21 · LFM3: una llamada sin cerrar NO se ejecuta', fs3.length === 0, ver(fs3));
+
 console.log(fallos ? `\n❌ ${fallos} FALLO(S)` : '\n✅ las etiquetas <function> no estropean lo que escribe el modelo');
 process.exit(fallos ? 1 : 0);
