@@ -36,8 +36,8 @@ ok('Claw avisa al Translator de que está listo', await hasta(() => stub.evaluat
 const aClaw = msg => stub.evaluate(([m, o]) => window.__claw.postMessage(m, o), [msg, new URL(BASE).origin]);
 
 await aClaw({ kind: 'copilot-init', skill: 'ficha', sellerLangName: 'español' });
-ok('el tablero «Ficha de cliente» se monta en el visor', await hasta(() => claw.evaluate(() =>
-  (document.getElementById('appframe').srcdoc || '').includes('Ficha de cliente'))));
+ok('el tablero «Ficha de cliente» se monta en el visor', await hasta(() => claw.evaluate(async () =>
+  (await import('/js/sandbox-frame.js')).frameHtml(document.getElementById('appframe')).includes('Ficha de cliente'))));
 const aviso = claw.locator('#toasts .toast', { hasText: 'Ficha de cliente' });
 ok('dice que ha instalado la skill en tus Skills, con «Ver»', await hasta(async () => await aviso.count() === 1)
   && (await aviso.locator('.toast-accion').innerText()) === 'Ver');
@@ -50,7 +50,7 @@ ok('en el chat va solo el consejo (💡), sin el contrato crudo ni la ayuda de B
   const t = await claw.locator('#log').innerText();
   return /💡/.test(t) && !/CONSEJO:|ACCION:|DATOS:/.test(t) && !/Estoy en modo básico/.test(t);
 }), (await claw.locator('#log').innerText()).slice(-300));
-const tablero = () => claw.frames().find(f => f !== claw.mainFrame() && f.url() === 'about:srcdoc');
+const tablero = () => claw.frames().find(f => f !== claw.mainFrame() && /\/sandbox\/run\.html\?n=/.test(f.url()));
 ok('«Me llamo Ana Ruiz» (con mayúscula) rellena el nombre, y el teléfono también', await hasta(async () => {
   const f = tablero(); if (!f) return false;
   const t = await f.locator('#slots').innerText().catch(() => '');
@@ -70,9 +70,9 @@ await claw.evaluate(async () => {
 });
 await claw.click('#tabs button[data-tab="apps"]');
 await claw.locator('#panel-apps .card', { hasText: 'reloj' }).locator('button', { hasText: 'Abrir' }).click();
-ok('Apps › Abrir abre la app', await hasta(() => claw.evaluate(() => /RELOJ-DE-PRUEBA/.test(document.getElementById('appframe').srcdoc))));
+ok('Apps › Abrir abre la app', await hasta(() => claw.evaluate(async () => /RELOJ-DE-PRUEBA/.test((await import('/js/sandbox-frame.js')).frameHtml(document.getElementById('appframe'))))));
 await espera(6500);
-ok('…y sigue a la vista pasado el vigilante del tablero (5 s)', await claw.evaluate(() => /RELOJ-DE-PRUEBA/.test(document.getElementById('appframe').srcdoc)));
+ok('…y sigue a la vista pasado el vigilante del tablero (5 s)', await claw.evaluate(async () => /RELOJ-DE-PRUEBA/.test((await import('/js/sandbox-frame.js')).frameHtml(document.getElementById('appframe')))));
 ok('…y el modelo sabe que es la app abierta', await claw.evaluate(async () => (await import('/js/tools/apps.js')).currentApp()) === 'reloj');
 
 ok('sin errores de página', errores.length === 0, errores.slice(0, 3).join(' | '));

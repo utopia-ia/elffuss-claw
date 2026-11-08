@@ -97,6 +97,9 @@ try {
   await ctx.addInitScript(scripted);
   // Fuera de esta web no se sale (el almacén de modelos, fuentes, telemetría).
   await ctx.route((u) => !u.href.startsWith(BASE), (r) => r.abort());
+  // …ni las librerías de los modelos de chat (ahora de este origen, web/vendor/third-party/): sin ellas el arranque cae
+  // enseguida al modo básico, como cuando venían de un CDN que esta prueba cortaba.
+  await ctx.route(/\/vendor\/third-party\/(@litert-lm|@litertjs|@mlc-ai|@huggingface|onnxruntime-web)[^/]*\//, (r) => r.abort());
   const p = await ctx.newPage();
   p.on('pageerror', (e) => { if (!/allow-same-origin/.test(e.message)) errores.push(e.message); });
   const arrancar = async () => {

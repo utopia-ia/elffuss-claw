@@ -36,6 +36,9 @@ const CORTAR = [
   /^https:\/\/(api\.github\.com|raw\.githubusercontent\.com)\//,
 ];
 
+// Las librerías de modelos vendorizadas (web/vendor/third-party/): LiteRT-LM, WebLLM, Transformers.js y ONNX Runtime.
+export const LIBS_MODELO = /\/vendor\/third-party\/(@litert-lm|@litertjs|@mlc-ai|@huggingface|onnxruntime-web)[^/]*\//;
+
 export async function navegador() { return chromium.launch(); }
 
 // Contexto con Claw en modo básico, ya «bienvenido» y con los permisos que se
@@ -47,6 +50,9 @@ export async function contexto(b, { locale = 'es-ES', viewport = { width: 1400, 
   const fuera = [];
   await ctx.route('**/*', async route => {
     const url = route.request().url();
+    // Las librerías de los modelos (antes de un CDN que aquí se cortaba, ahora de este origen) también se cortan: sin
+    // ellas el arranque cae enseguida al modo básico, como antes, en vez de intentar bajar pesos que aquí no hay.
+    if (url.startsWith(BASE) && LIBS_MODELO.test(url)) return route.abort();
     if (url.startsWith(BASE) || url.startsWith('data:') || url.startsWith('blob:')) return route.continue();
     if (rutas && await rutas(url, route)) return;
     fuera.push(route.request().method() + ' ' + url.slice(0, 140));

@@ -51,12 +51,12 @@ ok('la línea «🔧 app.create» enlaza a la app', await enlaceTool.getAttribut
 await p.click('#tabs button[data-tab="permisos"]');
 await enlaceTool.click();
 ok('y pulsarlo la vuelve a abrir en la Vista', await hasta(async () => (await activa()).tab === 'vista'
-  && await p.evaluate(() => /toLocaleTimeString/.test(document.getElementById('appframe').srcdoc))));
+  && await p.evaluate(async () => /toLocaleTimeString/.test((await import('/js/sandbox-frame.js')).frameHtml(document.getElementById('appframe'))))));
 
 await p.goto(BASE + '/#/apps/reloj', { waitUntil: 'domcontentloaded' });
 await p.waitForFunction(() => !!window.elffuss?.agent);
-ok('cargar #/apps/reloj abre esa app', await hasta(() => p.evaluate(() =>
-  !document.getElementById('appframe').hidden && /toLocaleTimeString/.test(document.getElementById('appframe').srcdoc))));
+ok('cargar #/apps/reloj abre esa app', await hasta(() => p.evaluate(async () =>
+  !document.getElementById('appframe').hidden && /toLocaleTimeString/.test((await import('/js/sandbox-frame.js')).frameHtml(document.getElementById('appframe'))))));
 ok('el visor lleva el nombre de la app como título', /reloj/.test(await p.getAttribute('#appframe', 'title')));
 await p.goto(BASE + '/#/apps/no-existe', { waitUntil: 'domcontentloaded' });
 await p.waitForFunction(() => !!window.elffuss?.agent);

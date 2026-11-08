@@ -67,7 +67,7 @@ let desde = peticiones.length;
 await escribir(p, 'hazme un juego de naves');
 ok('…y al mandarlo se apaga (era para ese mensaje)', await pulsado() === 'false');
 ok('trabaja en dos pasadas y lo dice con las rondas que hubo', await hasta(async () => /rondas de mejora: 1/.test(await ultimoAsistente())));
-ok('la app guardada es la mejorada', await p.evaluate(() => /MEJORADA/.test(document.getElementById('appframe').srcdoc)));
+ok('la app guardada es la mejorada', await p.evaluate(async () => /MEJORADA/.test((await import('/js/sandbox-frame.js')).frameHtml(document.getElementById('appframe')))));
 ok('(borrador, crítica y reescritura: 3 llamadas)', peticiones.length - desde === 3, `${peticiones.length - desde}`);
 await reposo(p);
 

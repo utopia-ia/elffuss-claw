@@ -147,7 +147,7 @@ ok('no page errors', errores.length === 0, errores.slice(0, 3).join(' | '));
   await claw.waitForFunction(() => !!window.elffuss?.agent, null, { timeout: 15000 });
   await hasta(() => stub.evaluate(() => window.__msgs.some(m => m.data?.kind === 'copilot-ready')));
   await stub.evaluate(o => window.__claw.postMessage({ kind: 'copilot-init', skill: 'ficha', sellerLangName: 'English' }, o), new URL(BASE).origin);
-  const tablero = () => claw.frames().find(f => f !== claw.mainFrame() && f.url() === 'about:srcdoc');
+  const tablero = () => claw.frames().find(f => f !== claw.mainFrame() && /\/sandbox\/run\.html\?n=/.test(f.url()));
   ok('the copilot board is in English (title, labels, live box, export)', await hasta(async () => {
     const f = tablero(); if (!f) return false;
     // textContent y no innerText: la hoja del tablero pasa a MAYÚSCULAS algunas
