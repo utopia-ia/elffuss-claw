@@ -123,7 +123,7 @@
             "/",
             "/index.html"
           ],
-          "why": "The store page, a hidden iframe in every Elffuss site. Its one inline module, by hash. It downloads whatever model URL an allowed site asks for, so connect-src stays https:. frame-ancestors lists exactly the origins its allowed() accepts (no ?allow= third parties: a new one has to be added here too).",
+          "why": "The store page, a hidden iframe in every Elffuss site. Its one inline module, by hash. It downloads whatever model URL an allowed site asks for, so connect-src stays https:. frame-ancestors lists exactly the origins its allowed() accepts (no ?allow= third parties: a new one has to be added here too). The hash is of server/broker/index.html, which must be the page actually served (check: curl -s https://models.elffuss.com/ | shasum -a 256 equals shasum of that file; node deploy/headers.mjs --print models.elffuss.com /).",
           "phase1": false,
           "csp": [
             "default-src 'none'",
@@ -134,7 +134,7 @@
             "object-src 'none'",
             "base-uri 'none'",
             "form-action 'none'",
-            "frame-ancestors https://elffuss.com https://claw.elffuss.com https://code.elffuss.com https://t2t.elffuss.com https://translator.elffuss.com https://copilot.elffuss.com https://models.elffuss.com https://m1.elffuss.com https://m2.elffuss.com https://tools.elffuss.com https://cutout.elffuss.com https://ocr.elffuss.com https://detect.elffuss.com https://depth.elffuss.com https://elffuss.utopiaia.com https://claw.elffuss.utopiaia.com https://code.elffuss.utopiaia.com https://t2t.elffuss.utopiaia.com https://translator.elffuss.utopiaia.com https://copilot.elffuss.utopiaia.com https://models.elffuss.utopiaia.com https://m1.elffuss.utopiaia.com https://m2.elffuss.utopiaia.com https://elffuss-claw.utopiaia.com https://elffuss-code.utopiaia.com https://burn-my-computer.utopiaia.com http://localhost:*"
+            "frame-ancestors https://elffuss.com https://claw.elffuss.com https://code.elffuss.com https://t2t.elffuss.com https://translator.elffuss.com https://copilot.elffuss.com https://models.elffuss.com https://m1.elffuss.com https://m2.elffuss.com https://audio.elffuss.com https://cutout.elffuss.com https://depth.elffuss.com https://detect.elffuss.com https://image.elffuss.com https://ocr.elffuss.com https://tools.elffuss.com https://video.elffuss.com https://elffuss.utopiaia.com https://claw.elffuss.utopiaia.com https://code.elffuss.utopiaia.com https://t2t.elffuss.utopiaia.com https://translator.elffuss.utopiaia.com https://copilot.elffuss.utopiaia.com https://models.elffuss.utopiaia.com https://m1.elffuss.utopiaia.com https://m2.elffuss.utopiaia.com https://elffuss-claw.utopiaia.com https://elffuss-code.utopiaia.com https://burn-my-computer.utopiaia.com http://localhost:*"
           ],
           "reportOnly": [
             "require-trusted-types-for 'script'",
