@@ -36,7 +36,7 @@ const extra = new URLSearchParams(location.search).getAll('allow');
 const WEBS = /^https:\/\/((claw|code|t2t|translator|copilot|models|m\d+)\.)?elffuss\.(com|utopiaia\.com)$/;
 // Las herramientas (repo elffuss-ai): el catálogo y una web por herramienta. Solo
 // su nombre exacto y solo bajo elffuss.com, que es donde viven.
-const HERRAMIENTAS = /^https:\/\/(tools|cutout|ocr|detect|depth)\.elffuss\.com$/;
+const HERRAMIENTAS = /^https:\/\/(audio|cutout|depth|detect|image|ocr|tools|video)\.elffuss\.com$/;
 function allowed(origin) {
   if (WEBS.test(origin)) return true;
   if (HERRAMIENTAS.test(origin)) return true;
