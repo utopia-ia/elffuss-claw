@@ -273,5 +273,23 @@ const K = 'https_m1.elffuss.com_modelo.part1.bin';
   } finally { WEBKIT = false; }
 }
 
+// Partes que dejó la página de antes del arreglo de WebKit (un tramo con bytes de más) con su marcador de reanudar:
+// empalmar detrás daba un fichero del tamaño justo y el contenido mal, que se marcaba bueno. Visto en el iPhone: 12
+// partes del modelo del chat de 17-20 MB cada una, en vez de 16 MiB.
+{
+  const fx = servidor(DATOS); const b = nuevoBroker(fx);
+  const k = url.replace(/[?#].*$/, '').replace(/[^\w.\-]+/g, '_').slice(-180);
+  b.store.datos.set(k + '.p0', Buffer.alloc(1300)); b.store.datos.set(k + '.p1', Buffer.alloc(200));
+  b.store.datos.set(k + '.parte', Buffer.from(JSON.stringify({ total: DATOS.length, v: '"v1"' })));
+  const r = ultimo(await b.get(url, DATOS.length));
+  ok('partes de antes con bytes de más: no se empalma detrás (se baja desde cero)', !fx.peticiones.some((x) => /^bytes=[1-9]/.test(x)), fx.peticiones.join(' | '));
+  ok('…y sale entero y exacto', r.kind === 'file' && sha(await bytesFile(r.file)) === sha(DATOS), r.message);
+}
+{
+  const fx = servidor(DATOS, { cortaTrasEn: { 1: 2500 } }); const b = nuevoBroker(fx);
+  const r = ultimo(await b.get(url, DATOS.length));
+  ok('partes buenas (tramos justos) tras un corte: se sigue empalmando', r.kind === 'file' && fx.peticiones.some((x) => /^bytes=2[0-9]{3}-/.test(x)) && sha(await bytesFile(r.file)) === sha(DATOS), fx.peticiones.join(' | '));
+}
+
 console.log(fails ? `\n${fails} FALLO(S)` : '\nTodo en verde');
 process.exit(fails ? 1 : 0);

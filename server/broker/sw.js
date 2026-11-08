@@ -5,7 +5,7 @@
 // sus modelos aunque estuvieran en el disco. Aquí solo se guarda la página
 // (red primero: con red siempre se sirve la última).
 // Cambiar VERSION si cambia lo que se guarda: un despliegue la renueva.
-const VERSION = 'broker-1';
+const VERSION = 'broker-2';
 const RAIZ = new URL('./', self.registration.scope).href;
 
 self.addEventListener('install', e => {
@@ -21,7 +21,9 @@ self.addEventListener('fetch', e => {
   if (r.mode !== 'navigate' || new URL(r.url).origin !== location.origin) return;
   e.respondWith((async () => {
     try {
-      const res = await fetch(r);
+      // Al servidor de verdad, no a la caché HTTP: la página se servía sin Cache-Control y Safari se quedó con una
+      // copia de días (sin el arreglo de WebKit) aunque la del servidor ya era otra. Medido en un iPhone, 8-nov.
+      const res = await fetch(r.url, { cache: 'no-cache', credentials: 'same-origin' });
       if (res.ok) { const copia = res.clone(); caches.open(VERSION).then(c => c.put(RAIZ, copia)).catch(() => {}); }
       return res;
     } catch (err) {

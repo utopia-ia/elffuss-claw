@@ -104,7 +104,7 @@ const bus = new EventTarget();
 globalThis.addEventListener = (t, h) => bus.addEventListener(t, h);
 globalThis.removeEventListener = (t, h) => bus.removeEventListener(t, h);
 const entregar = (data, source) => bus.dispatchEvent(Object.assign(new Event('message'), { data, source }));
-const SIRVE_BROKER = /^https:\/\/(models|m\d+)\.elffuss\.(com|utopiaia\.com)\/$/;
+const SIRVE_BROKER = /^https:\/\/(models|m\d+)\.elffuss\.(com|utopiaia\.com)\/(\?v=[\w.-]+)?$/;
 const iframes = [];
 const RESPUESTA = {
   'elffuss-model-get': () => ({ kind: 'file', file: { size: 42 } }),
@@ -172,12 +172,13 @@ else {
   ok('getModelParts(Hugging Face) sale del broker compartido', Array.isArray(partes) && partes[0]?.size === 42,
     `${typeof partes === 'string' ? partes : 'ok'} en ${Date.now() - t0} ms`);
   ok('  y no embebe huggingface.co', !embebidos().some(s => s.includes('huggingface.co')), embebidos().join(' '));
-  const enviado = iframes.find(f => f.src === BROKER)?.enviados.at(-1);
+  const enviado = iframes.find(f => f.src.startsWith(BROKER))?.enviados.at(-1);
+  ok('  la página del broker se pide con su versión (?v=): una copia vieja en la caché de Safari no contesta', iframes.some(f => f.src === BROKER + '?v=' + mb.BROKER_PAGE), embebidos().join(' '));
   ok('  la petición va con models.elffuss.com como destino', enviado?.destino === 'https://models.elffuss.com', enviado?.destino);
 }
 {
   const f = await mb.getSharedModel('https://m1.elffuss.com/bonsai-27b.p0');
-  ok('un fragmento de m1 lo guarda el broker de m1', f?.size === 42 && embebidos().includes('https://m1.elffuss.com/'));
+  ok('un fragmento de m1 lo guarda el broker de m1', f?.size === 42 && embebidos().some(s => s.startsWith('https://m1.elffuss.com/')));
   ok('isSharedCached(Hugging Face) pregunta al compartido', await mb.isSharedCached('https://huggingface.co/a/b'));
 }
 
@@ -190,7 +191,7 @@ if (typeof mb.sharedUsage !== 'function' || typeof mb.clearShared !== 'function'
   ok('sharedUsage() devuelve lo que dice el broker', uso.ok === true && uso.usage === 7200 && uso.quota === 20000, JSON.stringify(uso));
   const vac = await mb.clearShared().catch(e => ({ error: e.message }));
   ok('clearShared() devuelve lo liberado', vac.ok === true && vac.liberado === 7200, JSON.stringify(vac));
-  const destinos = (iframes.find(f => f.src === BROKER)?.enviados || [])
+  const destinos = (iframes.find(f => f.src.startsWith(BROKER))?.enviados || [])
     .filter(e => e.msg.type === 'elffuss-broker-diag' || e.msg.type === 'elffuss-model-clear').map(e => e.destino);
   ok('  las dos van al origen del broker', destinos.length === 2 && destinos.every(d => d === 'https://models.elffuss.com'), destinos.join(' '));
 }

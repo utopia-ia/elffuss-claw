@@ -208,6 +208,18 @@ export async function getModelFile(url, onProgress = () => {}) {
 // Devuelve null si OPFS no está disponible/escribible → el llamador usa su
 // respaldo (Cache Storage) sin romperse.
 export async function getModelParts(url, onProgress = () => {}) {
+  // 0) Lo que ESTA web ya tiene entero en su OPFS, antes de preguntar al broker. Si no, con la copia aquí y no en el
+  //    broker, cada carga le pedía el modelo entero al broker, que se ponía a bajarlo (visto en un iPhone, 8-nov:
+  //    230 MB de un 1 GB a medias en el almacén compartido, y el modelo bueno en el de elffuss.com).
+  if (navigator.storage?.getDirectory) {
+    try {
+      const d0 = await dirHandle();
+      const k0 = keyFor(url);
+      const m0 = await leerManifiesto(d0, k0);
+      const p0 = m0 ? await abrirPartes(d0, k0, m0) : null;
+      if (p0) { onProgress('Cargando el modelo desde disco (OPFS, sin descargar)…'); return p0; }
+    } catch { /* sigue por el broker */ }
+  }
   // 1) Caché COMPARTIDA (broker en origen Elffuss): un modelo bajado en CUALQUIER
   //    web de Elffuss se reutiliza aquí sin re-descargar. Fast-fail por sesión si
   //    el broker no está disponible → caemos a la OPFS local de este origen.

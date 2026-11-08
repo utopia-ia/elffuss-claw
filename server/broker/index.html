@@ -256,13 +256,27 @@ async function escribirJSON(d, nombre, obj){
 // Lo que hay guardado de verdad: partes p0, p1… seguidas y no vacías. La que se
 // estaba escribiendo al recargar queda a 0 B (su .crswap se tiró): corta ahí.
 async function guardado(d, k){
-  let n = 0, bytes = 0;
+  let n = 0, bytes = 0; const tamanos = [];
   for (;;) {
     let f; try { f = await (await d.getFileHandle(k + '.p' + n)).getFile(); } catch { break; }
     if (!f.size) break;
-    n++; bytes += f.size;
+    n++; bytes += f.size; tamanos.push(f.size);
   }
-  return { n, bytes };
+  return { n, bytes, tamanos };
+}
+// ¿Son partes que este código pudo escribir? Toda parte menos la última se cierra
+// al llenarse, así que mide un tramo justo (16 MiB, o 64 MiB las de antes) y todas
+// lo mismo; la última, como mucho eso. Las que dejó la página de antes del arreglo
+// de WebKit (exacto) miden un tramo MÁS bytes de otros trozos: empalmar detrás de
+// ellas daría un fichero del tamaño justo y el contenido mal, que pasaría por bueno.
+const TRAMOS_VALIDOS = [TRAMO, 64 * 1024 * 1024];
+function partesCuadran(tamanos){
+  // Una sola parte: como mucho un tramo de hoy (una de antes, de hasta 64 MiB, se baja otra vez: no se distingue de
+  // una de 16 MiB con bytes de más).
+  if (tamanos.length < 2) return tamanos.length === 0 || tamanos[0] <= TRAMO;
+  const t = tamanos[0];
+  if (!TRAMOS_VALIDOS.includes(t)) return false;
+  return tamanos.slice(0, -1).every(x => x === t) && tamanos[tamanos.length - 1] <= t;
 }
 // Tamaño y «versión» del fichero en el servidor. Si cambió, empalmar daría un
 // modelo corrupto que carga y devuelve basura: peor que volver a bajarlo.
@@ -309,7 +323,7 @@ async function intento(d, k, url, onProgress, signal, esperado = 0){
   const mismo = previo && srv.total > 0 && previo.total === srv.total &&
                 (!previo.v || !srv.v || previo.v === srv.v);
   let desde = 0;
-  if (mismo && srv.rangos && hay.bytes > 0 && hay.bytes <= srv.total) {
+  if (mismo && srv.rangos && hay.bytes > 0 && hay.bytes <= srv.total && partesCuadran(hay.tamanos)) {
     desde = hay.bytes;
     await borrarDesde(d, k, hay.n);          // lo que hubiera detrás de un hueco
     await d.removeEntry(k + '.done').catch(()=>{});

@@ -8,6 +8,12 @@
 // Lo guardado bajo los nombres viejos (*.elffuss.utopiaia.com) es de otro «site»
 // y no se ve desde aquí: tras el cambio de dominio el modelo se baja otra vez.
 export const BROKER_URL = 'https://models.elffuss.com/';
+// La página del broker se pide con la versión que el cliente espera: se servía sin Cache-Control y Safari siguió
+// usando una copia de días aunque la del servidor ya era otra (8-nov: la de antes del arreglo de WebKit, que no
+// dejaba cargar ningún modelo grande en el iPhone). Una dirección nueva no la contesta ninguna copia vieja. Subirla
+// cuando la página cambie algo que el cliente necesita. Las claves (orígenes) no cambian.
+export const BROKER_PAGE = '2026-11-08';
+const paginaBroker = (u) => { const x = new URL(u); if (!x.searchParams.has('v')) x.searchParams.set('v', BROKER_PAGE); return x.href; };
 
 // Un iframe POR ORIGEN. La maquinaria está, pero OJO con para qué sirve, porque
 // medirlo costó una tarde y el resultado no es el que parecía.
@@ -46,7 +52,7 @@ function _ensureNuevo(brokerURL, entrada) {
   let _iframe = null, _ready = null;
   const _url = brokerURL;
   _iframe = document.createElement('iframe');
-  _iframe.src = brokerURL; _iframe.setAttribute('aria-hidden', 'true');
+  _iframe.src = paginaBroker(brokerURL); _iframe.setAttribute('aria-hidden', 'true');
   _iframe.style.cssText = 'position:absolute;width:0;height:0;border:0;left:-9999px;visibility:hidden';
   _ready = new Promise((resolve, reject) => {
     const to = setTimeout(() => reject(new Error('broker timeout')), 8000);
