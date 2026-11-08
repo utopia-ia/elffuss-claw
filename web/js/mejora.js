@@ -9,7 +9,8 @@ const SKILL_DESC = 'Change or improve the Elffuss chat itself (colours, shapes, 
 export const SKILL_MD = `# Improve Elffuss (the user's own version of the chat)
 
 The user wants to change the Elffuss chat (elffuss.com) itself. You do it in THEIR fork on GitHub, never in the
-official site. Explain each step in one plain sentence; the user may not program.
+official site. In Elffuss Claw, explain each step in one plain sentence: the user may not program. In Elffuss Code,
+the user programs: show the exact diff and wait for an OK before each github.write.
 
 ## Steps
 1. Restate the change in one sentence and confirm what you understood.
@@ -37,8 +38,10 @@ official site. Explain each step in one plain sentence; the user may not program
 export async function instalarSkill() {
   const ya = skills.installed().find((s) => s.name === SKILL_NAME);
   if (!ya) return skills.createSkill({ name: SKILL_NAME, description: SKILL_DESC, instructions: SKILL_MD });
-  if ((await skills.get(SKILL_NAME))?.content !== SKILL_MD) return skills.editSkill({ name: SKILL_NAME, description: SKILL_DESC, instructions: SKILL_MD });
-  return null;
+  if ((await skills.get(SKILL_NAME))?.content === SKILL_MD) return null;
+  if (skills.editSkill) return skills.editSkill({ name: SKILL_NAME, description: SKILL_DESC, instructions: SKILL_MD });
+  await skills.remove(SKILL_NAME);
+  return skills.createSkill({ name: SKILL_NAME, description: SKILL_DESC, instructions: SKILL_MD });
 }
 
 // La petición que trae la dirección, o null. Se quita del hash al leerla: recargar no la vuelve a poner.
