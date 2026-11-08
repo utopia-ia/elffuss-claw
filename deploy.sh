@@ -32,6 +32,10 @@ DEST=/var/www/elffuss-claw.utopiaia.com
 # El SDK de medios (web/vendor/elffuss-ai/) viaja con la web: sus runtimes no están en git, los restaura ai-sync.mjs
 # desde su PIN.json y se comprueban byte a byte antes de subir nada. Sin ellos, imagen, audio, vídeo y PDF no van.
 node ai-sync.mjs --check || { echo "✗ web/vendor/elffuss-ai no casa con su PIN.json: node ai-sync.mjs (con ELFFUSS_AI_REPO)"; exit 1; }
+# El código de terceros (web/vendor/third-party/) viaja con la web, fijado y comprobado: nada se carga de un CDN.
+node third-party.mjs --check || { echo "✗ web/vendor/third-party no casa con su PIN.json: node third-party.mjs --ensure" >&2; exit 1; }
+# Las cabeceras de seguridad (deploy/headers.json → deploy/nginx/): al día, y ninguna página carga código de otro origen.
+node deploy/headers.mjs --check || { echo "✗ deploy/nginx no está al día o la web carga código de otro origen: node deploy/headers.mjs --write" >&2; exit 1; }
 PESOS=(--filter='P models/*' --exclude='models/*.gguf')
 MOTOR=("${PESOS[@]}" --filter='P js/engine/**' --exclude='js/engine/**')
 # El blog diario (elffuss-blog) publica en <docroot>/blog/, que NO existe en

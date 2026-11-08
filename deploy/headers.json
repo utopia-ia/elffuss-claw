@@ -1,0 +1,169 @@
+{
+  "schema": 1,
+  "note": "Single source of the security headers of the sites this repository serves (deploy/headers.mjs turns it into nginx snippets and into what tests/csp-f0.mjs serves). Elffuss Link spec §4.4. Placeholders: {self} = the site's origin, {inline:<file>} = the sha256 sources of that page's inline scripts. Policies are chosen by path like an nginx map on $uri: exact paths, then regexes in order, then default.",
+  "scan": {
+    "dirs": [
+      "web"
+    ],
+    "skip": [
+      "web/vendor",
+      "web/models"
+    ]
+  },
+  "sites": {
+    "claw.elffuss.com": {
+      "origin": "https://claw.elffuss.com",
+      "file": "claw.elffuss.com",
+      "prefix": "elffuss_claw",
+      "product": true,
+      "common": {
+        "Strict-Transport-Security": "max-age=31536000",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "no-referrer",
+        "Origin-Agent-Cluster": "?1"
+      },
+      "policies": [
+        {
+          "name": "app",
+          "match": "default",
+          "why": "Claw itself. Scripts only from this origin (third-party code is vendored: web/vendor/third-party/, web/vendor/elffuss-ai/) plus WebAssembly; the one inline script is the import map, by hash. Frames: this origin (the app viewer's sandbox page, the memory store), the model stores (models, m1, m2: js/runtime/model-broker.js frames the one of each weight host) and the SoundCloud player of the Mind. Connections: this origin (/proxy, /websearch, /proxy/report), the model hosts, Hugging Face (and the hf.co hosts its downloads redirect to), GitHub (skills), the API providers of Settings and a model server on this computer. Only elffuss.com may frame it (the chat's apps panel, chat/appview.js). COOP stays unsafe-none: Claw answers the Copilot and the Translator that open it, through window.opener.",
+          "csp": [
+            "default-src 'self'",
+            "script-src 'self' 'wasm-unsafe-eval' {inline:web/index.html}",
+            "style-src 'self' 'unsafe-inline'",
+            "img-src 'self' data: blob: https:",
+            "font-src 'self' data:",
+            "media-src 'self' data: blob:",
+            "connect-src 'self' data: blob: https://models.elffuss.com https://m1.elffuss.com https://m2.elffuss.com https://huggingface.co https://*.huggingface.co https://hf.co https://*.hf.co https://api.github.com https://raw.githubusercontent.com https://api.openai.com https://api.anthropic.com http://localhost:* http://127.0.0.1:*",
+            "worker-src 'self'",
+            "frame-src 'self' https://models.elffuss.com https://m1.elffuss.com https://m2.elffuss.com https://w.soundcloud.com",
+            "manifest-src 'self'",
+            "object-src 'none'",
+            "base-uri 'none'",
+            "form-action 'self'",
+            "frame-ancestors https://elffuss.com"
+          ],
+          "reportOnly": [
+            "require-trusted-types-for 'script'",
+            "trusted-types elffuss-ai 'allow-duplicates'"
+          ],
+          "headers": {
+            "Cross-Origin-Opener-Policy": "unsafe-none",
+            "Cross-Origin-Resource-Policy": "same-site",
+            "Permissions-Policy": "camera=(self), microphone=(self), geolocation=(), autoplay=(self \"https://w.soundcloud.com\"), encrypted-media=(self \"https://w.soundcloud.com\"), usb=(), serial=(), hid=(), bluetooth=(), midi=(), payment=(), display-capture=(), xr-spatial-tracking=(), browsing-topics=()"
+          }
+        },
+        {
+          "name": "bridge",
+          "match": "/bridge.html",
+          "why": "The hidden page the chat of elffuss.com embeds to reach Claw's apps (js/bridge.js). Only elffuss.com may frame it. The page's own meta policy is kept; this adds what a meta cannot (frame-ancestors).",
+          "phase1": true,
+          "csp": [
+            "default-src 'none'",
+            "script-src 'self'",
+            "connect-src 'none'",
+            "img-src 'none'",
+            "style-src 'none'",
+            "object-src 'none'",
+            "base-uri 'none'",
+            "form-action 'none'",
+            "frame-ancestors https://elffuss.com"
+          ],
+          "headers": {
+            "Cross-Origin-Opener-Policy": "unsafe-none",
+            "Cross-Origin-Resource-Policy": "same-site",
+            "Permissions-Policy": "camera=(), microphone=(), geolocation=(), usb=(), serial=(), hid=(), bluetooth=(), midi=(), payment=(), display-capture=(), browsing-topics=()"
+          }
+        },
+        {
+          "name": "sandbox",
+          "match": "~^/sandbox/",
+          "why": "The page the apps, the loading demos and the game checker are written into (web/sandbox/run.html, js/sandbox-frame.js). The `sandbox` directive gives it an opaque origin even when opened on its own; its flags are those of the app viewer's iframe. What runs there is what the model made, as before (a srcdoc frame had no policy at all): it may run inline code and load what it wants, but it cannot reach Claw's storage. Only Claw frames it, also when Claw itself is framed by elffuss.com (frame-ancestors checks every ancestor).",
+          "phase1": true,
+          "sandboxed": true,
+          "csp": [
+            "sandbox allow-scripts allow-forms allow-modals allow-popups allow-downloads",
+            "default-src * data: blob: 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'",
+            "frame-ancestors {self} https://elffuss.com"
+          ],
+          "headers": {
+            "Cross-Origin-Opener-Policy": "unsafe-none",
+            "Cross-Origin-Resource-Policy": "same-origin",
+            "Permissions-Policy": "camera=(), microphone=(), geolocation=(), usb=(), serial=(), hid=(), bluetooth=(), midi=(), payment=(), display-capture=(), browsing-topics=()"
+          }
+        },
+        {
+          "name": "none",
+          "match": [
+            "~^/memory/",
+            "/proxy",
+            "/proxy/report",
+            "~^/websearch"
+          ],
+          "why": "Paths with headers of their own: the memory store (server/memory/headers.conf, its own location) and the backends (/proxy answers with its own sandboxing CSP).",
+          "none": true,
+          "csp": []
+        }
+      ]
+    },
+    "models.elffuss.com": {
+      "origin": "https://models.elffuss.com",
+      "file": "models.elffuss.com",
+      "prefix": "elffuss_models",
+      "note": "The shared model store (server/broker/), served on models, m1 and m2 .elffuss.com. Only the store's two files get a policy; the weights on m1/m2 keep their headers.",
+      "common": {
+        "Strict-Transport-Security": "max-age=31536000",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "no-referrer"
+      },
+      "policies": [
+        {
+          "name": "store",
+          "match": [
+            "/",
+            "/index.html"
+          ],
+          "why": "The store page, a hidden iframe in every Elffuss site. Its one inline module, by hash. It downloads whatever model URL an allowed site asks for, so connect-src stays https:. frame-ancestors lists exactly the origins its allowed() accepts (no ?allow= third parties: a new one has to be added here too).",
+          "phase1": false,
+          "csp": [
+            "default-src 'none'",
+            "script-src {inline:server/broker/index.html}",
+            "style-src 'unsafe-inline'",
+            "connect-src 'self' https:",
+            "worker-src 'self'",
+            "object-src 'none'",
+            "base-uri 'none'",
+            "form-action 'none'",
+            "frame-ancestors https://elffuss.com https://claw.elffuss.com https://code.elffuss.com https://t2t.elffuss.com https://translator.elffuss.com https://copilot.elffuss.com https://models.elffuss.com https://m1.elffuss.com https://m2.elffuss.com https://tools.elffuss.com https://cutout.elffuss.com https://ocr.elffuss.com https://detect.elffuss.com https://depth.elffuss.com https://elffuss.utopiaia.com https://claw.elffuss.utopiaia.com https://code.elffuss.utopiaia.com https://t2t.elffuss.utopiaia.com https://translator.elffuss.utopiaia.com https://copilot.elffuss.utopiaia.com https://models.elffuss.utopiaia.com https://m1.elffuss.utopiaia.com https://m2.elffuss.utopiaia.com https://elffuss-claw.utopiaia.com https://elffuss-code.utopiaia.com https://burn-my-computer.utopiaia.com http://localhost:*"
+          ],
+          "reportOnly": [
+            "require-trusted-types-for 'script'",
+            "trusted-types 'none'"
+          ],
+          "headers": {
+            "Permissions-Policy": "camera=(), microphone=(), geolocation=(), usb=(), serial=(), hid=(), bluetooth=(), midi=(), payment=(), display-capture=(), browsing-topics=()"
+          }
+        },
+        {
+          "name": "store-worker",
+          "match": "/sw.js",
+          "why": "The store's service worker (it fetches the model files the page asks for).",
+          "csp": [
+            "default-src 'none'",
+            "connect-src 'self' https:",
+            "object-src 'none'",
+            "base-uri 'none'",
+            "frame-ancestors 'none'"
+          ],
+          "headers": {}
+        },
+        {
+          "name": "none",
+          "match": "default",
+          "why": "Everything else (the weights on m1/m2) keeps its headers.",
+          "none": true
+        }
+      ]
+    }
+  }
+}
