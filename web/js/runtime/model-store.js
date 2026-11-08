@@ -38,6 +38,12 @@ let PART = 1024 * 1024 * 1024;
 // de arriba; lo que hay que probar es la aritmética.
 export function _setPartSize(n) { PART = Math.max(1, n | 0); }
 
+// WebKit (Safari 26, medido en un iPhone el 8-nov) escribe con write(vista) el
+// ArrayBuffer ENTERO de la vista, no solo sus bytes: write(buf.subarray(10, 20))
+// de un buffer de 100 dejó un fichero de 200. Al repartir un chunk entre dos
+// partes, el modelo salía más largo de lo que mide. Se copia el trozo antes.
+const exacto = (v) => (ArrayBuffer.isView(v) && (v.byteOffset !== 0 || v.byteLength !== v.buffer.byteLength) ? v.slice() : v);
+
 // Nombre de fichero estable y seguro a partir de la URL (sin barras ni query).
 function keyFor(url) {
   return String(url).replace(/[?#].*$/, '').replace(/[^\w.\-]+/g, '_').slice(-180);
@@ -299,7 +305,7 @@ export async function getModelParts(url, onProgress = () => {}) {
       while (off < value.byteLength) {
         if (enParte >= PART) { await writable.close(); await abrirParte(); }
         const cabe = Math.min(PART - enParte, value.byteLength - off);
-        await writable.write(value.subarray(off, off + cabe));
+        await writable.write(exacto(value.subarray(off, off + cabe)));
         off += cabe; enParte += cabe; loaded += cabe;
       }
       onProgress(fmt(loaded, total, t0));

@@ -236,6 +236,13 @@ async function borrarDesde(d, k, n){
 // guardadas antes, de 64 MiB, se siguen leyendo y reanudando: el marcador lleva
 // cuántas hay y lo guardado es la suma de las que haya.
 const TRAMO = 16 * 1024 * 1024;
+// WebKit (Safari 26, medido en un iPhone el 8-nov) escribe con write(vista) el
+// ArrayBuffer ENTERO de la vista, no solo sus bytes: write(buf.subarray(10, 20))
+// de un buffer de 100 dejó un fichero de 200. Repartir un trozo de red entre dos
+// partes es justo eso, así que todo fichero de más de un TRAMO salía más largo de
+// lo que mide y se rechazaba («llegaron X de Y bytes»): en el iPhone no cargaba
+// ningún modelo de voz. Un trozo que no ocupa su buffer entero se copia antes.
+const exacto = v => (ArrayBuffer.isView(v) && (v.byteOffset !== 0 || v.byteLength !== v.buffer.byteLength) ? v.slice() : v);
 const MAX_SIN_AVANCE = 6;                 // reintentos seguidos sin un solo byte nuevo
 
 async function leerJSON(d, nombre){
@@ -345,7 +352,7 @@ async function intento(d, k, url, onProgress, signal, esperado = 0){
       while (off < value.byteLength) {
         if (enParte >= TRAMO) { await w.close(); w = null; await abrirParte(); }
         const cabe = Math.min(TRAMO - enParte, value.byteLength - off);
-        await w.write(value.subarray(off, off + cabe));
+        await w.write(exacto(value.subarray(off, off + cabe)));
         off += cabe; enParte += cabe; loaded += cabe;
       }
       const ahora = Date.now();
@@ -488,7 +495,7 @@ async function guardarCopia(url, blob){
       for (let off = 0; off < blob.size; off += TRAMO, n++) {
         const w = await (await d.getFileHandle(k + '.p' + n, { create:true })).createWritable();
         const r = blob.slice(off, off + TRAMO).stream().getReader();
-        try { for (;;) { const { done, value } = await r.read(); if (done) break; await w.write(value); } await w.close(); }
+        try { for (;;) { const { done, value } = await r.read(); if (done) break; await w.write(exacto(value)); } await w.close(); }
         catch (e) { try { await w.abort(); } catch {} throw e; }
       }
     } catch (e) { await borrarPartes(d, k); throw Object.assign(e instanceof Error ? e : new Error(String(e)), { tipo: e?.tipo || tipoDe(e) }); }

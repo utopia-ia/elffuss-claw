@@ -31,12 +31,14 @@ ajusta('const TRAMO = 16 * 1024 * 1024;', 'const TRAMO = 1000;');               
 ajusta('Math.min(15000, 1000 * 2 ** (fallos - 1))', '1');                          // sin esperas reales
 
 // ── OPFS falso ───────────────────────────────────────────────────────────────
+let WEBKIT = false;
 class FH {
   constructor(dir, nombre) { this.dir = dir; this.name = nombre; this.kind = 'file'; }
   async getFile() { return new Blob([this.dir.datos.get(this.name)]); }
   async createWritable() {
     const dir = this.dir, nombre = this.name; const trozos = [];
-    return { write: async v => { trozos.push(Buffer.from(v)); },
+    // WEBKIT: como Safari 26 (medido en un iPhone), write(vista) escribe el ArrayBuffer ENTERO de la vista.
+    return { write: async v => { trozos.push(WEBKIT && ArrayBuffer.isView(v) ? Buffer.from(new Uint8Array(v.buffer)) : Buffer.from(v)); },
              close: async () => { dir.datos.set(nombre, Buffer.concat(trozos)); },
              abort: async () => {} };
   }
@@ -256,6 +258,19 @@ const K = 'https_m1.elffuss.com_modelo.part1.bin';
     const r = ultimo(await b.put(url, new Blob([DATOS])));
     ok('copia de algo que no es de Hugging Face: rechazada', r.kind === 'error' && !hayMarca(b), r.message);
   }
+}
+
+// WebKit escribe el buffer entero de una vista: un trozo de red repartido entre dos partes (o una vista de un buffer
+// mayor) salía con bytes de más y el broker rechazaba el fichero («llegaron X de Y bytes»). Visto en el iPhone con
+// todos los modelos de voz, 8-nov.
+{
+  WEBKIT = true;
+  try {
+    const b = nuevoBroker(servidor(DATOS));
+    const r = ultimo(await b.get(url, DATOS.length));
+    ok('WebKit (write de una vista = buffer entero): la descarga sale entera y exacta', r.kind === 'file' && sha(await bytesFile(r.file)) === sha(DATOS), r.message);
+    ok('WebKit: cuatro partes que suman lo que mide el fichero', nombresPartes(b).length === 4 && nombresPartes(b).reduce((n, k) => n + b.store.datos.get(k).length, 0) === DATOS.length, nombresPartes(b).map(k => b.store.datos.get(k).length).join());
+  } finally { WEBKIT = false; }
 }
 
 console.log(fails ? `\n${fails} FALLO(S)` : '\nTodo en verde');
