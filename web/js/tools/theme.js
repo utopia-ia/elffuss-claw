@@ -2,15 +2,16 @@
 // elffuss-theme.js. elffuss.com lo lee por el puente (bridge.js, op theme.get), lo vuelve a validar y lo aplica. Solo
 // en este navegador; el fork de GitHub es el registro público y el origen de la PR, no lo que se aplica.
 import * as db from '../db.js';
-import { validateTheme, SCHEMA, COLORS, RADIUS, DENSITY, FONTS } from '../elffuss-theme.js';
+import { validateTheme, SCHEMA, COLORS, RADIUS, DENSITY, FONTS, BASE, THEMEABLE } from '../elffuss-theme.js';
 
 export const KEY = 'elffuss.theme';
 
 export async function get() {
   const s = await db.get('kv', KEY).catch(() => null);
   const v = s?.theme ? validateTheme(s.theme) : null;
-  if (!v?.ok) return `No custom theme: elffuss.com shows the official look. Allowed: colors {${Object.keys(COLORS).join(', ')}} as #rrggbb, radius ${Object.keys(RADIUS).join('|')}, density ${Object.keys(DENSITY).join('|')}, font ${Object.keys(FONTS).join('|')}, texts {es|en: {key: text}}.`;
-  return JSON.stringify(v.theme, null, 2);
+  const ayuda = `The official look is a dark slate: ${JSON.stringify(BASE)}. Colours you leave out keep these values, and text must stay readable on them. Allowed: colors {${Object.keys(COLORS).join(', ')}} as #rrggbb, radius ${Object.keys(RADIUS).join('|')}, density ${Object.keys(DENSITY).join('|')}, font ${Object.keys(FONTS).join('|')}, texts {es|en: {key: text}} only for these keys: ${[...THEMEABLE].join(', ')}.`;
+  if (!v?.ok) return `No custom theme: elffuss.com shows the official look.\n${ayuda}`;
+  return `Current theme:\n${JSON.stringify(v.theme, null, 2)}\n${ayuda}`;
 }
 
 // Guarda el tema entero (lo que no venga, vuelve a lo oficial). Si no es válido, no guarda nada y dice por qué, para

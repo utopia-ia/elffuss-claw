@@ -14,12 +14,13 @@ sentence: the user may not program. In Elffuss Code, the user programs: show exa
 ## A. Look and words (colours, shapes, fonts, density, labels): the theme
 Almost every request is this. No GitHub needed.
 1. Restate the change in one sentence.
-2. Call elffuss.theme_get to see the current theme and what is allowed.
+2. Call elffuss.theme_get to see the current theme, the official colours (a dark slate) and what is allowed.
 3. Build the WHOLE theme JSON (fields you leave out go back to the official look) and call elffuss.theme_set.
    - colors: wall (page), surface (side panels), board, steel (borders), ink (text and buttons), graphite (secondary
      text), on-ink (text on buttons), tape (highlight), accent, selection. Only #rrggbb.
    - radius: square | soft | round | pill. density: compact | normal | roomy. font: system | serif | rounded | mono.
-   - texts: {"es": {"key": "text"}, "en": {...}} for labels of the chat; plain text, 160 characters at most.
+   - texts: {"es": {"key": "text"}, "en": {...}} only for the label keys elffuss.theme_get lists; plain text,
+     160 characters at most. Only from Claw: a theme sent as a link carries no texts.
    If it is rejected, read the reason (often contrast: text must stay readable), fix it and try again.
 4. Tell the user to open or reload https://elffuss.com to see it, and that «Volver a la oficial» there turns it off.
    elffuss.theme_reset removes it.

@@ -41,9 +41,19 @@ export const DENY_TEXT = new Set([
   'deny', 'delAsk', 'delYes', 'delNo', 'micDenied', 'mediaDenied', 'mediaNeed', 'mediaNeedBtn', 'mediaDownload',
   'webSentSearch', 'webSentUrl', 'webSentRead', 'webSentSite', 'webSentList', 'webSent', 'appDeniedLine',
   'memBtnOn', 'memBtnOff', 'memDownBtn', 'forgetLearnt', 'forgetFailed',
+  // Lo que llega al modelo o forma parte de un mensaje: un tema no puede cambiar lo que se le dice al modelo.
+  'anythingElse', 'webClose', 'webPartial', 'webProgress', 'webAsking', 'webSlowTool', 'listKept', 'digest',
+  'alreadyAbove', 'answerNow', 'stalled', 'cutTool', 'fixIt', 'fixAsk', 'cut', 'noAnswer', 'appError', 'toolFailed',
 ]);
 const DENY_PATTERN = /gate|consent|permi|privacy|privac|download|descarg|sent|deny|denied|allow|forget|wipe|delete|del[A-Z]|mirror|official|version|myVersion|install|err[A-Z]|warn|secur|token|password|login|github|mem[A-Z]|memory|cookie/i;
-export const textAllowed = (key) => !DENY_TEXT.has(key) && !DENY_PATTERN.test(key);
+// Los textos que un tema SÍ puede cambiar: auditados en el chat para que acaben en textContent o en un atributo, nunca
+// en innerHTML, en el prompt del modelo ni en un mensaje. Lo que no está aquí no se cambia, aunque no esté denegado.
+export const THEMEABLE = new Set([
+  'welcomeTitle', 'newChat', 'thinking', 'reasoning', 'retry', 'noReason', 'makeApp', 'details', 'usingTool', 'saving',
+  'appNew', 'appUpdated', 'appOpened', 'open', 'openInClaw', 'stReady', 'stLoading', 'attReading', 'transcribing',
+  'voiceNote', 'recHint', 'recCancel', 'mediaStop', 'mediaLooked', 'madeFrom', 'looking', 'appList', 'appNone',
+]);
+export const textAllowed = (key) => THEMEABLE.has(key) && !DENY_TEXT.has(key) && !DENY_PATTERN.test(key);
 
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 function hex6(c) {
@@ -61,8 +71,16 @@ export function contrast(a, b) {
   return (x + 0.05) / (y + 0.05);
 }
 
-// Los colores de la versión oficial, para medir el contraste de un tema que solo cambia algunos.
-const OFFICIAL = { wall: '#ffffff', ink: '#191b1e', 'on-ink': '#ffffff', surface: '#f6f7f4', tape: '#ffc629', selection: '#ffe48a', accent: '#191b1e' };
+// La paleta oficial del chat (pizarra, slate.css): un tema que solo cambia algunos colores se mide contra ella.
+export const BASE = {
+  wall: '#303752', surface: '#272c44', board: '#3a4263', steel: '#465073', ink: '#f1eff7', graphite: '#b9bed6',
+  'on-ink': '#1b1d2a', tape: '#ffc629', accent: '#f1eff7', selection: '#5a54a8',
+};
+// Los pares en los que la página pone texto sobre fondo, con lo que necesitan; y el acento, que tiene que verse.
+export const PAIRS = [
+  ['ink', 'wall', 4.5], ['ink', 'surface', 4.5], ['ink', 'board', 4.5], ['ink', 'selection', 4.5],
+  ['graphite', 'wall', 4.5], ['graphite', 'surface', 4.5], ['on-ink', 'ink', 4.5], ['accent', 'wall', 3],
+];
 
 export function validateTheme(input) {
   const errors = [];
@@ -84,15 +102,11 @@ export function validateTheme(input) {
         if (typeof v !== 'string' || !HEX.test(v.trim())) { errors.push(`colour ${k} must be #rgb or #rrggbb, not «${String(v).slice(0, 30)}»`); continue; }
         theme.colors[k] = hex6(v.trim());
       }
-      const c = { ...OFFICIAL, ...theme.colors };
-      if (contrast(c.ink, c.wall) < 4.5) errors.push(`ink on wall is hard to read (contrast ${contrast(c.ink, c.wall).toFixed(1)}, needs 4.5)`);
-      if (contrast(c.ink, c.surface) < 4.5) errors.push(`ink on surface is hard to read (contrast ${contrast(c.ink, c.surface).toFixed(1)}, needs 4.5)`);
-      if (contrast(c['on-ink'], c.ink) < 4.5) errors.push(`on-ink on ink is hard to read (contrast ${contrast(c['on-ink'], c.ink).toFixed(1)}, needs 4.5)`);
-      // Los estados también se tienen que ver: el texto sobre el subrayado y la selección se lee, y el acento (anillos,
-      // botones de acento) se distingue de la página. El foco es la tinta, ya medida arriba.
-      if (contrast(c.ink, c.tape) < 4.5) errors.push(`ink on tape is hard to read (contrast ${contrast(c.ink, c.tape).toFixed(1)}, needs 4.5)`);
-      if (contrast(c.ink, c.selection) < 4.5) errors.push(`ink on selection is hard to read (contrast ${contrast(c.ink, c.selection).toFixed(1)}, needs 4.5)`);
-      if (contrast(c.accent, c.wall) < 3) errors.push(`accent does not stand out from wall (contrast ${contrast(c.accent, c.wall).toFixed(1)}, needs 3)`);
+      const c = { ...BASE, ...theme.colors };
+      for (const [fg, bg, need] of PAIRS) {
+        const k = contrast(c[fg], c[bg]);
+        if (k < need) errors.push(`${fg} on ${bg} is hard to see (contrast ${k.toFixed(1)}, needs ${need})`);
+      }
       if (!Object.keys(theme.colors).length) delete theme.colors;
     }
   }
@@ -111,7 +125,7 @@ export function validateTheme(input) {
         if (!entries || typeof entries !== 'object' || Array.isArray(entries)) { errors.push(`texts.${lang} must be an object`); continue; }
         for (const [key, val] of Object.entries(entries)) {
           if (!/^[a-zA-Z][a-zA-Z0-9]{0,39}$/.test(key)) { errors.push(`texts.${lang}: bad key «${key.slice(0, 40)}»`); continue; }
-          if (!textAllowed(key)) { errors.push(`texts.${lang}.${key} cannot be changed by a theme (it is a safety or privacy text)`); continue; }
+          if (!textAllowed(key)) { errors.push(`texts.${lang}.${key} cannot be changed by a theme (allowed: ${[...THEMEABLE].join(', ')})`); continue; }
           if (typeof val !== 'string') { errors.push(`texts.${lang}.${key} must be text`); continue; }
           const v = val.replace(/[\u0000-\u001f\u007f]/g, ' ').trim();
           if (!v || v.length > MAX_TEXT) { errors.push(`texts.${lang}.${key} must be 1 to ${MAX_TEXT} characters`); continue; }
