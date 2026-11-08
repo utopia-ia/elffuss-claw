@@ -154,3 +154,23 @@ export function needsMediaTools(text, { attachments = 0, hasMedia = false } = {}
 
 /** True when a text (the conversation so far) holds a media id: the conversation has a media item. */
 export const hasMediaIn = (text) => MEDIA_ID.test(String(text || ''));
+
+// An edit of a picture the conversation already has: a change («hazla en acuarela», «ponla de noche»), a part to
+// change («cámbiale el fondo»), a wish about it («que nieve»), «la misma pero…», «esa imagen…», «ahora de noche».
+const EDIT = [
+  /\b(?:cambiale|cambia|quitale|quita|ponle|anadele|anade) (?:el|la|los|las) (?:fondo|cielo|color|colores|luz|ropa|pelo|cara|suelo|agua|estilo)\b/,
+  /\bque (?:nieve|llueva|sea de noche|sea de dia|amanezca|anochezca|haya (?:niebla|nieve|sol|luna|estrellas))\b/,
+  /\b(?:la|el) mism[ao] pero\b/, /\b(?:esa|esta) (?:imagen|foto|ilustracion)\b/, /\bahora (?:de|en|con|como|sin) \S+/,
+  /\b(?:the same|this picture|that picture|this image|that image)\b/, /\b(?:change|replace) the (?:background|sky|colou?rs?|light)\b/,
+];
+/**
+ * Is this turn an edit of a picture of the conversation, and which one? `ids`: the picture ids the conversation has,
+ * newest last. Returns the id (the one the text names, else the newest) or null.
+ */
+export function editTarget(text, ids = []) {
+  if (!ids.length) return null;
+  const t = normalize(text);
+  const named = (String(text || '').toLowerCase().match(/\bimg-[a-z2-9]{4}\b/g) || []).find((id) => ids.includes(id));
+  if (named) return named;
+  return CHANGE.test(t) || EDIT.some((re) => re.test(t)) ? ids[ids.length - 1] : null;
+}
