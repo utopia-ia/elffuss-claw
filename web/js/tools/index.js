@@ -6,12 +6,13 @@ import * as tasks from './tasks.js';
 import * as web from './web.js';
 import * as memory from './memory.js';
 import * as watch from './watch.js';
+import * as github from './github.js';
 import * as skills from '../skills.js';
 import * as memoriaV2 from '../memory-wire.js';
 import { t, uiLang } from '../i18n.js';
 import { mediaToolEntries, MEDIA_ALIASES, isMediaTool } from './media.js';
 
-export { fs, apps, vault, tasks, web, memory, watch };
+export { fs, apps, vault, tasks, web, memory, watch, github };
 
 export const TOOLS = {
   'fs.pick_folder': { desc: 'Pedir al usuario que autorice una carpeta de su ordenador', params: {}, run: () => fs.pickFolder() },
@@ -39,6 +40,12 @@ export const TOOLS = {
   'skill.list':   { desc: 'Ver las skills instaladas', params: {}, run: async () => { const s = skills.installed(); return s.length ? s.map(x => `• ${x.name}: ${x.description || ''}`).join('\n') : t('skNoneTool'); } },
   'skill.get':    { desc: 'Leer el contenido completo de una skill instalada (útil antes de editarla)', params: { name: 'nombre de la skill' }, run: async a => { const s = await skills.get(a.name); return s ? `# ${s.name}\n${s.description || ''}\n\n${s.content || ''}` : t('skNoSuchTool', { name: a.name }); } },
   'skill.edit':   { desc: 'EDITAR una skill ya instalada: cambia sus instrucciones (o añade con append:true). Úsalo para ajustar el guion/argumentos de una skill que ya existe, p. ej. el copiloto de ventas', params: { name: 'nombre de la skill', instructions: 'nuevas instrucciones en markdown', description: 'opcional, nueva descripción', append: 'true para añadir al final en vez de reemplazar' }, run: a => skills.editSkill(a) },
+  'github.connect': { desc: 'Conectar la cuenta de GitHub del usuario (abre la ventana de inicio de sesión de GitHub)', params: {}, run: () => github.connect() },
+  'github.fork':    { desc: 'Preparar el fork del chat de Elffuss en el GitHub del usuario (lo crea o lo pone al día)', params: {}, run: () => github.fork() },
+  'github.read':    { desc: 'Leer un fichero (o listar una carpeta) del fork del chat', params: { path: 'ruta, p. ej. chat/chat.css' }, run: a => github.read(a) },
+  'github.write':   { desc: 'Escribir un fichero ENTERO en el fork del chat (un commit)', params: { path: 'ruta', content: 'contenido completo del fichero', message: 'qué cambia, en una línea' }, run: a => github.write(a) },
+  'github.publish': { desc: 'Publicar el fork en GitHub Pages y esperar a que esté en línea; devuelve su dirección', params: {}, run: () => github.pages() },
+  'github.pr':      { desc: 'Proponer el cambio a la versión oficial de Elffuss (abre una pull request)', params: { title: 'título corto', body: 'qué se pidió y qué se ha cambiado' }, run: a => github.pr(a) },
   // Con la memoria compartida (v2) la descripción y los parámetros los pone el
   // motor (memoryTools, ver catalogoMemoria); estos son los de la memoria v1.
   'memory.save':   { desc: 'Recordar un hecho sobre el usuario PARA SIEMPRE (memoria persistente)', params: { fact: 'el hecho' }, run: (a, ctx) => memory.save(a, ctx) },
@@ -82,6 +89,7 @@ function catalogoMemoria() {
 // `tests/funciontags.mjs` comprueba que cada nombre de aquí existe de verdad.
 export const PARAM_EXACTO = {
   'fs.write': ['content'],
+  'github.write': ['content'],
   'app.create': ['html'],
   'skill.create': ['instructions'],
   'skill.edit': ['instructions'],

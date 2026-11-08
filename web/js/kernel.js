@@ -17,6 +17,7 @@ import * as perms from './permissions.js';
 import * as telemetry from './telemetry.js';
 import * as gram from './copilot-grammar.js';
 import * as rutas from './rutas.js';
+import * as mejora from './mejora.js';
 import { abrirModal } from './modal.js';
 import { ofrecerInstalar } from './instalar.js';
 import * as memoria from './memory-wire.js';
@@ -1909,3 +1910,14 @@ Si no hay nada útil que decir: CONSEJO: —`;
   const r = rutas.leer();
   if (r) ui.navegar(r);
 }
+
+// «Mejora Elffuss» desde el chat (#/mejora?pide=…): la skill instalada y la petición en la caja, para enviarla el
+// usuario. Ver mejora.js.
+(async function mejoraDesdeElChat() {
+  const pide = mejora.leerPeticion();
+  if (!pide) return;
+  try {
+    if (await mejora.instalarSkill()) ui.toast(t('improveSkillInstalled', { name: mejora.SKILL_NAME }), { accion: { label: t('see'), run: () => rutas.ir('skills', mejora.SKILL_NAME) } });
+  } catch (e) { console.warn('[mejora] no se pudo instalar la skill:', e?.message || e); }
+  mejora.prepararCaja(pide, t('improvePrefix'));
+})();
