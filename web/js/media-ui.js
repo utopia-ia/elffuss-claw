@@ -9,7 +9,7 @@
 // Todo se lee y se hace en este dispositivo: nada se sube.
 import { t as tr, uiLang } from './i18n.js';
 import { mediaUrl, mediaKindOf, downloadName, formatBytes } from './tools/media-tools.js';
-import { attachFile, docContext, mediaContext, kindOf, DOC_ACCEPT, canRecord, startRecording, toMono16k, keepVoiceNote } from './tools/attach.js';
+import { attachFile, docContext, mediaContext, kindOf, DOC_ACCEPT, canRecord, recorderPanel, peaksCanvas, startRecording, toMono16k, keepVoiceNote } from './tools/attach.js';
 import { AI_BASE, transcribe, CHAT } from './tools/media.js';
 
 const $ = (id) => document.getElementById(id);
@@ -74,6 +74,21 @@ export function mediaCard(call, { onStop = () => {} } = {}) {
   return {
     progress(p) {
       line.textContent = p?.text || '';
+      // Un vídeo con historia: sus fotogramas clave aparecen pequeños según se hacen, y se encienden con cada plano.
+      const st = p?.story;
+      if (st && (st.stage === 'keyframe' || st.stage === 'clip')) {
+        let strip = card.querySelector('.md-story');
+        if (!strip) { strip = el('div', 'md-story'); strip.setAttribute('aria-hidden', 'true'); meter.after(strip); }
+        if (st.stage === 'keyframe' && st.done && st.image?.rgba && !strip.querySelector(`[data-k="${st.index}"]`)) {
+          const c = document.createElement('canvas');
+          c.dataset.k = String(st.index);
+          const w = 96, h = Math.max(1, Math.round((96 * st.image.height) / st.image.width));
+          c.width = w; c.height = h;
+          try { createImageBitmap(new ImageData(new Uint8ClampedArray(st.image.rgba), st.image.width, st.image.height)).then((bm) => { c.getContext('2d').drawImage(bm, 0, 0, w, h); bm.close?.(); }).catch(() => {}); } catch { /* — */ }
+          strip.insertBefore(c, [...strip.children].find((x) => Number(x.dataset.k) > st.index) || null);
+        }
+        if (st.stage === 'clip') for (const k of strip.children) k.classList.toggle('is-shot', Number(k.dataset.k) <= st.index + (st.done ? 1 : 0));
+      }
       meter.classList.toggle('is-busy', p?.pct == null);
       meter.querySelector('i').style.width = (p?.pct ?? 0) + '%';
     },
@@ -143,6 +158,7 @@ export function attachmentsEl(attach = []) {
       card.append(body);
     } else {
       if (a.source === 'voice') card.append(el('span', 'att-line', tr('voiceNote')));
+  if (a.source === 'voice' && a.meta?.peaks?.length) card.append(peaksCanvas(a.meta.peaks));
       card.append(mediaElement(a.kind, a.id, a.name), el('span', 'att-id', a.id));
     }
     box.append(card);
@@ -175,7 +191,9 @@ function paintChips() {
   const ul = $('att-chips');
   if (!ul) return;
   ul.textContent = '';
-  if (rec.state) ul.append(recChip());
+  // Grabando: el panel con la onda en vivo (attach.js recorderPanel); si no, la ficha (escribiendo, error).
+  if (rec.state === 'rec' && rec.panel) { const li = el('li', 'rec-li'); li.append(rec.panel.el); ul.append(li); }
+  else if (rec.state) ul.append(recChip());
   for (const p of pending) {
     const li = el('li', 'att-chip' + (p.error ? ' is-error' : p.rec ? '' : ' is-reading'));
     const kind = p.rec?.kind || kindOf(p.file) || 'doc';
@@ -203,7 +221,7 @@ function addFiles(files) {
 }
 
 // La nota de voz.
-const rec = { state: null, text: '', ctl: null, at: 0, held: false, timer: null, ctlVoice: null };
+const rec = { state: null, text: '', ctl: null, at: 0, held: false, timer: null, ctlVoice: null, panel: null };
 const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 function recChip() {
   const li = el('li', 'att-chip rec-chip' + (rec.state === 'rec' ? ' is-rec' : rec.state === 'error' ? ' is-error' : ' is-reading'));
@@ -220,6 +238,7 @@ function recChip() {
 function setMic(on) { const b = $('mic-btn'); b?.classList.toggle('is-rec', on); b?.setAttribute('aria-pressed', String(on)); }
 function cancelRecording() {
   if (rec.ctl) { rec.ctl.cancel(); clearInterval(rec.timer); rec.ctl = null; setMic(false); }
+  rec.panel?.destroy(); rec.panel = null;
   rec.state = null; paintChips();
 }
 async function beginRecording() {
@@ -227,7 +246,8 @@ async function beginRecording() {
     rec.ctl = await startRecording();
     rec.at = performance.now(); rec.held = true;
     rec.state = 'rec'; rec.text = tr('recording', { s: '0:00' });
-    rec.timer = setInterval(() => { rec.text = tr('recording', { s: clock(rec.ctl?.seconds() || 0) }); paintChips(); }, 500);
+    // La onda que capta el micrófono, en vivo, con Cancelar y Enviar (attach.js, el mismo panel que el chat).
+    rec.panel = recorderPanel(rec.ctl, { lang: lang(), onCancel: cancelRecording, onSend: finishRecording });
     setMic(true); paintChips();
   } catch (e) {
     console.warn('[claw] micrófono', e);
@@ -238,7 +258,8 @@ async function finishRecording() {
   const r = rec.ctl;
   if (!r) return;
   rec.ctl = null; clearInterval(rec.timer); setMic(false);
-  const { blob, seconds } = await r.stop();
+  rec.panel?.destroy(); rec.panel = null;
+  const { blob, seconds, peaks } = await r.stop();
   if (seconds < 0.6 || !blob.size) { rec.state = null; paintChips(); return; }
   rec.state = 'busy'; rec.text = tr('transcribing'); paintChips();
   const ctl = new AbortController();
@@ -247,7 +268,7 @@ async function finishRecording() {
     const samples = await toMono16k(blob);
     const out = await transcribe(samples, { signal: ctl.signal, lang: lang(), language: lang(), onProgress: () => {} });
     if (out.text) {
-      const voice = await keepVoiceNote(blob, seconds, { chat: CHAT, transcript: out.text });
+      const voice = await keepVoiceNote(blob, seconds, { chat: CHAT, transcript: out.text, peaks });
       rec.state = null; paintChips();
       onVoice(out.text, voice);
     } else if (out.reason === 'denied') { rec.state = null; paintChips(); }

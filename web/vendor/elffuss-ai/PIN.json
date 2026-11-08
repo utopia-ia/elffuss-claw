@@ -5,40 +5,41 @@
   "modules": {
     "core": {
       "dir": "sdk/core",
-      "commit": "6868ea5a89befa93ea900b29bf2ff54fc39ff9bd"
+      "commit": "fd2767ac5b11e707351f471cb17e730056ecc975"
     },
     "text-to-image": {
       "dir": "sdk/text-to-image",
-      "commit": "6868ea5a89befa93ea900b29bf2ff54fc39ff9bd"
+      "commit": "fd2767ac5b11e707351f471cb17e730056ecc975"
     },
     "video": {
       "dir": "sdk/video",
-      "commit": "6868ea5a89befa93ea900b29bf2ff54fc39ff9bd"
+      "commit": "fd2767ac5b11e707351f471cb17e730056ecc975"
     },
     "video-gen": {
       "dir": "sdk/video-gen",
-      "commit": "6868ea5a89befa93ea900b29bf2ff54fc39ff9bd"
+      "commit": "fd2767ac5b11e707351f471cb17e730056ecc975"
     },
     "audio": {
       "dir": "sdk/audio",
-      "commit": "6868ea5a89befa93ea900b29bf2ff54fc39ff9bd"
+      "commit": "fd2767ac5b11e707351f471cb17e730056ecc975"
     },
     "image-to-text": {
       "dir": "sdk/image-to-text",
-      "commit": "6868ea5a89befa93ea900b29bf2ff54fc39ff9bd"
+      "commit": "fd2767ac5b11e707351f471cb17e730056ecc975"
     }
   },
   "registry": [
     {
-      "commit": "6868ea5a89befa93ea900b29bf2ff54fc39ff9bd",
+      "commit": "fd2767ac5b11e707351f471cb17e730056ecc975",
       "path": "registry/tasks.json"
     }
   ],
   "runtimes": {
     "variant": "webgpu",
-    "manifestCommit": "6868ea5a89befa93ea900b29bf2ff54fc39ff9bd",
+    "manifestCommit": "fd2767ac5b11e707351f471cb17e730056ecc975",
     "onnxruntimeWeb": "1.30.0",
-    "transformers": "4.3.1"
+    "transformers": "4.3.1",
+    "engine": "37768aabb596"
   },
   "files": [
     {
@@ -47,11 +48,11 @@
     },
     {
       "path": "NOTICE",
-      "sha256": "702c69d82db44251367a8c25c4c16de8785729667fae9a5a98220da80adbaf09"
+      "sha256": "57a6ab1886e049eaf6998bcd991a1051ba8ceda4b6b991f49eeba973b28704cf"
     },
     {
       "path": "registry/tasks.json",
-      "sha256": "38c8f3247267731c970ca868e84880e3db444bf4055266510d5d907ef7ab0899"
+      "sha256": "930838137a2c43412e9cb0be5d67f3606c82257d766a529814c95cb255b13abf"
     },
     {
       "path": "runtimes/@huggingface/transformers@4.3.1+ort1.30.0-webgpu/LICENSE",
@@ -68,6 +69,94 @@
     {
       "path": "runtimes/@huggingface/transformers@4.3.1+ort1.30.0-webgpu/transformers.web.min.js",
       "sha256": "90000f4d30082e61e0f403d462cc5569b5f4fdc4fa1e1651e41751418d0ce7d1"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/js/device.js",
+      "sha256": "c2aad5e92fda27b0bcf9673fe2e47fe2b9a407afdc4c5632c2486b151eef279b"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/js/gguf.js",
+      "sha256": "6606e1228e7167f49c50001664448492db7f4f29fd5bde7dfa0551e72b7b355d"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/js/kernels.attn.wgsl.js",
+      "sha256": "46f5ebbbcdba8ce464ecb186a925a5b59e4463718f4dcbfe2ba03dae63d2cbb2"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/js/kernels.bloques.wgsl.js",
+      "sha256": "7539d466a17e12ca3adadbae67c555f1a5df5a528f4095f8ab46c365c48d24e9"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/js/kernels.drift.wgsl.js",
+      "sha256": "cf0a7e9263fdce2f357e7c9f496d0558396c74207b4fe2eec63df55bc305650c"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/js/kernels.filas.wgsl.js",
+      "sha256": "14aabcaf6c8543c0ef599706fa191984b115495a42fa48eafc40db2a168f22f5"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/js/kernels.gemm.wgsl.js",
+      "sha256": "3defacf1f6f1c686a4ea73048bfab1c9f10e123744d42b348d959f7cb614a152"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/js/kernels.gemm2.wgsl.js",
+      "sha256": "369b29a7ef8ca5558c60cd98df9e84a902d86696aede230ba8b4243fb9759b77"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/js/kernels.gemv.wgsl.js",
+      "sha256": "dc288f587e332d36c99635be562cda88a9d6893c7da4e2ed932d258a8fde1a06"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/js/kernels.hadamard.wgsl.js",
+      "sha256": "8d87dd747927d12b3d952cbc663562c478885f40018f9348a4a35175161c1406"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/js/kernels.model.wgsl.js",
+      "sha256": "62cbc75f9e352facc3e6e59f07da82131e664d003cb8d83635b15a4b785ec7ca"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/js/kernels.nn.wgsl.js",
+      "sha256": "20c88aca0db0cab7870cd2ff2cb146320ec117d4a7f4971d867cabc84e5fa646"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/js/kernels.ssm.wgsl.js",
+      "sha256": "38c64a5a5c710ea570ea7ce90c6eda180f402382486b2a85355c081cc757a584"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/js/kernels.wgsl.js",
+      "sha256": "e271619d37e51e4d9cdb9718eaf29610b425f75537509468c4753f50469bcb49"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/js/moss-mapa.js",
+      "sha256": "91fbe2156d63c443e564bf6f0f69488f3b5adfcaad8dbf9806d5bb76539faafc"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/js/moss.js",
+      "sha256": "1c1866b57e4278f3b58c22e9853ddafb9d3d3812c95cd40a2461967f3518c20c"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/js/ops.gemm2.js",
+      "sha256": "d2e331fac7d7003b1d5ff49ee95a8cabe999e1e97871aca55f428a99efa860be"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/js/ops.gemv.js",
+      "sha256": "5a1b81e8708e72c5ad4befe800b25341cf9593c575df7c778afca91b82e336d2"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/js/ops.js",
+      "sha256": "291c79c30fd1446d934c0a88cc1726644848abcf6ae5fc74884371087069e090"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/js/quant-tables.js",
+      "sha256": "5f27228b8700cfc2202e14c049cab168c7af97d9f0af9c0dedee94f333488fe5"
+    },
+    {
+      "path": "runtimes/elffuss-engine@37768aabb596/js/repack.js",
+      "sha256": "e63b3bacba60ed4af1c4aee19fb74108731c0c432118e454b96a2919b21cc83b"
     },
     {
       "path": "runtimes/onnxruntime-web@1.30.0/LICENSE.txt",
@@ -791,7 +880,7 @@
     },
     {
       "path": "sdk/audio/index.js",
-      "sha256": "e2e34eb6d39c8a564dc5087c2a4645983587788a46c7d0ab6a6223c8935e397e"
+      "sha256": "d806f330068e559b49061d6af7e829e65c8c0388c882c8d885ba8a2f1fa60ba8"
     },
     {
       "path": "sdk/audio/kokoro.js",
@@ -803,7 +892,7 @@
     },
     {
       "path": "sdk/audio/moss.js",
-      "sha256": "991f08255ea5a85aa20b839cb01907d86efbcaa8d8189e2c9dcc3b7c2170446d"
+      "sha256": "ca7a9108468508a893af859e081d2786730df9aeeef5a7b0ff9a8c043085ab01"
     },
     {
       "path": "sdk/audio/music.impl.js",
@@ -839,11 +928,11 @@
     },
     {
       "path": "sdk/audio/sizes.js",
-      "sha256": "da1faafa17ba9558d56768460c33a40f900d6e6a72ca15f40f9cfb78138418de"
+      "sha256": "b0d2f6cc0fdf9ab8df122c08bca6af4177a9920e49a8592ddf8ec77036c7f4b2"
     },
     {
       "path": "sdk/audio/speech-moss.impl.js",
-      "sha256": "45ea3af32686ea9e697edda1ace20d9242e3ab928f35444a0361642ff4ce12d4"
+      "sha256": "f8c97ac3d7c6bb30b20dd3bf75135c4de3eb132fb6fa2a0086cdf3d200c43f4d"
     },
     {
       "path": "sdk/audio/speech-moss.worker.js",
@@ -914,16 +1003,20 @@
       "sha256": "89c1714260c321cd317a2fe465f1d9916cf4f016ea49888d191180ab439e6b2f"
     },
     {
+      "path": "sdk/core/ranged.js",
+      "sha256": "6ff4a00d88a046d40676c0046dd9e4c436c6eb5a2fc5f09d52dc1447938b220c"
+    },
+    {
       "path": "sdk/core/registry.js",
-      "sha256": "80658f492fd35eaea489fcabd1127d5f718302e228707120040f215509aa3603"
+      "sha256": "c713a53950238e34dd2c4a1e80edf646ff41cab133a9b6258f482b4c80803496"
     },
     {
       "path": "sdk/core/runtime-pins.js",
-      "sha256": "508cec9a1450f9bba3db246ce239be82af4ae5494a975e4fb33e76fd519d13c1"
+      "sha256": "e63ef2076a13006f76a642c12b6111ce6ec3abd499606381e75ab3c2eaa77fe3"
     },
     {
       "path": "sdk/core/runtimes.js",
-      "sha256": "588b0142f69fbbd04b89d8904e1bfc63abd2c8214267ffed776e02a5f9666100"
+      "sha256": "bd1b82e11b30e3d93e58c2390e1bdbfcea129d6586875fc16f1e411f5fd77ab9"
     },
     {
       "path": "sdk/core/store-bridge.js",
@@ -935,7 +1028,7 @@
     },
     {
       "path": "sdk/core/task-runtime.js",
-      "sha256": "afd4150f4671702ec5eea9c626f96494b79fffa156b27fd5172f261b73dda40a"
+      "sha256": "dfb7244fe3d849c9e586770c1c3f28e6e62d429e21ee7c9a53cfd4256762db32"
     },
     {
       "path": "sdk/core/task.js",
@@ -978,16 +1071,20 @@
       "sha256": "1b1f9d11e407533bbdab3c459aeb1612fd4fc679f4e915f72c91d6aac19c6861"
     },
     {
+      "path": "sdk/text-to-image/compose.js",
+      "sha256": "0793639d1d7b9b8a949fe7800792d1362bd340ae6a9b8aa8f71dfa1f2053f61e"
+    },
+    {
       "path": "sdk/text-to-image/impl.js",
-      "sha256": "baeb1a8d2cb5324ad941ac68efbf06ba7803de907f48d9599fb1dbbe3aa50a03"
+      "sha256": "0e16ece31ae693b9d313abfb16fdfd8b03ccb0f81631f2c8d34e2520277bd46c"
     },
     {
       "path": "sdk/text-to-image/index.js",
-      "sha256": "42a01daef48aa839a00e80d98dc24c27e174c08433aa6da42f501c600701a247"
+      "sha256": "4e82ed0856649d56687b7f5114d266acdff64f6d402fa9d129aef5038561fc22"
     },
     {
       "path": "sdk/text-to-image/pipeline.js",
-      "sha256": "f05a3202282c7ce7d705579b97cd52bed68e279c7229057e668b500329f00376"
+      "sha256": "3f67c54d04ef2a70ff1119854e8c0c41b6c802f0ed99cb725a2c0f94a6a4c180"
     },
     {
       "path": "sdk/text-to-image/pixels.js",
@@ -999,7 +1096,7 @@
     },
     {
       "path": "sdk/text-to-image/request.js",
-      "sha256": "ec0d5e82dda03914d214680d7bb037174afdd848002d14759dcebcf9e0b75771"
+      "sha256": "2deb26e80d35132ba4d6e82cd297ced0c1890a9f6d312da806273367daa3d881"
     },
     {
       "path": "sdk/text-to-image/rng.js",
@@ -1007,7 +1104,7 @@
     },
     {
       "path": "sdk/text-to-image/schedule.js",
-      "sha256": "cd3461a673cc41081c3037f33a193208ace7076347070cf83960f6ce4f318c1a"
+      "sha256": "88702629bccfbcd29d520187fcd52e5a5df58508e71e5ff95930f555b6b399a1"
     },
     {
       "path": "sdk/text-to-image/shapes.js",
@@ -1023,7 +1120,7 @@
     },
     {
       "path": "sdk/video-gen/estimate.js",
-      "sha256": "9e17ebba0ac994ef4538d9522d9bb47355bdec72b69b9f22869ae3a32ecf42f5"
+      "sha256": "81e842748b502083c02e325a2883e2426330c1f030fa5ee38c05c2fb950ace3b"
     },
     {
       "path": "sdk/video-gen/half.js",
@@ -1035,7 +1132,7 @@
     },
     {
       "path": "sdk/video-gen/index.js",
-      "sha256": "a21304df5ec2c1357f55c1b118bec2914f05a48e23eb3764a5d0e3893c23ec6e"
+      "sha256": "57ec96bf75b0ede7f05fae697c04e43e9920e27f646008a76d215e7836562d8e"
     },
     {
       "path": "sdk/video-gen/latent.js",
@@ -1055,7 +1152,31 @@
     },
     {
       "path": "sdk/video-gen/sizes.js",
-      "sha256": "b50431910f5d7d8098df3945a25fec8cfa073b97a776413a3bc7f76e5e57354d"
+      "sha256": "5ec22e8266c6565ffc4b1e495baf4ec0b56e02b592711c1ae573b90007606f75"
+    },
+    {
+      "path": "sdk/video-gen/story-impl.js",
+      "sha256": "d2f4faa7a4dad11bfe517b1d8e492e10f011752cb6a287b765816ebebfaed5c6"
+    },
+    {
+      "path": "sdk/video-gen/story-worker.js",
+      "sha256": "386de70f96152ad54ba41837f843eb143e4c32de02b80944240ce975c9349714"
+    },
+    {
+      "path": "sdk/video-gen/story.js",
+      "sha256": "64c057d076e1e1019801ecb73cd7101dc538f18645a481d5597f17776df2b75f"
+    },
+    {
+      "path": "sdk/video-gen/story/color.js",
+      "sha256": "a3e934b2a70d4261a8b7af58a319876a801d6330a632f713b293522045bfd215"
+    },
+    {
+      "path": "sdk/video-gen/story/control.js",
+      "sha256": "ed32a8b121db7b2fcd87cb5037d6fe2aada2592846c9d9b7024d0a2cace01abf"
+    },
+    {
+      "path": "sdk/video-gen/story/plan.js",
+      "sha256": "874993761e23262e6468a9928a4767264cc259b8173952efd28b259285cda681"
     },
     {
       "path": "sdk/video-gen/t5.js",

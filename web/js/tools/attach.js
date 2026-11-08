@@ -211,19 +211,170 @@ export async function startRecording() {
   rec.ondataavailable = (e) => { if (e.data?.size) chunks.push(e.data); };
   const t0 = performance.now();
   const ended = new Promise((resolve) => { rec.onstop = resolve; });
-  const free = () => stream.getTracks().forEach((t) => t.stop());
+  // What the microphone hears, for the live waveform: an AnalyserNode on the same stream (nothing is played back).
+  let ac = null, analyser = null, buf = null;
+  try {
+    ac = new (globalThis.AudioContext || globalThis.webkitAudioContext)();
+    analyser = ac.createAnalyser();
+    analyser.fftSize = 1024;
+    analyser.smoothingTimeConstant = 0.6;
+    ac.createMediaStreamSource(stream).connect(analyser);
+    buf = new Float32Array(analyser.fftSize);
+  } catch { analyser = null; }
+  // The level every 50 ms, kept for the note's still waveform (peaks()).
+  const levels = [];
+  const level = () => {
+    if (!analyser) return 0;
+    analyser.getFloatTimeDomainData(buf);
+    let sum = 0;
+    for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+    // In decibels, as the ear hears it: -60 dB (a quiet room) is 0, -10 dB (a loud voice close to the phone) is 1.
+    const db = 20 * Math.log10(Math.sqrt(sum / buf.length) + 1e-9);
+    return Math.min(1, Math.max(0, (db + 60) / 50));
+  };
+  const sampler = setInterval(() => levels.push(level()), 50);
+  const free = () => {
+    clearInterval(sampler);
+    stream.getTracks().forEach((t) => t.stop());
+    try { ac?.close(); } catch { /* closed */ }
+    analyser = null;
+  };
   rec.start(250);
   return {
     seconds: () => (performance.now() - t0) / 1000,
+    /** The loudness now, 0 to 1. */
+    level,
+    /** The waveform now: `n` values from -1 to 1 (silence is 0). */
+    wave(n = 64) {
+      const out = new Float32Array(n);
+      if (!analyser) return out;
+      analyser.getFloatTimeDomainData(buf);
+      const step = buf.length / n;
+      for (let i = 0; i < n; i++) out[i] = buf[Math.floor(i * step)];
+      return out;
+    },
+    /** The levels of the whole note, `n` bars of 0 to 1 (its still waveform). */
+    peaks(n = 40) { return downsample(levels, n); },
     async stop() {
       const seconds = (performance.now() - t0) / 1000;
       if (rec.state !== 'inactive') rec.stop();
       await ended;
+      const peaks = this.peaks();
       free();
-      return { blob: new Blob(chunks, { type: rec.mimeType || type || 'audio/webm' }), seconds };
+      return { blob: new Blob(chunks, { type: rec.mimeType || type || 'audio/webm' }), seconds, peaks };
     },
     cancel() { try { if (rec.state !== 'inactive') rec.stop(); } catch { /* gone */ } free(); },
   };
+}
+
+function downsample(values, n) {
+  if (!values.length) return [];
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const a = Math.floor((i * values.length) / n), b = Math.max(a + 1, Math.floor(((i + 1) * values.length) / n));
+    let m = 0;
+    for (let k = a; k < b && k < values.length; k++) m = Math.max(m, values[k]);
+    out.push(Math.round(m * 100) / 100);
+  }
+  return out;
+}
+
+/**
+ * The panel shown while a voice note is recorded: a pulsing dot, the live waveform of what the microphone hears (a
+ * flowing line of bars that follow the voice and settle when it is quiet; a plain level meter with reduced motion),
+ * the time, and «Cancelar» / «Enviar». `rec` is what startRecording() returned. Returns { el, destroy() }; the product
+ * places `el` and calls onCancel / onSend from its own controls too (a release of the microphone, Escape).
+ * @param {{ lang: 'es'|'en', onCancel: () => void, onSend: () => void }} o
+ */
+export function recorderPanel(rec, { lang = 'es', onCancel = () => {}, onSend = () => {} } = {}) {
+  const es = lang === 'es';
+  const doc = globalThis.document;
+  const el = (tag, cls, text) => { const e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const root = el('div', 'rec-panel');
+  root.setAttribute('role', 'group');
+  root.setAttribute('aria-label', es ? 'Grabando una nota de voz' : 'Recording a voice note');
+  const dot = el('span', 'rec-dot');
+  dot.setAttribute('aria-hidden', 'true');
+  const canvas = el('canvas', 'rec-wave');
+  canvas.setAttribute('aria-hidden', 'true');
+  const time = el('span', 'rec-time', '0:00');
+  const said = el('span', 'rec-said');
+  said.setAttribute('aria-live', 'polite');
+  said.className = 'rec-said sr-only ef-visually-hidden';
+  const cancel = el('button', 'rec-cancel', '✕');
+  cancel.type = 'button';
+  cancel.setAttribute('aria-label', es ? 'Cancelar la nota de voz' : 'Cancel the voice note');
+  cancel.title = es ? 'Cancelar' : 'Cancel';
+  const send = el('button', 'rec-send', es ? 'Enviar' : 'Send');
+  send.type = 'button';
+  send.setAttribute('aria-label', es ? 'Enviar la nota de voz' : 'Send the voice note');
+  cancel.addEventListener('click', () => onCancel());
+  send.addEventListener('click', () => onSend());
+  root.append(cancel, dot, canvas, time, said, send);
+
+  const reduced = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  root.classList.toggle('is-reduced', !!reduced);
+  const clock = (sec) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
+  let raf = 0, lastSaid = -1, alive = true;
+  const bars = new Float32Array(48);          // the flowing line: newest on the right, each bar eased toward its level
+  let lastPush = 0;
+  const draw = (now) => {
+    if (!alive) return;
+    const sec = rec.seconds();
+    time.textContent = clock(sec);
+    // For a screen reader, every five seconds is enough.
+    const s5 = Math.floor(sec / 5);
+    if (s5 !== lastSaid) { lastSaid = s5; said.textContent = (es ? 'Grabando… ' : 'Recording… ') + clock(sec); }
+    const dpr = globalThis.devicePixelRatio || 1;
+    const w = canvas.clientWidth || 160, h = canvas.clientHeight || 32;
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
+    const g = canvas.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+    const css = getComputedStyle(root);
+    const ink = css.getPropertyValue('--rec-wave').trim() || '#191b1e';
+    const quiet = css.getPropertyValue('--rec-wave-quiet').trim() || '#5b6169';
+    const lvl = rec.level();
+    if (reduced) {
+      // A plain meter: how loud it is now, without movement across.
+      g.fillStyle = quiet; g.globalAlpha = 0.25; g.fillRect(0, h / 2 - 3, w, 6);
+      g.globalAlpha = 1; g.fillStyle = ink; g.fillRect(0, h / 2 - 3, w * lvl, 6);
+    } else {
+      if (now - lastPush > 45) { bars.copyWithin(0, 1); bars[bars.length - 1] = lvl; lastPush = now; }
+      const n = bars.length, gap = 2, bw = Math.max(1.5, (w - gap * (n - 1)) / n);
+      for (let i = 0; i < n; i++) {
+        const v = bars[i];
+        const bh = Math.max(2, v * (h - 4));
+        g.globalAlpha = 0.35 + 0.65 * Math.min(1, v * 2.5) * (0.4 + 0.6 * (i / n));
+        g.fillStyle = v > 0.04 ? ink : quiet;
+        const x = i * (bw + gap), y = (h - bh) / 2;
+        g.beginPath();
+        g.roundRect ? g.roundRect(x, y, bw, bh, bw / 2) : g.rect(x, y, bw, bh);
+        g.fill();
+      }
+      g.globalAlpha = 1;
+    }
+    root.classList.toggle('is-quiet', lvl < 0.04);
+    raf = requestAnimationFrame(draw);
+  };
+  raf = requestAnimationFrame(draw);
+  return { el: root, destroy() { alive = false; cancelAnimationFrame(raf); root.remove(); } };
+}
+
+/** The still waveform of a voice note (its `meta.peaks`) as a small canvas, for its card. */
+export function peaksCanvas(peaks, { width = 140, height = 28 } = {}) {
+  const c = globalThis.document.createElement('canvas');
+  c.className = 'att-wave';
+  c.setAttribute('aria-hidden', 'true');
+  const dpr = globalThis.devicePixelRatio || 1;
+  c.width = width * dpr; c.height = height * dpr;
+  c.style.width = width + 'px'; c.style.height = height + 'px';
+  const g = c.getContext('2d');
+  g.scale(dpr, dpr);
+  g.fillStyle = getComputedStyle(globalThis.document.documentElement).getPropertyValue('--ef-graphite').trim() || '#5b6169';
+  const n = peaks.length, gap = 2, bw = Math.max(1.5, (width - gap * (n - 1)) / Math.max(1, n));
+  peaks.forEach((v, i) => { const bh = Math.max(2, v * (height - 2)); g.fillRect(i * (bw + gap), (height - bh) / 2, bw, bh); });
+  return c;
 }
 
 /** The samples of a recording, mono at 16 kHz (what Whisper reads). */
@@ -240,6 +391,6 @@ export async function toMono16k(blob) {
 }
 
 /** Keep a voice note as media (an aud- id, source 'voice'). */
-export function keepVoiceNote(blob, seconds, { chat = null, transcript = '' } = {}) {
-  return putMedia({ kind: 'audio', mime: blob.type, blob, name: 'voice', chat, source: 'voice', text: transcript, meta: { seconds } });
+export function keepVoiceNote(blob, seconds, { chat = null, transcript = '', peaks = null } = {}) {
+  return putMedia({ kind: 'audio', mime: blob.type, blob, name: 'voice', chat, source: 'voice', text: transcript, meta: { seconds, ...(peaks?.length ? { peaks } : {}) } });
 }

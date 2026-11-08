@@ -217,7 +217,7 @@ try {
   ok('hay micrófono en la caja', await p.locator('#mic-btn').isVisible());
   await p.evaluate(() => window.elffuss.agent.setProvider(window.__scripted));
   await p.click('#mic-btn');
-  ok('un toque empieza a grabar', await until(() => p.locator('.rec-chip.is-rec').count().then((n) => n === 1)));
+  ok('un toque empieza a grabar', await until(() => p.locator('.rec-panel').count().then((n) => n === 1)));
   await wait(1500);
   const dAntes = dialogos;
   await p.click('#mic-btn');

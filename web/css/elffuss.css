@@ -859,3 +859,24 @@ body.modo-basico .proposal-needs-model { display: flex; }
 .made-in { display: flex; align-items: center; gap: 6px; margin: 0; padding: 0 16px 10px; font-size: 12px; color: var(--muted); }
 .made-in-flag { width: 24px; height: 16px; flex: none; border-radius: 2px; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.12); }
 .made-in-ic { width: 11px; height: 11px; flex: none; margin-left: -2px; }
+
+/* Grabando una nota de voz: la onda en vivo del micrófono, el tiempo, un punto que late, Cancelar y Enviar. */
+.rec-li { list-style: none; flex: 1 1 100%; }
+.rec-panel { --rec-wave: #f07a92; --rec-wave-quiet: var(--muted); display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 6px 4px 4px; border: 1px solid #f07a92; border-radius: 999px; background: var(--bg2); }
+.rec-dot { width: 10px; height: 10px; flex: none; border-radius: 50%; background: #f07a92; animation: rec-dot 1.4s ease-out infinite; }
+.rec-panel.is-quiet .rec-dot { animation-duration: 2.2s; }
+@keyframes rec-dot { 0% { box-shadow: 0 0 0 0 rgb(240 122 146 / 0.5); } 70% { box-shadow: 0 0 0 9px rgb(240 122 146 / 0); } 100% { box-shadow: 0 0 0 0 rgb(240 122 146 / 0); } }
+.rec-wave { flex: 1; min-width: 60px; height: 32px; transition: opacity 0.4s ease; }
+.rec-panel.is-quiet .rec-wave { opacity: 0.55; }
+.rec-time { flex: none; min-width: 3.2em; font-variant-numeric: tabular-nums; color: var(--fg); font-size: 14px; }
+.rec-cancel, .rec-send { flex: none; min-height: 36px; border-radius: 999px; font: inherit; cursor: pointer; }
+.rec-cancel { width: 36px; border: 1px solid var(--line); background: transparent; color: var(--muted); }
+.rec-cancel:hover { color: #f07a92; border-color: #f07a92; }
+.rec-send { padding: 0 14px; border: 0; background: var(--accent); color: #1b1d2b; font-weight: 600; }
+.rec-said { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.att-wave { display: block; margin: 4px 0; }
+/* Un vídeo con historia: sus fotogramas clave en la tarjeta mientras se hace. */
+.md-story { display: flex; gap: 6px; margin-top: 8px; overflow-x: auto; }
+.md-story canvas { width: 96px; height: auto; border-radius: 6px; opacity: 0.55; box-shadow: 0 0 0 1px var(--line); transition: opacity 0.2s ease; }
+.md-story canvas.is-shot { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .rec-dot { animation: none; } .rec-wave, .md-story canvas { transition: none; } }

@@ -11,6 +11,7 @@ import { Task, TASK_OPTIONS } from '../core/task.js';
 
 export { estimate, probeGpuMemory } from './estimate.js';
 export { SIZES, SECONDS, STEPS, normalizeOptions } from './options.js';
+export { StoryVideo, readPhoto, estimateStory, storyPeakBytes, STORY_MODEL, planStory, checkPlan, splitActions, sizeForAspect, containRect, clipCount, clipFrames, videoFrames, PLAN_GUIDE, STORY_SIZES, MAX_CLIPS, SHOT_SECONDS, SDEDIT_TIME } from './story.js';
 
 /**
  * Whether this browser may run the task at all: WebGPU gives it an adapter. It

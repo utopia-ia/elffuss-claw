@@ -8,12 +8,14 @@
 export const PINS = Object.freeze({
   "transformers": "4.3.1",
   "onnxruntimeWeb": "1.30.0",
-  "pdfjs": "6.4.299"
+  "pdfjs": "6.4.299",
+  "engine": "37768aabb596"
 });
 
 /** Directory of each runtime under /vendor/. */
 export const VENDOR_DIRS = Object.freeze({
   "transformers": "@huggingface/transformers@4.3.1",
   "onnxruntimeWeb": "onnxruntime-web@1.30.0",
-  "pdfjs": "pdfjs-dist@6.4.299"
+  "pdfjs": "pdfjs-dist@6.4.299",
+  "engine": "elffuss-engine@37768aabb596"
 });

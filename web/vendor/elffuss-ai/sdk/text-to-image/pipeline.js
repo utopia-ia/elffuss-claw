@@ -12,7 +12,7 @@
 
 import { AiError, throwIfAborted } from '../core/errors.js';
 import { Mt19937, randn } from './rng.js';
-import { timesteps, modelInput, step, SIGMA_DATA } from './schedule.js';
+import { timesteps, sdeditTimes, modelInput, step, SIGMA_DATA } from './schedule.js';
 import { captionTokens } from './prompt.js';
 import { resizeCrop, toRgba } from './pixels.js';
 
@@ -29,11 +29,16 @@ import { resizeCrop, toRgba } from './pixels.js';
 
 /**
  * @param {Models} m
- * @param {{ prompt: string, seed: number, steps: number, width: number, height: number, genWidth: number, genHeight: number }} req
- * @param {{ signal?: AbortSignal, report?: (stage: string, extra?: object) => void }} [o]
+ * @param {{ prompt: string, seed: number, steps: number, width: number, height: number, genWidth: number, genHeight: number,
+ *   init?: { latents: Float32Array, t: number } }} req
+ *   `init` (optional, SDEdit): the latents of a picture at the generation size, already
+ *   multiplied by the decoder's scaling factor, and the time `t` the run starts from
+ * @param {{ signal?: AbortSignal, report?: (stage: string, extra?: object) => void,
+ *   onX0?: (x0: Float32Array, step: number, steps: number) => Promise<void>|void }} [o]
+ *   `onX0` sees each step's clean estimate (scaled latents, for a preview)
  * @returns {Promise<{ rgba: Uint8ClampedArray, width: number, height: number, promptTokens: number, truncated: boolean }>}
  */
-export async function generate(m, req, { signal, report = () => {} } = {}) {
+export async function generate(m, req, { signal, report = () => {}, onX0 = null } = {}) {
   const { channels, factor, scaling, guidance } = m.config;
   const sigmaData = m.config.sigmaData ?? SIGMA_DATA;
   const h = req.genHeight / factor, w = req.genWidth / factor;
@@ -49,11 +54,20 @@ export async function generate(m, req, { signal, report = () => {} } = {}) {
   const gen = new Mt19937(req.seed);
   const n = channels * h * w;
   let latents = randn(gen, n);
-  for (let i = 0; i < n; i++) latents[i] = Math.fround(latents[i] * sigmaData);
-  const times = timesteps(req.steps);
+  let times = timesteps(req.steps);
+  if (req.init) {
+    // SDEdit: the picture noised to time t, as diffusers' img2img does it
+    if (req.init.latents.length !== n) throw new AiError('model-mismatch', `the picture's latents have ${req.init.latents.length} values, not ${n}`);
+    times = sdeditTimes(req.init.t);
+    const c = Math.fround(Math.cos(times[0])), s = Math.fround(Math.sin(times[0]));
+    for (let i = 0; i < n; i++) latents[i] = Math.fround(c * Math.fround(req.init.latents[i] * sigmaData) + s * Math.fround(latents[i] * sigmaData));
+  } else {
+    for (let i = 0; i < n; i++) latents[i] = Math.fround(latents[i] * sigmaData);
+  }
+  const steps = times.length - 1;
   let x0 = null;
-  for (let i = 0; i < req.steps; i++) {
-    report('step', { step: i + 1, steps: req.steps });
+  for (let i = 0; i < steps; i++) {
+    report('step', { step: i + 1, steps });
     const s = times[i], t = times[i + 1];
     const { input, time, scale } = modelInput(latents, s, sigmaData);
     const output = await m.runTransformer({ latents: input, h, w, caption, tokens: keep.length, time, guidance });
@@ -62,6 +76,7 @@ export async function generate(m, req, { signal, report = () => {} } = {}) {
     const noise = randn(gen, n);
     ({ x0, next: latents } = step({ latents, input, output, time, scale, s, t, noise, sigmaData }));
     throwIfAborted(signal);
+    if (onX0 && i < steps - 1) await onX0(x0, i + 1, steps);
   }
 
   report('decode');

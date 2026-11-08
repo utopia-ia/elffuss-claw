@@ -48,6 +48,12 @@ export const SIZES = Object.freeze({
     ]
   },
   "text-to-speech/moss-tts-nano": {
+    "webgpu": [
+      {
+        "dtype": "fp32",
+        "bytes": 717414286
+      }
+    ],
     "wasm": [
       {
         "dtype": "fp32",

@@ -65,20 +65,29 @@ export async function estimate(opts = {}, env = {}) {
     decoderBytes: size(/^vae\//),
   });
   const base = { downloadBytes, missingBytes, memoryBytes: mem.peak, width: o.width, height: o.height, frames: o.frames, seconds: o.seconds, tokens: o.g.tokens };
-  const no = reason => ({ fits: false, reason, ...base });
-  if (!variant) return no('no-webgpu-variant');
+  if (!variant) return { fits: false, reason: 'no-webgpu-variant', ...base };
+  const reason = await deviceReason(env, largestBuffer(o.g), mem.peak);
+  return { fits: !reason, reason, ...base };
+}
+
+/**
+ * Why this device cannot run a video model, or null when it can: a real WebGPU
+ * adapter with shader-f16, buffers of `need` bytes, and `peak` bytes of memory
+ * (probed unless `env.probeMemory` is false).
+ * @returns {Promise<string|null>}
+ */
+export async function deviceReason(env, need, peak) {
   const gpu = env.gpu !== undefined ? env.gpu : globalThis.navigator?.gpu;
-  if (!gpu) return no('no-webgpu');
+  if (!gpu) return 'no-webgpu';
   let adapter;
   try { adapter = await gpu.requestAdapter({ powerPreference: 'high-performance' }); } catch { adapter = null; }
-  if (!adapter) return no('no-adapter');
+  if (!adapter) return 'no-adapter';
   const info = adapter.info || {};
-  if (info.isFallbackAdapter || /swiftshader|llvmpipe|lavapipe|software|warp/i.test(`${info.vendor || ''} ${info.architecture || ''} ${info.description || ''}`)) return no('software-adapter');
-  if (!adapter.features?.has?.('shader-f16')) return no('no-shader-f16');
-  const need = largestBuffer(o.g);
-  if ((adapter.limits?.maxBufferSize ?? 0) < need || (adapter.limits?.maxStorageBufferBindingSize ?? 0) < need) return no('buffers-too-small');
-  if (env.probeMemory !== false && !(await probeGpuMemory(adapter, mem.peak))) return no('not-enough-memory');
-  return { fits: true, reason: null, ...base };
+  if (info.isFallbackAdapter || /swiftshader|llvmpipe|lavapipe|software|warp/i.test(`${info.vendor || ''} ${info.architecture || ''} ${info.description || ''}`)) return 'software-adapter';
+  if (!adapter.features?.has?.('shader-f16')) return 'no-shader-f16';
+  if ((adapter.limits?.maxBufferSize ?? 0) < need || (adapter.limits?.maxStorageBufferBindingSize ?? 0) < need) return 'buffers-too-small';
+  if (env.probeMemory !== false && !(await probeGpuMemory(adapter, peak))) return 'not-enough-memory';
+  return null;
 }
 
 /**

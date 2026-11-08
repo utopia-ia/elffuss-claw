@@ -35,6 +35,11 @@ const POSITIVE = [
   ['cerame una foto de la alhambra'], ['geenra un logo para mi tienda'], ['mkae a picture of a lighthouse'], ['craete an image of a fox'],
   ['una imagen de Málaga y París juntas'], ['imagen de un zorro en la nieve'], ['foto de un atardecer en la playa'], ['un dibujo de un dragón'],
   ['an image of a cat wearing a hat'], ['un vídeo de un cohete despegando'],
+  // Changes of a picture the chat has, and a story video.
+  ['hazla en acuarela', { hasMedia: true }], ['ponla de noche', { hasMedia: true }], ['Hazla en acuarela', { hasMedia: true }],
+  ['make it a watercolour', { hasMedia: true }], ['ahora ponla en blanco y negro', { hasMedia: true }], ['conviértela en dibujos animados', { hasMedia: true }],
+  ['hazme un vídeo de 9 segundos de un zorro que se despierta y sale corriendo'], ['cuenta una historia en vídeo de un gato que encuentra un tesoro'],
+  ['make a 9 second video of a fox waking up and running away'],
 ];
 // → must NOT get them
 const NEGATIVE = [
@@ -52,6 +57,7 @@ const NEGATIVE = [
   ['convierte este png a jpg'], ['hola, ¿qué tal?'], ['recuerda que me gusta la música clásica'],
   ['anima esta foto'], ['use the same picture again'],
   ['', { attachments: 1 }], ['', { attachments: 2 }], ['   ', { attachments: 1 }],
+  ['ponla en la mesa'], ['hazla tú, que yo no sé'], ['ponla de noche'], ['la noche fue larga, hazla corta'],
   ['creo que una foto vale más que mil palabras'], ['¿has visto la foto de ayer?'], ['para una imagen iso usa dd'],
   ['imagen de docker para node'], ['la cara de la foto sale borrosa'], ['cree una cuenta y subí una foto'],
   ['¿qué imagen de disco necesito?'], ['una imagen vale más que mil palabras'], ['the image is blurry'],

@@ -35,6 +35,20 @@ export function timesteps(steps) {
 }
 
 /**
+ * The schedule of SDEdit (a picture from another picture) starting at time `t`
+ * (π/2 is all noise): the two-step schedule scaled to start there,
+ * [t, t·1.3/(π/2), 0], as diffusers' Sprint img2img runs with
+ * max_timesteps = t and intermediate_timesteps = t·1.3/(π/2).
+ * @param {number} t in (0, π/2]
+ * @returns {Float32Array}
+ */
+export function sdeditTimes(t) {
+  if (!(t > 0 && t <= MAX_TIME + 1e-6)) throw new RangeError('the SDEdit time must be in (0, π/2]');
+  const s = f(t);
+  return Float32Array.of(s, f(f(s * TWO_STEP_TIME) / MAX_TIME), 0);
+}
+
+/**
  * What the transformer is given at time s: the latents scaled to its input, and
  * the time as it sees it (between 0 and 1).
  * @param {Float32Array} latents

@@ -163,6 +163,32 @@ export function frameInputs(seen, uniform, codebook) {
   return { mask, assistant, audio };
 }
 
+/**
+ * Uniform numbers the official runtime draws for a chunk that gave `frames` frames
+ * with at most `max`: N_VQ + 1 per step, the step that ends the chunk included.
+ * @param {number} frames
+ * @param {number} max
+ */
+export function uniformsDrawn(frames, max) {
+  return (N_VQ + 1) * Math.min(frames + 1, max);
+}
+
+/**
+ * The uniform numbers of a run, with a way back: a runtime that draws ahead (the
+ * engine draws a whole batch of frames before it knows where the chunk ends) gives
+ * back what the official runtime would not have drawn, and the next chunk or
+ * reading starts from them. So a seed gives the same frames on every runtime.
+ * @param {() => number} draw
+ */
+export function uniformStream(draw) {
+  const back = [];
+  return {
+    next: () => (back.length ? back.shift() : draw()),
+    /** @param {number[]} list numbers to draw again first, in their order */
+    giveBack(list) { back.unshift(...list); },
+  };
+}
+
 /** One channel of a [1, channels, samples] audio tensor's data, or their mean. */
 export function toMono(data, channels, samples, length = samples) {
   const out = new Float32Array(length);

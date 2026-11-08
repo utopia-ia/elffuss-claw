@@ -749,6 +749,18 @@
        "sha256": "a1c88900bbbdc80f876ca8f7dc2735829fe16615d7acccafc4ba8eff3e6b0591"
       }
      }
+    },
+    "onnxenc": {
+     "repo": "UtopiaIA/sana-sprint-0.6b-1024px-onnx-web",
+     "revision": "131c0f31f7607f8e92e7209dfeb968e8b7f44374",
+     "license": "Apache-2.0",
+     "author": "UtopiaIA",
+     "files": {
+      "vae_encoder/model_fp16.onnx": {
+       "size": 306441950,
+       "sha256": "32ce0774a4a1d3eb2a41783f0062609822d05f66538e939b1c96db83e527d191"
+      }
+     }
     }
    },
    "devices": {
@@ -766,7 +778,11 @@
        "onnx:text_encoder/embed_tokens_q4.bin",
        "onnx:text_encoder/embed_tokens_q4_scales.bin",
        "onnx:transformer/model_fp16.onnx",
-       "onnx:vae_decoder/model_fp16.onnx"
+       "onnx:vae_decoder/model_fp16.onnx",
+       "onnxenc:vae_encoder/model_fp16.onnx"
+      ],
+      "lazy": [
+       "onnxenc:vae_encoder/model_fp16.onnx"
       ],
       "bytes": 3172452977
      }
@@ -1089,6 +1105,7 @@
    "flag": null,
    "redistributes": false,
    "runtime": "onnxruntime-web",
+   "engine": "moss",
    "pipeline": null,
    "parts": {
     "tts": {
@@ -1153,6 +1170,25 @@
     }
    },
    "devices": {
+    "webgpu": [
+     {
+      "dtype": "fp32",
+      "files": [
+       "tts:browser_poc_manifest.json",
+       "tts:tts_browser_onnx_meta.json",
+       "tts:tokenizer.model",
+       "tts:moss_tts_prefill.onnx",
+       "tts:moss_tts_decode_step.onnx",
+       "tts:moss_tts_local_fixed_sampled_frame.onnx",
+       "tts:moss_tts_global_shared.data",
+       "tts:moss_tts_local_shared.data",
+       "codec:codec_browser_onnx_meta.json",
+       "codec:moss_audio_tokenizer_decode_full.onnx",
+       "codec:moss_audio_tokenizer_decode_shared.data"
+      ],
+      "bytes": 717414286
+     }
+    ],
     "wasm": [
      {
       "dtype": "fp32",
@@ -1423,6 +1459,436 @@
    "notes": {
     "es": "El codificador de texto va en 4 bits y el transformador en 8 bits: el vídeo de una semilla no es el mismo que el del modelo original, pero sigue la descripción igual de bien.",
     "en": "The text encoder runs in 4 bits and the transformer in 8 bits: the video of a seed is not the one of the original model, but it follows the prompt as well."
+   }
+  },
+  "text-to-video/wan2.1-vace-1.3b-rcm": {
+   "task": "text-to-video",
+   "name": {
+    "es": "Wan 2.1 VACE 1.3B (rCM) y SANA-Sprint",
+    "en": "Wan 2.1 VACE 1.3B (rCM) and SANA-Sprint"
+   },
+   "license": "Apache-2.0",
+   "author": "Wan-AI",
+   "base": {
+    "name": "Wan2.1-VACE-1.3B",
+    "author": "Wan-AI",
+    "url": "https://huggingface.co/Wan-AI/Wan2.1-VACE-1.3B",
+    "license": "Apache-2.0"
+   },
+   "bases": [
+    {
+     "name": "Wan2.1-VACE-1.3B",
+     "author": "Wan-AI",
+     "url": "https://huggingface.co/Wan-AI/Wan2.1-VACE-1.3B",
+     "license": "Apache-2.0",
+     "part": "vace"
+    },
+    {
+     "name": "Wan2.1-T2V-1.3B",
+     "author": "Wan-AI",
+     "url": "https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B",
+     "license": "Apache-2.0",
+     "part": "tok"
+    },
+    {
+     "name": "rCM Wan2.1 T2V 1.3B 480p",
+     "author": "worstcoder (rCM, NVlabs/Tsinghua)",
+     "url": "https://huggingface.co/worstcoder/rcm-Wan",
+     "license": "Apache-2.0",
+     "part": "web"
+    },
+    {
+     "name": "lighttaew2_1 (TAEHV)",
+     "author": "lightx2v / madebyollin",
+     "url": "https://huggingface.co/lightx2v/Autoencoders",
+     "license": "Apache-2.0",
+     "part": "vace"
+    },
+    {
+     "name": "SANA-Sprint 0.6B",
+     "author": "NVlabs",
+     "url": "https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px",
+     "license": "Apache-2.0",
+     "part": "sana"
+    }
+   ],
+   "flag": "gemma-terms",
+   "redistributes": true,
+   "runtime": "onnxruntime-web",
+   "pipeline": null,
+   "sampler": "rcm",
+   "parts": {
+    "tok": {
+     "repo": "Wan-AI/Wan2.1-T2V-1.3B",
+     "revision": "37ec512624d61f7aa208f7ea8140a131f93afc9a",
+     "license": "Apache-2.0",
+     "author": "Wan-AI",
+     "files": {
+      "assets/comp_effic.png": {
+       "size": 1793594,
+       "sha256": "b0e225caffb4b31295ad150f95ee852e4c3dde4a00ac8f79a2ff500f2ce26b8d"
+      },
+      "assets/data_for_diff_stage.jpg": {
+       "size": 528268,
+       "sha256": "59aec08409f2d46b0e640e4e120dc7cca52c08c3de56d026602dbcff1ebf241a"
+      },
+      "assets/i2v_res.png": {
+       "size": 891681,
+       "sha256": "6823b3206d8d0cb18d3b5b949dec1217f1178109ba11f14e977b67e1f7b8a248"
+      },
+      "assets/logo.png": {
+       "size": 56322,
+       "sha256": "96cddc0f667293436d0b9f92a299b6346b65b231d38ee49719a33d46c91fe1e3"
+      },
+      "assets/t2v_res.jpg": {
+       "size": 301030,
+       "sha256": "91db579092446be2a834bc67721a8e4346936f38c4edb912f459ca3e10f8f439"
+      },
+      "assets/vben_1.3b_vs_sota.png": {
+       "size": 515765,
+       "sha256": "b7705db79f2e1428ec7a1e6fff8c4fbde062fb95bb233516ddbd04b20007c845"
+      },
+      "assets/vben_vs_sota.png": {
+       "size": 1552119,
+       "sha256": "9a0e86ca85046d2675f97984b88b6e74df07bba8a62a31ab8a1aef50d4eda44e"
+      },
+      "assets/video_dit_arch.jpg": {
+       "size": 643369,
+       "sha256": "195dceec6570289d8b01cc51d2e28a7786216f19de55b23978a52610d1646a66"
+      },
+      "assets/video_vae_res.jpg": {
+       "size": 212586,
+       "sha256": "d8f9e7f7353848056a615c8ef35ab86ec22976bb46cb27405008b4089701945c"
+      },
+      "config.json": {
+       "size": 249,
+       "gitOid": "d203bef600b2f3c64fe1f5f53d70a2087f4ccd2f"
+      },
+      "examples/i2v_input.JPG": {
+       "size": 250628,
+       "sha256": "077e3d965090c9028c69c00931675f42e1acc815c6eb450ab291b3b72d211a8e"
+      },
+      "google/umt5-xxl/special_tokens_map.json": {
+       "size": 6623,
+       "gitOid": "14855e7052ffbb595057dfd791d293c1c940db2c"
+      },
+      "google/umt5-xxl/spiece.model": {
+       "size": 4548313,
+       "sha256": "e3909a67b780650b35cf529ac782ad2b6b26e6d1f849d3fbb6a872905f452458"
+      },
+      "google/umt5-xxl/tokenizer_config.json": {
+       "size": 61728,
+       "gitOid": "4e1cc1cd85599ce0b47fd0a746af188fe4043ff2"
+      },
+      "google/umt5-xxl/tokenizer.json": {
+       "size": 16837417,
+       "sha256": "6e197b4d3dbd71da14b4eb255f4fa91c9c1f2068b20a2de2472967ca3d22602b"
+      },
+      "LICENSE.txt": {
+       "size": 11357,
+       "gitOid": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64"
+      },
+      "README.md": {
+       "size": 16913,
+       "gitOid": "fbbf7c13900d37f3179c546d09372aeb52e0fae1"
+      }
+     }
+    },
+    "web": {
+     "repo": "UtopiaIA/Wan2.1-T2V-1.3B-web",
+     "revision": "3dbd66ddf838b03a751576500ed6b5e72c53a972",
+     "license": "Apache-2.0",
+     "author": "UtopiaIA",
+     "files": {
+      "dit/ctx.onnx": {
+       "size": 56891,
+       "sha256": "002b7fb781bb41f1dbdea5107ddeb25c8f4257034ad6517af500638c8b15cba3"
+      },
+      "dit/ctx.onnx_data": {
+       "size": 164573184,
+       "sha256": "3c867d7b5f95b5f84b0a9a6a9b051035383078f34aeebd3bea43ad467493c4b6"
+      },
+      "dit/part0.onnx_data": {
+       "size": 525190144,
+       "sha256": "b0abf78c01858378168b09336f4dc2a26fd045d0307ea9f343d665f15674c86e"
+      },
+      "dit/part1.onnx_data": {
+       "size": 457108480,
+       "sha256": "cf4714471d4a05438eae920f6ce86fc8122403f528477e664cc1da28d150494c"
+      },
+      "dit/part2.onnx_data": {
+       "size": 457526272,
+       "sha256": "a3b458b34086202c95d4eb68638b14123de24e771f124d812fcccc122dd41293"
+      },
+      "LICENSE": {
+       "size": 11358,
+       "gitOid": "d645695673349e3947e8e5ae42332d0ac3164cd7"
+      },
+      "NOTICE": {
+       "size": 620,
+       "gitOid": "d9426fc98b59a2aaa0778b9c505a85365e6db9ea"
+      },
+      "README.md": {
+       "size": 1689,
+       "gitOid": "9f8311fa43e079a62fd55b3485fdc930296fee8a"
+      },
+      "t5/embed_q4.bin": {
+       "size": 607117312,
+       "sha256": "11dc1a357c6bc93242fb4b4c6180d552542e714320977d38cccbe72714022537"
+      },
+      "t5/encoder_0.onnx": {
+       "size": 31416,
+       "sha256": "74ab11ac81b3145f8dd49c9452abf1f92d1e79129acb7001cd401b51947814ed"
+      },
+      "t5/encoder_0.onnx_data": {
+       "size": 741851136,
+       "sha256": "8990b501a437fe2176bb57a29b0c06fad861a7e838321e2860d91720679add1b"
+      },
+      "t5/encoder_1.onnx": {
+       "size": 31512,
+       "sha256": "2c742d631edd1e63e0ac1a0d3581947f46ba9d722d26c4f015e8da4bda90e554"
+      },
+      "t5/encoder_1.onnx_data": {
+       "size": 741851136,
+       "sha256": "6411820ea1f0f4d524a567ae853c39efbe3735dbf3bd89b9694fa5160d58f556"
+      },
+      "t5/encoder_2.onnx": {
+       "size": 31704,
+       "sha256": "544c588d2f61872d852b90bed2ebddcbbdc3027939595d62da1e3ed0ee150d54"
+      },
+      "t5/encoder_2.onnx_data": {
+       "size": 741851136,
+       "sha256": "d488759c22d69047616e19f578bd982ed144a284ebb416e4a1ba52961b0cb9fb"
+      },
+      "t5/encoder_3.onnx": {
+       "size": 31988,
+       "sha256": "ef64c0a07ad4289994bf8953a019fddb7dbee3d27b45a82a2684675df08ac58b"
+      },
+      "t5/encoder_3.onnx_data": {
+       "size": 741867520,
+       "sha256": "b5a0cb37ff6983778fdca2759b7535ed086b8d64a2af76003f56f29878995c40"
+      },
+      "vae/taew2_1_light.onnx": {
+       "size": 39412019,
+       "sha256": "6122148a9416a34f0e83de44ef1bf17892f1fd64fc9b9b857bd6f1016d2b81d6"
+      }
+     }
+    },
+    "vace": {
+     "repo": "UtopiaIA/Wan2.1-VACE-1.3B-web",
+     "revision": "caac656e0e828334e0dc55a66457a33d46568fee",
+     "license": "Apache-2.0",
+     "author": "UtopiaIA",
+     "files": {
+      "dit/vctx.onnx": {
+       "size": 30460,
+       "sha256": "24731deed9c34c8c01a89f24dd7b6d44ac11de99072bfbe6fde20f19d62d0c8d"
+      },
+      "dit/vctx.onnx_data": {
+       "size": 77512704,
+       "sha256": "f33968cc966653ed892dcacdabf1d8301fd3726932062ac3e0b628eb3dd4b378"
+      },
+      "dit/vpart0.onnx": {
+       "size": 149420,
+       "sha256": "5adbaa20579687b2c2058f4b239451b89def8c795f620568590cb8e1c220ee39"
+      },
+      "dit/vpart0.onnx_data": {
+       "size": 246221312,
+       "sha256": "911ec12b37d986a8899482719eeee8cbd8ba6504a9c3fa0903a76abf70eb5928"
+      },
+      "dit/vpart1.onnx": {
+       "size": 146757,
+       "sha256": "57a75c7102c20579aa84554ec581ac0d28a36647f19716b10f1c8c53531009a5"
+      },
+      "dit/vpart1.onnx_data": {
+       "size": 241275392,
+       "sha256": "4d5d38be32e570df883a4f0ef30cb2df6060985ba3159c18d2b58de9140d2f5a"
+      },
+      "dit/vpart2.onnx": {
+       "size": 148457,
+       "sha256": "038b45face6f9f5ede26d8de28a2fb049ff2ab651144f374af3f649ce8827cb5"
+      },
+      "dit/vpart2.onnx_data": {
+       "size": 241278464,
+       "sha256": "306cb6d701340ed20ea3b51c567e4c212f2de1a947c3ffe5a564bba9a582f1df"
+      },
+      "LICENSE": {
+       "size": 11358,
+       "gitOid": "d645695673349e3947e8e5ae42332d0ac3164cd7"
+      },
+      "NOTICE": {
+       "size": 731,
+       "gitOid": "a5ecc7f11266c3fdcd7357c1d627a08dca279837"
+      },
+      "README.md": {
+       "size": 1809,
+       "gitOid": "061c681abd9f94f7ab7bc4ecf83ca269515737f6"
+      },
+      "vae/lighttaew2_1_encoder.onnx": {
+       "size": 5915764,
+       "sha256": "1f732fc6fe02dedf753e0d723671ac4f05f9a14cdd9ed437eb76951af03a21cb"
+      }
+     }
+    },
+    "sana": {
+     "repo": "Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers",
+     "revision": "aa76e7f4f4928f378716b6716a2130fba3caf5b1",
+     "license": "Apache-2.0",
+     "author": "Efficient-Large-Model",
+     "files": {
+      "LICENSE": {
+       "size": 11358,
+       "gitOid": "d645695673349e3947e8e5ae42332d0ac3164cd7"
+      },
+      "model_index.json": {
+       "size": 392,
+       "gitOid": "795d41a9eaf524bb0d84fbac6a325609d4f737d1"
+      },
+      "README.md": {
+       "size": 6543,
+       "gitOid": "ca75553ce2d02bed329c94e8eeaf36634e70dba8"
+      },
+      "scheduler/scheduler_config.json": {
+       "size": 160,
+       "gitOid": "6d3081b117d2ea1c4db209edf5914a80c9ed754e"
+      },
+      "text_encoder/config.json": {
+       "size": 890,
+       "gitOid": "b9834570dc12b608f336a00e3f81658d17a85b6c"
+      },
+      "text_encoder/model.safetensors.index.json": {
+       "size": 22495,
+       "gitOid": "36d550130eb056ee9c28e438c0e3d1b28fddab84"
+      },
+      "tokenizer/special_tokens_map.json": {
+       "size": 636,
+       "gitOid": "8d6368f7e735fbe4781bf6e956b7c6ad0586df80"
+      },
+      "tokenizer/tokenizer_config.json": {
+       "size": 46996,
+       "gitOid": "36ba12877e7efaba5252f7b17ab337a59d953563"
+      },
+      "tokenizer/tokenizer.json": {
+       "size": 34362873,
+       "sha256": "5f7eee611703c5ce5d1eee32d9cdcfe465647b8aff0c1dfb3bed7ad7dbb05060"
+      },
+      "tokenizer/tokenizer.model": {
+       "size": 4241003,
+       "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2"
+      },
+      "transformer/config.json": {
+       "size": 648,
+       "gitOid": "e0d55e9165c1992b9c98e16afeb397548e705f57"
+      },
+      "vae/config.json": {
+       "size": 1280,
+       "gitOid": "e265030c18bc640fa24267beb2a92c3a187cba5b"
+      }
+     }
+    },
+    "sanaw": {
+     "repo": "UtopiaIA/sana-sprint-0.6b-1024px-onnx-web",
+     "revision": "762399d3a10e6ec06afeffbdf7dd425c83004fb3",
+     "license": "Apache-2.0",
+     "author": "UtopiaIA",
+     "files": {
+      "LICENSE": {
+       "size": 11358,
+       "gitOid": "d645695673349e3947e8e5ae42332d0ac3164cd7"
+      },
+      "NOTICE": {
+       "size": 552,
+       "gitOid": "ac1eeeabe1ada66ab5d624d7f58c82d9826ff09f"
+      },
+      "README.md": {
+       "size": 1958,
+       "gitOid": "4dbf134c4c9e22ebf855879d547b4f1358ff5cbf"
+      },
+      "text_encoder/embed_tokens_q4_scales.bin": {
+       "size": 36864000,
+       "sha256": "383dbe086c9e40c573ac7289939889b95c43134f53e47776511203a6747faaf6"
+      },
+      "text_encoder/embed_tokens_q4.bin": {
+       "size": 294912000,
+       "sha256": "d35527833b24b6f06b81f7823cdd6c820ccd329b270e021e6d0862b6621eb6a2"
+      },
+      "text_encoder/model_q4.onnx": {
+       "size": 1298421504,
+       "sha256": "3f39b9db293dbaa0c504811fb4164956eddc4cb8eee09a1a22496fca6ceea90e"
+      },
+      "transformer/model_fp16.onnx": {
+       "size": 1189024647,
+       "sha256": "bfc4993efd67fd5164a8cfb981284c340a74a6b5e36deb23baea986cf0085d83"
+      },
+      "vae_decoder/model_fp16.onnx": {
+       "size": 318818869,
+       "sha256": "a1c88900bbbdc80f876ca8f7dc2735829fe16615d7acccafc4ba8eff3e6b0591"
+      }
+     }
+    },
+    "sanaenc": {
+     "repo": "UtopiaIA/sana-sprint-0.6b-1024px-onnx-web",
+     "revision": "131c0f31f7607f8e92e7209dfeb968e8b7f44374",
+     "license": "Apache-2.0",
+     "author": "UtopiaIA",
+     "files": {
+      "vae_encoder/model_fp16.onnx": {
+       "size": 306441950,
+       "sha256": "32ce0774a4a1d3eb2a41783f0062609822d05f66538e939b1c96db83e527d191"
+      }
+     }
+    }
+   },
+   "devices": {
+    "webgpu": [
+     {
+      "when": "shader-f16",
+      "dtype": "q8f16",
+      "files": [
+       "tok:google/umt5-xxl/tokenizer.json",
+       "web:t5/embed_q4.bin",
+       "web:t5/encoder_0.onnx",
+       "web:t5/encoder_1.onnx",
+       "web:t5/encoder_2.onnx",
+       "web:t5/encoder_3.onnx",
+       "web:dit/ctx.onnx",
+       "web:dit/part0.onnx_data",
+       "web:dit/part1.onnx_data",
+       "web:dit/part2.onnx_data",
+       "web:vae/taew2_1_light.onnx",
+       "vace:dit/vctx.onnx",
+       "vace:dit/vpart0.onnx",
+       "vace:dit/vpart1.onnx",
+       "vace:dit/vpart2.onnx",
+       "vace:vae/lighttaew2_1_encoder.onnx",
+       "sana:tokenizer/tokenizer.json",
+       "sana:tokenizer/tokenizer_config.json",
+       "sana:transformer/config.json",
+       "sana:vae/config.json",
+       "sana:scheduler/scheduler_config.json",
+       "sanaw:text_encoder/model_q4.onnx",
+       "sanaw:text_encoder/embed_tokens_q4.bin",
+       "sanaw:text_encoder/embed_tokens_q4_scales.bin",
+       "sanaw:transformer/model_fp16.onnx",
+       "sanaw:vae_decoder/model_fp16.onnx",
+       "sanaenc:vae_encoder/model_fp16.onnx",
+       "web:t5/encoder_0.onnx_data",
+       "web:t5/encoder_1.onnx_data",
+       "web:t5/encoder_2.onnx_data",
+       "web:t5/encoder_3.onnx_data",
+       "web:dit/ctx.onnx_data",
+       "vace:dit/vctx.onnx_data",
+       "vace:dit/vpart0.onnx_data",
+       "vace:dit/vpart1.onnx_data",
+       "vace:dit/vpart2.onnx_data"
+      ],
+      "bytes": 9526942924
+     }
+    ]
+   },
+   "notes": {
+    "es": "Primero las imágenes clave (SANA-Sprint), una por plano; después los clips entre ellas (Wan 2.1 VACE, 4 pasos). Casi todo lo comparte con el vídeo desde texto y con las imágenes.",
+    "en": "First the keyframes (SANA-Sprint), one per shot; then the clips between them (Wan 2.1 VACE, 4 steps). It shares most of its files with video from text and with pictures."
    }
   }
  }

@@ -35,6 +35,11 @@ runtimes and their licence files are not in the source repository: scripts/vendo
     Eigen (Mozilla Public License 2.0). Source code: https://github.com/microsoft/onnxruntime/tree/v1.30.0
     and, for Eigen, the archive that release builds with (named in its cmake/deps.txt):
     https://github.com/eigen-mirror/eigen/archive/1d8b82b0740839c0de7f1242a3585e3390ff5f33.zip
+  Elffuss Engine (https://github.com/utopia-ia/elffuss-engine) - UtopiaIA - Apache License 2.0.
+    Our own WebGPU runtime: only the files of its MOSS-TTS-Nano port (js/moss.js and what
+    it imports) and its LICENSE, from a commit of its public branch, pinned by
+    vendor/engine.json. js/quant-tables.js carries tables of ggml (MIT License, reproduced
+    in that file).
   PDF.js 6.4.299 (pdfjs-dist) - Mozilla Foundation - Apache License 2.0.
     Bundled decoders: OpenJPEG (BSD-2-Clause), PDFium JBIG2 (BSD-3-Clause), qcms (MIT).
     Standard fonts: Foxit (BSD-3-Clause, PDFium Authors) and Liberation (SIL Open Font

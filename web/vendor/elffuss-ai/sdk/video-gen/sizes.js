@@ -19,5 +19,14 @@ export const SIZES = Object.freeze({
         "bytes": 5235652550
       }
     ]
+  },
+  "text-to-video/wan2.1-vace-1.3b-rcm": {
+    "webgpu": [
+      {
+        "when": "shader-f16",
+        "dtype": "q8f16",
+        "bytes": 9526942924
+      }
+    ]
   }
 });

@@ -11,7 +11,9 @@ import { pinnedUrl } from './hub-url.js';
 /**
  * @typedef {{ size: number, sha256?: string, gitOid?: string }} RegistryFileMeta
  * @typedef {{ repo: string, revision: string, license: string, author: string, files: Record<string, RegistryFileMeta> }} RegistryPart
- * @typedef {{ when?: 'shader-f16', dtype: string, files: string[], bytes: number }} RegistryVariant
+ * @typedef {{ when?: 'shader-f16', dtype: string, files: string[], lazy?: string[], bytes: number }} RegistryVariant
+ *   `lazy`: files of `files` read only when a feature needs them (SANA's image encoder, for a
+ *   picture from a picture): the store may serve them, but `bytes` and the first download leave them out.
  * @typedef {{ name: string, author: string, url: string, license: string, part?: string }} RegistryBase
  * @typedef {{ task: string, name: { es: string, en: string }, license: string, author: string,
  *   base: RegistryBase, bases?: RegistryBase[], flag: string|null, redistributes: boolean,
@@ -20,7 +22,7 @@ import { pinnedUrl } from './hub-url.js';
  *   `bases` is there when a model joins the work of several authors (one per part it names); `base` is then the first.
  * @typedef {{ schema: 1, tasks: Record<string, { default: string, module?: string }>, models: Record<string, RegistryModel> }} Registry
  *   A task's `module` is the directory of its module under sdk/ (the task's own name when absent).
- * @typedef {{ ref: string, part: string, path: string, url: string, size: number, sha256?: string, gitOid?: string }} ResolvedFile
+ * @typedef {{ ref: string, part: string, path: string, url: string, size: number, sha256?: string, gitOid?: string, lazy?: boolean }} ResolvedFile
  */
 
 const loaded = new Map();
@@ -110,7 +112,13 @@ export function resolveRef(model, ref) {
  * @returns {ResolvedFile[]}
  */
 export function variantFiles(model, variant) {
-  return variant.files.map(ref => resolveRef(model, ref));
+  const lazy = new Set(variant.lazy || []);
+  return variant.files.map(ref => (lazy.has(ref) ? { ...resolveRef(model, ref), lazy: true } : resolveRef(model, ref)));
+}
+
+/** The files a variant downloads up front: all but the lazy ones. */
+export function eagerFiles(model, variant) {
+  return variantFiles(model, variant).filter(f => !f.lazy);
 }
 
 /**

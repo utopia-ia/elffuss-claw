@@ -4,7 +4,8 @@
 // Audio from text in the browser: music and sound effects with Stable Audio 3
 // Small (Stability AI, Stability AI Community License; its text encoder T5Gemma
 // is also under the Gemma Terms of Use) on WebGPU, and speech: in Spanish with
-// MOSS-TTS-Nano (OpenMOSS, Apache-2.0) on WebAssembly, in Spanish and English
+// MOSS-TTS-Nano (OpenMOSS, Apache-2.0) on WebGPU (its frames on the Elffuss
+// Engine) or WebAssembly, in Spanish and English
 // with Kokoro 82M (hexgrad, Apache-2.0) on WebGPU or WebAssembly. The
 // models come from their Hugging Face repositories at pinned revisions, through
 // the Elffuss model store. Each task class runs its model in a module Worker of
@@ -58,10 +59,12 @@ export function speechModelFor(input = {}, model) {
 
 /**
  * @typedef {{ blob: Blob, mime: 'audio/wav', seconds: number, sampleRate: number, channels: number, seed?: number,
- *   model: string, device: 'webgpu'|'wasm', dtype: string, stats: { peakDb: number, rmsDb: number, clipped: number, silent: number } } & Record<string, any>} AudioResult
+ *   model: string, device: 'webgpu'|'wasm'|'webgpu-engine', dtype: string, stats: { peakDb: number, rmsDb: number, clipped: number, silent: number } } & Record<string, any>} AudioResult
  *   What `run()` gives: `blob` is a 16-bit PCM WAV of `seconds` at `sampleRate` (44 100 Hz stereo for music and
  *   sound effects, 48 000 Hz mono for speech with Elffuss's own voice, 24 000 Hz mono with Kokoro); `seed` reproduces
- *   a music or sound clip, or a reading with Elffuss's own voice; `stats` measures it.
+ *   a music or sound clip, or a reading with Elffuss's own voice; `stats` measures it. `device` is where the model
+ *   ran: Elffuss's own voice on WebGPU gives `webgpu-engine` (its frames on the Elffuss Engine, the codec on
+ *   WebAssembly), with the same frames as `wasm` for the same text and seed.
  * @typedef {{ status: string, stage?: 'download'|'load'|'encode'|'step'|'decode'|'phonemes'|'text'|'chunk'|'frame', step?: number, steps?: number,
  *   chunk?: number, chunks?: number, frames?: number, loaded?: number, total?: number }} AudioProgress
  *   Progress events: `download` (loaded/total bytes), `load`, then for music and sound `encode`, `step` (step of steps)
@@ -171,7 +174,7 @@ export class Sfx extends Task {
 
 /**
  * Speech from text, in Spanish with Elffuss's own voice (MOSS-TTS-Nano, about 720 MB,
- * WebAssembly) or in English (and Kokoro's Spanish voices) with Kokoro 82M (WebGPU or
+ * WebGPU or WebAssembly) or in English (and Kokoro's Spanish voices) with Kokoro 82M (WebGPU or
  * WebAssembly). The voice picks the model; each is loaded the first time a run needs it.
  * Long texts are read sentence by sentence and joined with natural pauses.
  *

@@ -66,6 +66,13 @@ export const PDFJS_FILES = Object.freeze({
 });
 
 /**
+ * The module of the Elffuss Engine that a site imports, relative to the engine's
+ * directory: its MOSS-TTS-Nano port (the token-by-token part of the speech on
+ * WebGPU). Only the import closure of this file is vendored (vendor/engine.json).
+ */
+export const ENGINE_ENTRY = 'js/moss.js';
+
+/**
  * Directory of the Transformers.js copy whose two ONNX Runtime imports point at
  * one variant of the vendored ONNX Runtime Web (the build writes it).
  * @param {'webgpu'|'wasm'} variant
@@ -88,7 +95,7 @@ export function ortSpecifierFromTransformers(variant) {
  * Same-origin URLs of the runtimes of one site.
  * @param {{ variant: 'webgpu'|'wasm', base?: string, pdfjs?: boolean }} opts
  *   `base` is the URL of /vendor/ (default `/vendor/`).
- * @returns {{ variant: string, ortBundle: string, ortMjs: string, ortWasm: string, transformers: string,
+ * @returns {{ variant: string, ortBundle: string, ortMjs: string, ortWasm: string, transformers: string, engine: string,
  *   pdfjs?: { lib: string, worker: string, wasmUrl: string, cMapUrl: string, standardFontDataUrl: string, iccUrl: string } }}
  */
 export function runtimeUrls({ variant, base = '/vendor/', pdfjs = false }) {
@@ -102,6 +109,7 @@ export function runtimeUrls({ variant, base = '/vendor/', pdfjs = false }) {
     ortMjs: ort + v.mjs,
     ortWasm: ort + v.wasm,
     transformers: `${b}${transformersDir(variant)}/transformers.web.min.js`,
+    engine: `${b}${VENDOR_DIRS.engine}/${ENGINE_ENTRY}`,
   };
   if (pdfjs) {
     const p = `${b}${VENDOR_DIRS.pdfjs}/`;

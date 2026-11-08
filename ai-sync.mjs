@@ -19,6 +19,7 @@
 //   <dest>/registry/tasks.json   the registries of the pinned commits merged (tasks and models)  (committed)
 //   <dest>/LICENSE, NOTICE       of the core's commit                                            (committed)
 //   <dest>/runtimes/…            ONNX Runtime Web and Transformers.js, the webgpu variant, read from an elffuss-ai
+//                                vendor/ directory (and the Elffuss Engine's closure, from its public repository),
 //                                vendor/ directory and checked against vendor/manifest.json of the core's commit;
 //                                Transformers.js rewritten to import that ONNX Runtime (the SDK's own rewrite,
 //                                scripts/lib/rewrite-transformers.mjs of the same commit)          (git-ignored)
@@ -38,6 +39,9 @@ const DEST = ['site-chat/vendor/elffuss-ai', 'web/vendor/elffuss-ai'].map((d) =>
 const PIN = join(DEST, 'PIN.json');
 const REPO = resolve(process.env.ELFFUSS_AI_REPO || join(ROOT, '..', 'elffuss-ai'));
 const VENDOR = resolve(process.env.ELFFUSS_AI_VENDOR || join(REPO, 'vendor'));
+// The Elffuss Engine's public repository, for the closure the SDK pins in vendor/engine.json (Elffuss's own voice on
+// WebGPU): $ELFFUSS_ENGINE_REPO, else ../elffuss-engine next to this repository.
+const ENGINE_REPO = resolve(process.env.ELFFUSS_ENGINE_REPO || join(ROOT, '..', 'elffuss-engine'));
 const GIT = '/usr/bin/git';
 const shown = (p) => relative(ROOT, p).split(sep).join('/');
 const sha = (b) => createHash('sha256').update(b).digest('hex');
@@ -177,6 +181,21 @@ for (const f of Object.keys(manifest.packages[TF].licenses || {})) out.set(`runt
 const PDF = pins.VENDOR_DIRS.pdfjs;
 for (const f of Object.keys(manifest.packages[PDF].files).filter((f) => f === rt.PDFJS_FILES.lib || f === rt.PDFJS_FILES.worker || f.startsWith(rt.PDFJS_FILES.cMapDir))) out.set(`runtimes/${PDF}/${f}`, vendorFile(PDF, f));
 for (const f of ['LICENSE', `${rt.PDFJS_FILES.cMapDir}LICENSE`]) out.set(`runtimes/${PDF}/${f}`, vendorFile(PDF, f));
+// The Elffuss Engine, when the core's commit pins one (vendor/engine.json): the import closure of its entry and its
+// LICENSE, read with `git show` from the engine's public branch and checked by size and sha256 against the pin. It is
+// served from the same origin, under runtimes/ (runtimeUrls() points there): the SDK runs Elffuss's own voice on it.
+if (exists(core, 'vendor/engine.json')) {
+  const pin = JSON.parse(show(core, 'vendor/engine.json').toString());
+  const dir = pins.VENDOR_DIRS?.engine;
+  if (!dir) die(`the runtime pins of ${core.slice(0, 12)} name no engine directory`);
+  for (const [path, meta] of Object.entries(pin.files || {})) {
+    let b;
+    try { b = execFileSync(GIT, ['-C', ENGINE_REPO, 'show', `${pin.commit}:${path}`], { maxBuffer: 1 << 26 }); }
+    catch { die(`engine file ${path} at ${pin.commit.slice(0, 12)} not found (set ELFFUSS_ENGINE_REPO to a clone of its public branch)`); }
+    if (b.length !== meta.size || sha(b) !== meta.sha256) die(`engine file does not match its pin: ${path}`);
+    out.set(`runtimes/${dir}/${path}`, b);
+  }
+}
 
 // Write: the destination is replaced whole, so a file a newer pin dropped does not linger.
 rmSync(DEST, { recursive: true, force: true });
@@ -193,7 +212,7 @@ const pin = {
   repo: 'elffuss-ai',
   modules,
   registry: registrySources,
-  runtimes: { variant: RUNTIME_VARIANT, manifestCommit: core, onnxruntimeWeb: pins.PINS.onnxruntimeWeb, transformers: pins.PINS.transformers },
+  runtimes: { variant: RUNTIME_VARIANT, manifestCommit: core, onnxruntimeWeb: pins.PINS.onnxruntimeWeb, transformers: pins.PINS.transformers, ...(pins.PINS.engine ? { engine: pins.PINS.engine } : {}) },
   files,
 };
 writeFileSync(PIN, JSON.stringify(pin, null, 2) + '\n');

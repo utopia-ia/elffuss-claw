@@ -12,8 +12,8 @@
 import { AiError } from '../core/errors.js';
 import { releaseSession } from '../core/ort-env.js';
 import { generate } from './pipeline.js';
-import { embedRows } from './pixels.js';
-import { normalizeRequest } from './request.js';
+import { embedRows, resizeCrop } from './pixels.js';
+import { normalizeRequest, strengthTime } from './request.js';
 
 export const task = 'text-to-image';
 
@@ -32,6 +32,8 @@ export const FILES = Object.freeze({
   embedScales: 'onnx:text_encoder/embed_tokens_q4_scales.bin',
   transformer: 'onnx:transformer/model_fp16.onnx',
   decoder: 'onnx:vae_decoder/model_fp16.onnx',
+  // The DC-AE encoder, for a picture made from another (SDEdit); loaded only then.
+  imageEncoder: 'onnxenc:vae_encoder/model_fp16.onnx',
 });
 
 /** Create one session from bytes the store gave, without another copy of them. */
@@ -73,7 +75,15 @@ export async function load(ctx) {
     for (const s of Object.values(sessions)) await releaseSession(s);
     throw err;
   }
-  return { ort, tokenizer, embed, scales, hidden, config, ...sessions };
+  const canEdit = ctx.files.some(f => `${f.part}:${f.path}` === FILES.imageEncoder);
+  return { ort, tokenizer, embed, scales, hidden, config, canEdit, ...sessions };
+}
+
+/** RGBA [W × H] → planes in [-1, 1] covering w × h (centre crop). */
+function imagePlanes(rgba, W, H, w, h) {
+  const px = W * H, planes = new Float32Array(3 * px);
+  for (let p = 0; p < px; p++) for (let c = 0; c < 3; c++) planes[c * px + p] = rgba[p * 4 + c] / 127.5 - 1;
+  return W === w && H === h ? planes : resizeCrop(planes, 3, H, W, w, h);
 }
 
 /**
@@ -110,6 +120,16 @@ export async function run(state, input, opts = {}, ctx) {
     },
   };
   const report = (stage, extra) => ctx.report('running', { stage, ...extra });
+  if (req.image) {
+    // A picture from another: its latents through the DC-AE encoder, then SDEdit from the strength's time.
+    if (!state.canEdit) throw new AiError('unsupported-format', 'this version of the model cannot start from a picture (it has no image encoder)');
+    report('encode-image');
+    state.imageEncoder ||= await session(ort, await ctx.bytes(FILES.imageEncoder));
+    const rgba = new Uint8ClampedArray(req.image.rgba.buffer || req.image.rgba);
+    const planes = imagePlanes(rgba, req.image.width, req.image.height, req.genWidth, req.genHeight);
+    const lat = await out(state.imageEncoder, { image: T(planes, [1, 3, req.genHeight, req.genWidth]) }, 'latents');
+    req.init = { latents: Float32Array.from(lat.data, v => v * state.config.scaling), t: strengthTime(req.strength) };
+  }
   const img = await generate(models, req, { report });
   report('encode-png');
   const canvas = new OffscreenCanvas(img.width, img.height);
@@ -120,12 +140,13 @@ export async function run(state, input, opts = {}, ctx) {
     value: {
       blob, mime: 'image/png', width: img.width, height: img.height, seed: req.seed, steps: req.steps, prompt: req.prompt,
       aspect: req.aspect, model: ctx.modelId, device: ctx.device, promptTokens: img.promptTokens, truncated: img.truncated,
+      ...(req.image ? { strength: req.strength, fromImage: true } : {}),
     },
     transfer: [],
   };
 }
 
 export async function dispose(state) {
-  for (const k of ['encoder', 'transformer', 'decoder']) await releaseSession(state?.[k]);
+  for (const k of ['encoder', 'transformer', 'decoder', 'imageEncoder']) await releaseSession(state?.[k]);
   if (state) { state.embed = null; state.scales = null; state.tokenizer = null; }
 }

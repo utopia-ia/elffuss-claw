@@ -52,6 +52,7 @@ const ONLY_MEDIA = [
   /\btext to speech\b/, /\btts\b/, /\bnarra(?:lo|la|me|melo)? (?:en|con) (?:voz|audio)\b/, /\bcon (?:tu|una|la) voz\b/,
   /\bconvierte(?:lo|la)? (?:en|a) (?:voz|audio)\b/, /\b(?:turn|convert) (?:it|this|that|the text) (?:in)?to (?:speech|audio|voice)\b/,
   /\banim(?:ala|alo|alas|alos|amela|amelo)\b/, /\banimate (?:it|this|that|the|my|her|him)\b/,
+  /\bcuenta(?:me|nos)? (?:una|la) historia (?:en|con un|como) (?:video|animacion)\b/, /\btell (?:me |us )?a story (?:in|as|with) (?:a )?(?:video|animation)\b/,
   /\b(?:dibujame|pintame)\b(?! (?:un|una|el|la) (?:grafic|diagram|tabla|lista))/,
 ];
 
@@ -63,6 +64,10 @@ const REFERS = [
   /\b(?:de antes|anterior|que hiciste|que has hecho|que te pase|que adjunte|you made|i sent|i attached|from before)\b/,
   /\banim(?:a|ar|ala|alo|ame|amela)\b/, /\banimate\b/,
 ];
+
+// A change asked of a picture the conversation has («hazla en acuarela», «ponla de noche», «make it a watercolour»):
+// a verb on «it» and a style, a light or a season.
+const CHANGE = new RegExp('\\b(?:hazla|hazlo|ponla|ponlo|pasala|pasalo|conviertela|conviertelo|cambiala|cambialo|vuelvela|dejala|pintala|dibujala|make it|turn it into|put it|render it|redo it|now)\\b.*\\b(?:acuarelas?|watercolou?rs?|noche|night|oleo|oil|anime|manga|dibujos? animados?|cartoon|pixel ?art|lapiz|pencil|carboncillo|charcoal|blanco y negro|black and white|invierno|winter|verano|summer|otono|autumn|fall|primavera|spring|nieve|snow|lluvia|rain|atardecer|sunset|amanecer|sunrise|retro|vintage|futurista|futuristic|cyberpunk|realista|realistic|fotografia|photo|3d|pastel|comic|boceto|sketch|estilo|style)\\b');
 
 // Drawing and painting verbs with an object («dibuja un gato», «draw a cat»): a picture even without the word for it,
 // unless what is drawn is code's («un círculo en el canvas», «a chart»).
@@ -121,6 +126,7 @@ export function needsMediaTools(text, { attachments = 0, hasMedia = false } = {}
   if (MEDIA_ID.test(raw.toLowerCase())) return { media: true, why: 'id' };
   const t = normalize(raw);
   if (hasMedia && REFERS.some((re) => re.test(t))) return { media: true, why: 'reference' };
+  if (hasMedia && CHANGE.test(t)) return { media: true, why: 'reference' };
   if (ONLY_MEDIA.some((re) => re.test(t))) return { media: true, why: 'phrase' };
   const d = DRAW.exec(t);
   if (d && !d[1].trim().split(' ').some((w) => BLOCK.test(w))) return { media: true, why: 'request' };

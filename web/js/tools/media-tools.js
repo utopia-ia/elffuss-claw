@@ -34,22 +34,22 @@ export const MEDIA_TOOL_NAMES = ['image.generate', 'image.describe', 'audio.musi
 
 const CATALOG = {
   en: [
-    '- image.generate(prompt, aspect?): make a picture. Write `prompt` in ENGLISH (translate the user\'s request): subject, style, light, colours. aspect: "1:1", "16:9" or "9:16"',
+    '- image.generate(prompt, aspect?, image?, strength?): make a picture. Write `prompt` in ENGLISH (translate the user\'s request): subject, style, light, colours. aspect: "1:1", "16:9" or "9:16". To change a picture of this chat («as a watercolour», «at night»), pass its id as image (img-…) and the change as prompt; strength 0.3 keeps it close, 0.9 almost a new one (0.7 by default)',
     '- image.describe(image, question?): look at a picture of this chat again (its id, img-…): what it shows and the text written in it. For a picture whose description you do not have, or a detail of it (what a sign says)',
     '- audio.music(prompt, seconds?): make music. `prompt` in ENGLISH: genre, instruments, mood, tempo. seconds 5 to 60',
     '- audio.sfx(prompt, seconds?): make a sound effect. `prompt` in ENGLISH. seconds 1 to 20',
     '- audio.speak(text, lang?): read a text aloud. `text` in the user\'s language, as it should be heard; lang "es" or "en"',
     '- video.animate(image, preset?, seconds?): turn a picture of this chat into a short video with a camera move. image: its id (img-…); preset: "dolly-in", "orbit", "swing", "zoom-pan" or "vertigo"',
-    '- video.generate(prompt, seconds?): make a short video from a description. `prompt` in ENGLISH. seconds 1 to 5',
+    '- video.generate(prompt, seconds?, start?, end?): make a video from a description. `prompt` in ENGLISH. seconds 1 to 5 is one shot; 6 to 9 tells a story (a keyframe every 3 seconds, then the moves between them): use it for «a video of 9 seconds», «tell a story», or when there is a start or end picture (start, end: img-… ids of this chat)',
   ],
   es: [
-    '- image.generate(prompt, aspect?): hacer una imagen. Escribe `prompt` en INGLÉS (traduce lo que pide el usuario): tema, estilo, luz, colores. aspect: "1:1", "16:9" o "9:16"',
+    '- image.generate(prompt, aspect?, image?, strength?): hacer una imagen. Escribe `prompt` en INGLÉS (traduce lo que pide el usuario): tema, estilo, luz, colores. aspect: "1:1", "16:9" o "9:16". Para cambiar una imagen de esta conversación («en acuarela», «de noche»), pasa su id en image (img-…) y el cambio en prompt; strength 0.3 la deja parecida, 0.9 casi nueva (0,7 por defecto)',
     '- image.describe(image, question?): volver a mirar una imagen de esta conversación (su id, img-…): lo que muestra y el texto escrito en ella. Para una imagen cuya descripción no tienes, o un detalle (qué pone en un cartel)',
     '- audio.music(prompt, seconds?): hacer música. `prompt` en INGLÉS: género, instrumentos, ánimo, tempo. seconds de 5 a 60',
     '- audio.sfx(prompt, seconds?): hacer un efecto de sonido. `prompt` en INGLÉS. seconds de 1 a 20',
     '- audio.speak(text, lang?): leer un texto en voz alta. `text` en el idioma del usuario, tal como debe sonar; lang "es" o "en"',
     '- video.animate(image, preset?, seconds?): convertir una imagen de esta conversación en un vídeo corto con movimiento de cámara. image: su id (img-…); preset: "dolly-in", "orbit", "swing", "zoom-pan" o "vertigo"',
-    '- video.generate(prompt, seconds?): hacer un vídeo corto a partir de una descripción. `prompt` en INGLÉS. seconds de 1 a 5',
+    '- video.generate(prompt, seconds?, start?, end?): hacer un vídeo a partir de una descripción. `prompt` en INGLÉS. seconds de 1 a 5 es un plano; de 6 a 9 cuenta una historia (un fotograma clave cada 3 segundos y el movimiento entre ellos): úsalo para «un vídeo de 9 segundos», «cuenta una historia» o si hay una imagen de inicio o de final (start, end: ids img-… de esta conversación)',
   ],
 };
 
@@ -76,7 +76,7 @@ export const MEDIA_ALIASES = Object.fromEntries(Object.entries({
 }).filter(([, tool]) => offered(tool)));
 
 /** The argument keys of the media tools, for parsers that read loose JSON by key. */
-export const MEDIA_KEYS = ['prompt', 'text', 'image', 'aspect', 'preset', 'lang', 'size', 'voice', 'path', 'question'];
+export const MEDIA_KEYS = ['prompt', 'text', 'image', 'aspect', 'preset', 'lang', 'size', 'voice', 'path', 'question', 'strength', 'start', 'end', 'seconds'];
 
 export const isMediaTool = (name) => MEDIA_TOOL_NAMES.includes(name);
 
@@ -92,10 +92,18 @@ const GEN_SIZE = { '16:9': '832x480', '9:16': '480x832' };
 const SPEC = {
   'image.generate': {
     module: 'text-to-image', cls: 'TextToImage', kind: 'image', prefix: 'img',
-    args: (a) => ({ prompt: str(a.prompt ?? a.text ?? a.description), aspect: ASPECT_OK.includes(str(a.aspect)) ? str(a.aspect) : undefined, seed: num(a.seed) }),
+    // `image`: a picture of the chat to start from (SANA from a picture); its prompt then leads with what the picture
+    // shows (its description, image.describe) when the text is only a change («as a watercolour»): pics.caption.
+    args: (a) => ({ prompt: str(a.prompt ?? a.text ?? a.description), aspect: ASPECT_OK.includes(str(a.aspect)) ? str(a.aspect) : undefined, seed: num(a.seed),
+      image: /^img-/.test(str(a.image ?? a.source ?? a.from)) ? str(a.image ?? a.source ?? a.from) : undefined, strength: clamp(num(a.strength), 0.1, 1) }),
     need: (o) => (o.prompt ? null : 'prompt'),
+    images: (o) => (o.image ? { image: o.image } : {}),
     estimate: (mod, o, env) => mod.TextToImage.estimate(env),
-    exec: (task, o, _img, signal) => task.generate({ prompt: o.prompt, ...(o.aspect ? { aspect: o.aspect } : {}), ...(o.seed != null ? { seed: o.seed } : {}) }, { signal }),
+    exec: (task, o, _img, signal, mod, pics) => {
+      if (!pics.image) return task.generate({ prompt: o.prompt, ...(o.aspect ? { aspect: o.aspect } : {}), ...(o.seed != null ? { seed: o.seed } : {}) }, { signal });
+      const prompt = pics.caption && mod.composePrompt ? mod.composePrompt(pics.caption, o.prompt).prompt : o.prompt;
+      return task.generate({ prompt, image: pics.image.blob, ...(o.strength != null ? { strength: o.strength } : {}), ...(o.seed != null ? { seed: o.seed } : {}) }, { signal });
+    },
   },
   // Looking again at a picture: Florence-2 (elffuss-ai image-to-text), its description kept with the picture (describe()).
   'image.describe': {
@@ -136,11 +144,33 @@ const SPEC = {
   },
   'video.generate': {
     module: 'video-gen', cls: 'TextToVideo', kind: 'video', prefix: 'vid',
-    args: (a) => ({ prompt: str(a.prompt ?? a.text ?? a.description), seconds: clamp(num(a.seconds ?? a.duration), 1, 5), size: GEN_SIZE[str(a.aspect)] || (/^\d+x\d+$/.test(str(a.size)) ? str(a.size) : undefined), seed: num(a.seed) }),
-    need: (o) => (o.prompt ? null : 'prompt'),
-    // video-gen's estimate is a function of the module: estimate(opts, env).
-    estimate: (mod, o, env) => mod.estimate({ ...(o.seconds ? { seconds: o.seconds } : {}), ...(o.size ? { size: o.size } : {}) }, env),
-    exec: (task, o, _img, signal) => task.run(null, { prompt: o.prompt, ...(o.seconds ? { seconds: o.seconds } : {}), ...(o.size ? { size: o.size } : {}), ...(o.seed != null ? { seed: o.seed } : {}), signal }),
+    // One shot (1 to 5 s, Wan 2.1) or a story (6 to 9 s, or a start or end picture: keyframes every 3 s with SANA and
+    // the moves between them with Wan 2.1 VACE, video-gen's StoryVideo).
+    args: (a) => {
+      const secs = clamp(num(a.seconds ?? a.duration), 1, 9);
+      const start = /^img-/.test(str(a.start)) ? str(a.start) : undefined, end = /^img-/.test(str(a.end)) ? str(a.end) : undefined;
+      const story = (secs != null && secs > 5) || !!start || !!end;
+      return { prompt: str(a.prompt ?? a.text ?? a.description), seconds: story ? (secs != null && secs > 5 ? secs : 9) : clamp(secs, 1, 5), story, start, end,
+        aspect: VIDEO_ASPECT[str(a.aspect)], size: GEN_SIZE[str(a.aspect)] || (/^\d+x\d+$/.test(str(a.size)) ? str(a.size) : undefined), seed: num(a.seed) };
+    },
+    need: (o) => (o.prompt || (o.start && o.end) ? null : 'prompt'),
+    images: (o) => ({ ...(o.start ? { start: o.start } : {}), ...(o.end ? { end: o.end } : {}) }),
+    storyCls: 'StoryVideo',
+    // video-gen's estimates are functions of the module: estimate(opts, env), estimateStory(opts, env).
+    estimate: (mod, o, env) => (o.story
+      ? mod.estimateStory({ seconds: o.seconds, size: o.size || mod.STORY_SIZES[o.aspect || '16:9'] }, env)
+      : mod.estimate({ ...(o.seconds ? { seconds: o.seconds } : {}), ...(o.size ? { size: o.size } : {}) }, env)),
+    exec: async (task, o, _img, signal, mod, pics) => {
+      if (!o.story) return task.run(null, { prompt: o.prompt, ...(o.seconds ? { seconds: o.seconds } : {}), ...(o.size ? { size: o.size } : {}), ...(o.seed != null ? { seed: o.seed } : {}), signal });
+      const photos = {};
+      let size = o.size || mod.STORY_SIZES[o.aspect || '16:9'];
+      for (const k of ['start', 'end']) if (pics[k]) { const r = await mod.readPhoto(pics[k].blob); photos[k] = r.picture; size = r.size; }
+      const seed = o.seed ?? (crypto.getRandomValues(new Uint32Array(1))[0] >>> 1);
+      const plan = mod.planStory({ prompt: o.prompt, seconds: o.seconds, start: !!photos.start, end: !!photos.end, seed, lang: 'en' });
+      if (!plan.style && pics.caption) plan.style = pics.caption.slice(0, 240);
+      const kf = await task.keyframes({ plan, size, ...photos, signal });
+      return task.clips({ plan, size, keyframes: kf.keyframes, ...photos, signal });
+    },
   },
 };
 
@@ -178,6 +208,7 @@ const W = {
       depth: 'Measuring the depth…', inpaint: 'Painting behind what is near…', render: (i, n) => `Frame ${i} of ${n}`, mux: 'Writing the video file…',
       phonemes: 'Reading the text…', chunk: (i, n) => `Sentence ${i} of ${n}`, load: 'Loading the model…', download: 'Downloading the model…',
       unload: 'Freeing the graphics card…', working: 'Working…', running: 'Looking at the picture…',
+      keyframe: (i, n) => `Keyframe ${i} of ${n}`, clip: (i, n) => `Shot ${i} of ${n}`,
     },
   },
   es: {
@@ -209,6 +240,7 @@ const W = {
       depth: 'Midiendo la profundidad…', inpaint: 'Pintando lo que queda detrás…', render: (i, n) => `Fotograma ${i} de ${n}`, mux: 'Escribiendo el vídeo…',
       phonemes: 'Leyendo el texto…', chunk: (i, n) => `Frase ${i} de ${n}`, load: 'Cargando el modelo…', download: 'Descargando el modelo…',
       unload: 'Liberando la tarjeta gráfica…', working: 'Trabajando…', running: 'Mirando la imagen…',
+      keyframe: (i, n) => `Fotograma clave ${i} de ${n}`, clip: (i, n) => `Plano ${i} de ${n}`,
     },
   },
 };
@@ -225,6 +257,17 @@ export { fmtBytes as formatBytes };
  * One progress event of a task, in the user's words: { text, pct } (pct null when there is no measure).
  * Events: { status: checking|downloading|loading|ready|running|done, loaded, total, stage, step, steps, frame, frames, index, count, chunk, chunks }.
  */
+/**
+ * What a story's progress event says for a product that draws it: { stage: 'keyframe'|'clip'|…, index, count,
+ * done, image? } with a keyframe made as `image` ({ width, height, rgba }), and for a clip its number and count.
+ */
+export function storyEvent(p) {
+  if (!p || typeof p !== 'object') return null;
+  if (p.stage === 'keyframe') return { stage: 'keyframe', index: p.index, count: p.count, done: !!p.done, ...(p.done && p.image ? { image: p.image } : {}) };
+  if (p.stage === 'clip') return { stage: 'clip', index: p.clip, count: p.clips, done: !!p.done, step: p.index, steps: p.count };
+  return p.stage ? { stage: p.stage } : null;
+}
+
 export function progressWords(p, lang) {
   const s = words(lang).stage;
   if (!p || typeof p !== 'object') return { text: s.working, pct: null };
@@ -234,6 +277,11 @@ export function progressWords(p, lang) {
     return { text: s.downloading(fmtBytes(p.loaded || 0, lang), fmtBytes(p.total, lang), pct), pct };
   }
   const st = p.stage;
+  if (st === 'keyframe' && Number.isFinite(p.index) && p.count > 0) return { text: s.keyframe(p.index + 1, p.count), pct: Math.round(((p.index + (p.done ? 1 : 0.5)) / p.count) * 30) };
+  if (st === 'clip' && Number.isFinite(p.clip) && p.clips > 0) {
+    const part = p.done ? 1 : Number.isFinite(p.index) && p.count > 0 ? (p.index + 1) / p.count : 0;
+    return { text: s.clip(p.clip + 1, p.clips) + (p.done ? '' : Number.isFinite(p.index) && p.count > 0 ? ` · ${p.index + 1}/${p.count}` : ''), pct: 30 + Math.round(((p.clip + part) / p.clips) * 70) };
+  }
   const of = (i, n) => (Number.isFinite(i) && Number.isFinite(n) && n > 0 ? [i, n] : null);
   const pair = of(p.step, p.steps) || of(p.frame, p.frames) || of(p.chunk, p.chunks) || (Number.isFinite(p.index) && p.count > 1 ? [p.index + 1, p.count] : null);
   if (p.status === 'running' && st && s[st]) {
@@ -418,6 +466,19 @@ export function createMediaTools(hooks) {
       if (rec.kind !== 'image') return { text: 'ERROR: ' + w.notImage(rec.id), result: { ...summary, error: w.notImage(rec.id) } };
       img = rec.blob; summary.image = rec.id;
     }
+    // The pictures a call names besides `image` (image.generate's picture to start from, a story's start and end):
+    // each read here, and the first one's description (looked at once, kept with it) for the prompt.
+    const pics = {};
+    for (const [k, id] of Object.entries(spec.images ? spec.images(o) : {})) {
+      const rec = await getMedia(id);
+      if (!rec || rec.kind !== 'image') return { text: 'ERROR: ' + w.notImage(id), result: { ...summary, error: w.notImage(id) } };
+      pics[k] = rec; summary[k] = id;
+    }
+    const first = pics.image || pics.start || pics.end;
+    if (first) {
+      const d = first.described || (await describe(first.id, { signal, onProgress, lang }).catch(() => null));
+      if (d && !d.reason && d.caption) pics.caption = d.caption;
+    }
     const stop = () => Object.assign(new Error('stopped'), { name: 'AbortError' });
     if (signal?.aborted) throw stop();
     // Looking again at a picture: the description, kept with it, is what the model reads; the turn goes on.
@@ -458,11 +519,12 @@ export function createMediaTools(hooks) {
       await hooks.unloadLlm();
       unloaded = true;
       if (signal?.aborted) throw stop();
-      const Cls = mod[spec.cls];
-      task = new Cls({ store: e.store, runtime: e.runtime, onProgress: (p) => { try { onProgress(progressWords(p, lang)); } catch { /* painting */ } } });
+      const Cls = mod[o.story && spec.storyCls ? spec.storyCls : spec.cls];
+      // A story's progress also carries its pictures (keyframes made, a clip's previews) for a product that draws them.
+      task = new Cls({ store: e.store, runtime: e.runtime, onProgress: (p) => { try { onProgress({ ...progressWords(p, lang), ...(o.story ? { story: storyEvent(p) } : {}) }); } catch { /* painting */ } } });
       let out;
       try {
-        out = await spec.exec(task, o, img, signal);
+        out = await spec.exec(task, o, img, signal, mod, pics);
       } catch (err) {
         if (signal?.aborted || err?.code === 'aborted' || err?.name === 'AbortError') throw stop();
         const m = err?.message || String(err);
@@ -470,7 +532,7 @@ export function createMediaTools(hooks) {
       }
       // 4. Kept in this browser, under an id the model can pass back.
       const mime = out.mime || out.blob?.type || (spec.kind === 'image' ? 'image/png' : spec.kind === 'audio' ? 'audio/wav' : 'video/mp4');
-      const meta = { width: out.width, height: out.height, seconds: out.seconds, seed: out.seed, model: out.model, prompt: o.prompt || o.text };
+      const meta = { width: out.width, height: out.height, seconds: out.seconds, seed: out.seed, model: out.model, prompt: o.prompt || o.text, ...(out.device ? { device: out.device } : {}), ...(o.story ? { story: true } : {}), ...(o.image ? { from: o.image } : {}) };
       const rec = await putMedia({ kind: spec.kind, mime, blob: out.blob, chat, source: 'made', name: (o.prompt || o.text || '').slice(0, 60), meta });
       const extra = out.width && out.height ? `${out.width}×${out.height}${out.seconds ? `, ${Math.round(out.seconds * 10) / 10} s` : ''}` : out.seconds ? `${Math.round(out.seconds * 10) / 10} s` : '';
       onProgress({ text: w.stage.done, pct: 100 });

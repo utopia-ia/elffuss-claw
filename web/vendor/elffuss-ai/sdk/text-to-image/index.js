@@ -10,15 +10,17 @@
 //   import { TextToImage } from '@elffuss/ai/text-to-image';
 //   const image = new TextToImage({ onProgress: p => console.log(p.status, p.stage) });
 //   const { blob, width, height, seed } = await image.generate({ prompt: 'a red fox in the snow', aspect: '16:9', seed: 7 });
+//   const again = await image.generate({ prompt: 'the same, as a watercolour', image: blob, strength: 0.6 }); // from a picture
 //   await image.dispose();
 
 import { Task, oneShot } from '../core/task.js';
-import { loadRegistry, getModel, defaultModelId, variantFiles } from '../core/registry.js';
+import { loadRegistry, getModel, defaultModelId, eagerFiles } from '../core/registry.js';
 import { probeWebGPU, chooseVariant } from '../core/device.js';
-import { toAiError } from '../core/errors.js';
+import { toAiError, AiError } from '../core/errors.js';
 import { normalizeRequest } from './request.js';
 
-export { normalizeRequest, DEFAULT_STEPS, MAX_PROMPT_CHARS } from './request.js';
+export { normalizeRequest, DEFAULT_STEPS, MAX_PROMPT_CHARS, DEFAULT_STRENGTH, strengthTime, sizeFromImage } from './request.js';
+export { composePrompt, isChangeRequest, shortCaption } from './compose.js';
 export { ASPECTS, TRAINED_SIZES, resolveSize } from './shapes.js';
 export { MAX_SEED, randomSeed } from './rng.js';
 
@@ -49,7 +51,11 @@ export class TextToImage extends Task {
       task: 'text-to-image',
       workerUrl: new URL('./worker.js', import.meta.url),
       impl: () => import('./impl.js'),
-      prepare: async input => ({ value: normalizeRequest(input), transfer: [] }),
+      prepare: async input => {
+        const image = input?.image != null ? await pixelsOf(input.image) : undefined;
+        const value = normalizeRequest(image ? { ...input, image } : input);
+        return { value, transfer: image ? [image.rgba] : [] };
+      },
     }, options);
   }
 
@@ -75,6 +81,43 @@ export class TextToImage extends Task {
   }
 }
 
+/** Longest side of a picture handed to the model to start from (it is scaled to about a megapixel anyway). */
+const MAX_INPUT_SIDE = 2048;
+
+/**
+ * RGBA pixels of a picture to start from: a Blob or File, an ImageBitmap, an ImageData,
+ * or `{ width, height, rgba }` already. Larger than 2048 px on its long side, it is scaled.
+ * @returns {Promise<{ width: number, height: number, rgba: ArrayBuffer }>}
+ */
+export async function pixelsOf(src) {
+  if (src && src.rgba && src.width && src.height) {
+    const rgba = src.rgba instanceof ArrayBuffer ? src.rgba.slice(0) : new Uint8ClampedArray(src.rgba).buffer;
+    return { width: src.width, height: src.height, rgba };
+  }
+  if (typeof ImageData !== 'undefined' && src instanceof ImageData) return { width: src.width, height: src.height, rgba: src.data.slice().buffer };
+  const bmp = typeof Blob !== 'undefined' && src instanceof Blob ? await createImageBitmap(src) : src;
+  if (!bmp || !(bmp.width > 0)) throw new AiError('unsupported-format', 'the picture to start from is a Blob, an ImageBitmap, an ImageData or { width, height, rgba }');
+  try {
+    const k = Math.min(1, MAX_INPUT_SIDE / Math.max(bmp.width, bmp.height));
+    const w = Math.max(1, Math.round(bmp.width * k)), h = Math.max(1, Math.round(bmp.height * k));
+    const c = new OffscreenCanvas(w, h);
+    const g = c.getContext('2d');
+    g.drawImage(bmp, 0, 0, w, h);
+    return { width: w, height: h, rgba: g.getImageData(0, 0, w, h).data.buffer };
+  } finally { if (bmp !== src) bmp.close?.(); }
+}
+
+/** The image encoder's file (impl.js FILES.imageEncoder): its own part, so SANA's other files keep their URLs. */
+export const IMAGE_ENCODER = 'onnxenc:vae_encoder/model_fp16.onnx';
+
+/**
+ * Whether a model of this task can start from a picture (its variant has the image encoder).
+ * @param {object} model a registry model
+ */
+export function canStartFromImage(model) {
+  return Object.values(model?.devices || {}).flat().some(v => v.files.includes(IMAGE_ENCODER));
+}
+
 /**
  * See `TextToImage.estimate`. Phones are refused for memory: the models alone are
  * larger than the memory a phone browser gives one tab.
@@ -94,7 +137,7 @@ export async function estimate({ store, registry, model, probe, mobile } = {}, d
   }
   const isMobile = mobile ?? Boolean(globalThis.navigator?.userAgentData?.mobile || /iPhone|iPad|Android/i.test(globalThis.navigator?.userAgent || ''));
   if (!reason && isMobile) reason = 'memory';
-  const files = choice ? variantFiles(m, choice.variant) : [];
+  const files = choice ? eagerFiles(m, choice.variant) : []; // the image encoder is lazy: not part of the first download
   const downloadBytes = choice ? choice.variant.bytes : bytes;
   let missingBytes = null;
   if (store && files.length) {
