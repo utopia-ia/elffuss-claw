@@ -10,11 +10,12 @@
 //   al cargar: { kind: 'elffuss-bridge', v: 1, op: 'ready' }
 //   op: memory.list · memory.save {fact} · memory.forget {id}
 //       apps.list · apps.get {name} · apps.save {name, html} · apps.remove {name}
+//       theme.get   «tu versión» del chat (tools/theme.js), validado aquí y otra vez en el chat; null si no hay
 //
 // Lo que NO hace, a propósito:
 //   · Contestar a nadie que no sea la ventana que lo contiene, ni a un origen fuera de ALLOWED. A los demás no
 //     les contesta NADA (ni un error): no tienen por qué saber que esto existe.
-//   · Tocar vault, fs, tasks ni kv. Solo los almacenes 'memory' y 'apps'.
+//   · Tocar vault, fs ni tasks. De kv, solo LEER una clave: el tema validado de theme.get.
 //   · Ejecutar nada de lo que llega. Los mensajes se validan campo a campo (tipos, tamaños, claves conocidas) y
 //     el HTML de una app se guarda como texto: lo ejecuta, en su caja, quien lo enseña.
 //   · Pedir permisos: el chat pregunta antes de guardar, como Claw (permissions.js), y aquí no hay interfaz.
@@ -34,6 +35,7 @@
 // Las peticiones pasan por el almacén con la identidad de la app 'chat' (permiso, límites y reglas del almacén).
 // Este puente de memoria se retira 30 días después de que el chat publique la memoria v2.
 import * as db from './db.js';
+import * as tema from './tools/theme.js';
 
 // Solo el chat de producción. Las pruebas abren la página con este mismo origen (resolución de nombres
 // apuntada a un servidor local), así que no hace falta ningún origen de pruebas aquí.
@@ -104,6 +106,8 @@ const OPS = {
     exige(typeof id === 'string' && RE_ID.test(id));
     throw new Rechazo(MEMORIA_V1.olvidaEnMemoria);
   } },
+
+  'theme.get': { keys: [], run: () => tema.current() },
 
   'apps.list': { keys: [], run: async () =>
     (await db.all('apps')).filter((a) => a && typeof a.name === 'string')

@@ -7,6 +7,7 @@ import * as web from './web.js';
 import * as memory from './memory.js';
 import * as watch from './watch.js';
 import * as github from './github.js';
+import * as theme from './theme.js';
 import * as skills from '../skills.js';
 import * as memoriaV2 from '../memory-wire.js';
 import { t, uiLang } from '../i18n.js';
@@ -40,6 +41,9 @@ export const TOOLS = {
   'skill.list':   { desc: 'Ver las skills instaladas', params: {}, run: async () => { const s = skills.installed(); return s.length ? s.map(x => `• ${x.name}: ${x.description || ''}`).join('\n') : t('skNoneTool'); } },
   'skill.get':    { desc: 'Leer el contenido completo de una skill instalada (útil antes de editarla)', params: { name: 'nombre de la skill' }, run: async a => { const s = await skills.get(a.name); return s ? `# ${s.name}\n${s.description || ''}\n\n${s.content || ''}` : t('skNoSuchTool', { name: a.name }); } },
   'skill.edit':   { desc: 'EDITAR una skill ya instalada: cambia sus instrucciones (o añade con append:true). Úsalo para ajustar el guion/argumentos de una skill que ya existe, p. ej. el copiloto de ventas', params: { name: 'nombre de la skill', instructions: 'nuevas instrucciones en markdown', description: 'opcional, nueva descripción', append: 'true para añadir al final en vez de reemplazar' }, run: a => skills.editSkill(a) },
+  'elffuss.theme_get':   { desc: 'Ver el tema de «tu versión» del chat de elffuss.com (colores, redondeo, densidad, fuente, textos) y qué valores admite', params: {}, run: () => theme.get() },
+  'elffuss.theme_set':   { desc: 'Guardar el tema de «tu versión» del chat de elffuss.com: JSON con colors {wall, surface, board, steel, ink, graphite, on-ink, tape, accent, selection: #rrggbb}, radius, density, font, texts. Lo valida; si falla dice por qué', params: { theme: 'el JSON del tema completo' }, run: a => theme.set(a) },
+  'elffuss.theme_reset': { desc: 'Quitar el tema: elffuss.com vuelve al aspecto oficial', params: {}, run: () => theme.reset() },
   'github.connect': { desc: 'Conectar la cuenta de GitHub del usuario (abre la ventana de inicio de sesión de GitHub)', params: {}, run: () => github.connect() },
   'github.fork':    { desc: 'Preparar el fork del chat de Elffuss en el GitHub del usuario (lo crea o lo pone al día)', params: {}, run: () => github.fork() },
   'github.read':    { desc: 'Leer un fichero (o listar una carpeta) del fork del chat', params: { path: 'ruta, p. ej. chat/chat.css' }, run: a => github.read(a) },
@@ -90,6 +94,7 @@ function catalogoMemoria() {
 export const PARAM_EXACTO = {
   'fs.write': ['content'],
   'github.write': ['content'],
+  'elffuss.theme_set': ['theme'],
   'app.create': ['html'],
   'skill.create': ['instructions'],
   'skill.edit': ['instructions'],

@@ -4,36 +4,39 @@
 import * as skills from './skills.js';
 
 export const SKILL_NAME = 'elffuss-improve';
-const SKILL_DESC = 'Change or improve the Elffuss chat itself (colours, shapes, texts, behaviour) in the user\'s own fork on GitHub, publish it, and offer it as a pull request.';
+const SKILL_DESC = 'Change the Elffuss chat itself: its look and words as a validated theme on elffuss.com, behaviour in the user\'s GitHub fork (Code), and propose it as a pull request.';
 
 export const SKILL_MD = `# Improve Elffuss (the user's own version of the chat)
 
-The user wants to change the Elffuss chat (elffuss.com) itself. You do it in THEIR fork on GitHub, never in the
-official site. In Elffuss Claw, explain each step in one plain sentence: the user may not program. In Elffuss Code,
-the user programs: show the exact diff and wait for an OK before each github.write.
+The user wants to change the Elffuss chat (elffuss.com) itself. In Elffuss Claw, explain each step in one plain
+sentence: the user may not program. In Elffuss Code, the user programs: show exact changes and wait for an OK.
 
-## Steps
-1. Restate the change in one sentence and confirm what you understood.
-2. If GitHub is not connected, call github.connect and wait.
-3. Call github.fork (creates or updates the fork named elffuss-chat).
-4. Find the file to change. Read before writing:
-   - colours, sizes, shapes, fonts, spacing: chat/chat.css (look for the custom properties in :root first)
-   - words and labels: chat/chat.js (the text dictionaries near the top, one per language)
-   - layout of the page: index.html
-   - behaviour: chat/chat.js. Only small, local changes; if it needs a large rewrite, say so and stop.
-5. Make the SMALLEST change that does what was asked. Keep everything else byte for byte. Never touch .github/.
-6. Write the whole file back with github.write and a one-line message.
-7. Call github.publish and wait. Then tell the user:
-   - their version is at the address it returns;
-   - to use it from now on, open https://elffuss.com/?my-version=<that address> and confirm there;
-   - https://elffuss.com/?official=1 always goes back to the official chat.
-8. Ask if they want to propose the change to Elffuss. Only if they say yes, call github.pr with a short title and a
-   body that quotes what they asked and lists the files changed.
+## A. Look and words (colours, shapes, fonts, density, labels): the theme
+Almost every request is this. No GitHub needed.
+1. Restate the change in one sentence.
+2. Call elffuss.theme_get to see the current theme and what is allowed.
+3. Build the WHOLE theme JSON (fields you leave out go back to the official look) and call elffuss.theme_set.
+   - colors: wall (page), surface (side panels), board, steel (borders), ink (text and buttons), graphite (secondary
+     text), on-ink (text on buttons), tape (highlight), accent, selection. Only #rrggbb.
+   - radius: square | soft | round | pill. density: compact | normal | roomy. font: system | serif | rounded | mono.
+   - texts: {"es": {"key": "text"}, "en": {...}} for labels of the chat; plain text, 160 characters at most.
+   If it is rejected, read the reason (often contrast: text must stay readable), fix it and try again.
+4. Tell the user to open or reload https://elffuss.com to see it, and that «Volver a la oficial» there turns it off.
+   elffuss.theme_reset removes it.
+
+## B. Behaviour (only in Elffuss Code, only if A cannot do it)
+Changing how the chat works means changing its code in the user's fork on GitHub (github.fork, github.read,
+github.write, github.publish). That version runs at the user's github.io address as a preview, without the shared
+memory or models of elffuss.com. Keep changes small; if it needs a large rewrite, say so and stop.
+
+## Proposing it to Elffuss
+Only if the user asks: in their fork, write the theme as elffuss-theme.json (or the code change), then github.pr with
+a short title and a body quoting what they asked. If GitHub is not available yet, say so plainly.
 
 ## Never
-- Write outside the fork, or to any repository other than the one github.fork prepared.
-- Add scripts from other websites, trackers, or anything that sends data elsewhere.
-- Paste a token or password into the conversation; connecting is always github.connect.`;
+- Write CSS, scripts or HTML into the theme; only the fields above.
+- Write outside the user's fork, or add anything that loads from other websites or sends data elsewhere.
+- Paste a token or password into the conversation.`;
 
 export async function instalarSkill() {
   const ya = skills.installed().find((s) => s.name === SKILL_NAME);

@@ -12,6 +12,8 @@ export const FORK_NAME = 'elffuss-chat';
 // El relevo del login: cambia el código OAuth por el token y lo devuelve por postMessage a la app que lo abrió.
 const AUTH = 'https://auth.elffuss.com';
 const KEY = 'github.token';
+// El login necesita la GitHub App (instalada solo en el fork) y su relevo: hasta que existan, se dice claro.
+const LOGIN_READY = false;
 
 let token = null;
 let login = null;
@@ -69,6 +71,7 @@ export async function connected() { return !!(await getToken()); }
 // relevo de login y se espera su respuesta, solo de ese origen y solo de esa ventana.
 export async function connect({ token: dado } = {}) {
   let tk = dado ? String(dado).trim() : null;
+  if (!tk && !LOGIN_READY) throw new Error('Connecting GitHub is not available yet in Elffuss: the look of the chat can still be changed with elffuss.theme_set');
   if (!tk) {
     const w = open(`${AUTH}/github/start?app=${encodeURIComponent(location.origin)}`, 'elffuss-github', 'width=520,height=720');
     if (!w) throw new Error('el navegador ha bloqueado la ventana de GitHub: permite ventanas emergentes y vuelve a probar');

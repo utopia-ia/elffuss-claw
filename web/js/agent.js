@@ -185,7 +185,7 @@ export function herramientasPara(consulta, provider = null) {
     router ||= crearRouter(toolHelp().split('\n'));
     const deSkills = new Set();
     for (const s of installed() || [])
-      for (const m of String(s.content || '').matchAll(/\b(fs|app|vault|tasks|web|skill|memory|github)\.[a-z_]+/g)) deSkills.add(m[1]);
+      for (const m of String(s.content || '').matchAll(/\b(fs|app|vault|tasks|web|skill|memory|github|elffuss)\.[a-z_]+/g)) deSkills.add(m[1]);
     const r = router.rutear(consulta, { ademas: [...deSkills] });
     console.debug('[herramientas]', r ? r.familias.join(', ') : 'todas (sin señal clara)');
     return r;
