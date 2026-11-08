@@ -870,7 +870,7 @@ body.modo-basico .proposal-needs-model { display: flex; }
 .rec-panel.is-quiet .rec-wave { opacity: 0.55; }
 .rec-time { flex: none; min-width: 3.2em; font-variant-numeric: tabular-nums; color: var(--fg); font-size: 14px; }
 .rec-cancel, .rec-send { flex: none; min-height: 36px; border-radius: 999px; font: inherit; cursor: pointer; }
-.rec-cancel { width: 36px; border: 1px solid var(--line); background: transparent; color: var(--muted); }
+.rec-cancel { display: grid; place-items: center; width: 36px; border: 1px solid var(--line); background: transparent; color: var(--muted); }
 .rec-cancel:hover { color: #f07a92; border-color: #f07a92; }
 .rec-send { padding: 0 14px; border: 0; background: var(--accent); color: #1b1d2b; font-weight: 600; }
 .rec-said { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
