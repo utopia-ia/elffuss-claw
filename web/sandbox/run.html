@@ -1,0 +1,26 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Elffuss · sandbox</title>
+<script>
+// The document a page made here (an app, a game, a preview) is written into. The server sends it with a
+// Content-Security-Policy whose `sandbox` directive gives it an opaque origin even if it is opened on its own, and
+// with a policy of its own, so what it runs does not fall under the product's strict policy (a srcdoc frame would
+// inherit that policy and its inline scripts would not run). It takes one message, from its parent only, and
+// replaces itself with that page: js/sandbox-frame.js.
+(function () {
+  if (window.top === window) return;
+  var n = new URLSearchParams(location.search).get('n');
+  var origin = location.origin;
+  function on(e) {
+    if (e.source !== window.parent || e.origin !== origin) return;
+    var d = e.data;
+    if (!d || d.sbx !== 'html' || d.n !== n || typeof d.html !== 'string') return;
+    window.removeEventListener('message', on);
+    document.open();
+    document.write(d.html);
+    document.close();
+  }
+  window.addEventListener('message', on);
+  window.parent.postMessage({ sbx: 'ready', n: n }, origin);
+})();
+</script>

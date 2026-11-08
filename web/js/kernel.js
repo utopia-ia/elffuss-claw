@@ -22,6 +22,7 @@ import { ofrecerInstalar } from './instalar.js';
 import * as memoria from './memory-wire.js';
 import { configureMedia, isMediaTool, mediaIdIn } from './tools/media.js';
 import * as mediaUi from './media-ui.js';
+import { frameHtml } from './sandbox-frame.js';
 
 // En el móvil, lo primero: instalarla como app. Fuera del móvil no hay aviso
 // solo: la entrada «Instalar Elffuss Claw como app» está en Ajustes.
@@ -1594,7 +1595,7 @@ function vistaDe(sk) {
 }
 // ¿El visor enseña el tablero de esta skill? Por su id (marcado en el <body>), no
 // por su nombre, que ahora sale en el idioma de la página.
-const esTablero = (f, sk) => !!f && !f.hidden && (f.srcdoc || '').includes(`data-skill="${sk.id}"`);
+const esTablero = (f, sk) => !!f && !f.hidden && frameHtml(f).includes(`data-skill="${sk.id}"`);
 
 // Superficie genérica: pinta las ranuras de la skill (objetivos o campos),
 // el consejo en vivo y, si procede, el botón de exportar a Excel. Los textos del

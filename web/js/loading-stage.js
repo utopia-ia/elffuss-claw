@@ -5,6 +5,7 @@
 // construye aquí». Vive en el panel Vista, así el progreso deja de ser la caja
 // flotante que en móvil se solapaba con el compositor.
 import { DEMOS } from './loading-demos.js';
+import { setFrameHtml } from './sandbox-frame.js';
 
 let root = null, galaxy = null, timer = null, idx = 0, frameA = null, frameB = null, showingA = true, mounted = false;
 
@@ -43,7 +44,7 @@ export async function show(panel, emptyEl) {
   timer = setInterval(cycle, 5200);
 }
 
-function paint(frame, demo) { try { frame.srcdoc = demo.html; } catch { /* — */ } }
+function paint(frame, demo) { try { setFrameHtml(frame, demo.html); } catch { /* — */ } }
 function badge(t) { const b = root?.querySelector('.ls-badge'); if (b) b.textContent = t; }
 
 function cycle() {
@@ -59,7 +60,7 @@ function cycle() {
     badge(DEMOS[idx].title);
     showingA = !showingA;
     // parar el rAF del que sale (menos presión de GPU en móvil)
-    setTimeout(() => { if (root && !cur.classList.contains('on')) { try { cur.srcdoc = ''; } catch { /* — */ } } }, 900);
+    setTimeout(() => { if (root && !cur.classList.contains('on')) { try { setFrameHtml(cur, ''); } catch { /* — */ } } }, 900);
   }, 420);
 }
 

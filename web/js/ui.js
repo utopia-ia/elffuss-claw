@@ -15,6 +15,7 @@ import * as workspace from './workspace.js';
 import * as telemetry from './telemetry.js';
 import * as memoria from './memory-wire.js';
 import { entradaInstalar, textoEntrada } from './instalar.js';
+import { setFrameHtml } from './sandbox-frame.js';
 
 let onSettingsChangedCb = () => {};
 let onSkillInstalledCb = () => {};
@@ -384,7 +385,7 @@ export function renderApp(name, html, { ruta = false } = {}) {
   $('vista-empty').hidden = true;
   const frame = $('appframe');
   frame.hidden = false;
-  frame.srcdoc = html;
+  setFrameHtml(frame, html);
   frame.title = tr('appFrameT', { name });
   selectTab('vista', { reflejar: !ruta });
   if (ruta) rutas.reflejar('apps', name);
@@ -593,7 +594,7 @@ function botonBorrarApp(app) {
 function vaciarVisor() {
   const f = $('appframe');
   f.hidden = true;
-  f.srcdoc = '';
+  setFrameHtml(f, '');
   f.title = tr('appFrameEmpty');
   $('vista-empty').hidden = false;
   if (/^#\/apps\//.test(location.hash)) rutas.reflejar('apps');
