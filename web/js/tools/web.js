@@ -94,11 +94,23 @@ const lengua = () => (uiLang() === 'es' ? 'es' : 'en');
 const palabras = () => WORDS[lengua()];
 
 function parseWithBase(html, url) {
-  const doc = new DOMParser().parseFromString(String(html || ''), 'text/html');
-  if (!doc.querySelector('base[href]') && doc.head) {
-    const b = doc.createElement('base');
-    b.setAttribute('href', url);
-    doc.head.prepend(b);
+  // No <base> element: the page's Content-Security-Policy (base-uri 'none') also governs the documents this page
+  // parses, so setting one is refused (and the links would resolve against this site). The page's own <base> is
+  // read as text before parsing (renamed, so the parser does not try to apply it) and every link and source is made
+  // absolute here, against it or the page's address. Readers that look for base[href] then fall back to `url`, which
+  // gives the same addresses.
+  const doc = new DOMParser().parseFromString(String(html || '').replace(/<base\b/gi, '<x-base'), 'text/html');
+  let base = url;
+  try { const own = doc.querySelector('x-base[href]')?.getAttribute('href'); if (own) base = new URL(own, url).href; } catch { /* keep url */ }
+  const abs = (v) => { try { return new URL(v, base).href; } catch { return v; } };
+  for (const el of doc.querySelectorAll('[href], [src], [poster]')) {
+    for (const a of ['href', 'src', 'poster']) {
+      const v = el.getAttribute(a);
+      if (v != null && !/^(#|javascript:|data:|mailto:|tel:)/i.test(v.trim())) el.setAttribute(a, abs(v.trim()));
+    }
+  }
+  for (const el of doc.querySelectorAll('[srcset]')) {
+    el.setAttribute('srcset', el.getAttribute('srcset').split(',').map((c) => { const [u, ...d] = c.trim().split(/\s+/); return [u ? abs(u) : u, ...d].join(' '); }).join(', '));
   }
   return doc;
 }
