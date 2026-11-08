@@ -21,6 +21,16 @@ import { renderMarkdown } from './md.js';
 import { t } from './i18n.js';
 
 const SOUNDCLOUD = 'https://soundcloud.com/dekel-official/dekel-baoba-festival-2023';
+
+// El reproductor de SoundCloud se maneja con su protocolo de postMessage (el que
+// usa su api.js: un JSON {method, value} al iframe), sin cargar su api.js: es
+// código de terceros y la página no ejecuta ninguno (web/vendor/third-party/).
+// Solo hacen falta play y pause.
+const SC_ORIGIN = 'https://w.soundcloud.com';
+function scWidget(iframe) {
+  const call = (method) => { try { iframe.contentWindow?.postMessage(JSON.stringify({ method }), SC_ORIGIN); } catch { /* — */ } };
+  return { play: () => call('play'), pause: () => call('pause') };
+}
 const CEO_COLOR = '#ff4d8d';
 
 let open = false, built = false, raf = null;
@@ -104,9 +114,7 @@ function mountMusic(root) {
     '<div class="mind-music-cap">▶ Dekel · Baoba Festival — <a href="' + SOUNDCLOUD + '" target="_blank" rel="noopener noreferrer">SoundCloud ↗</a></div>';
   root.appendChild(wrap);
   const iframe = wrap.querySelector('#mind-sc');
-  const initWidget = () => { try { widget = window.SC.Widget(iframe); } catch { /* aún no */ } };
-  if (window.SC && window.SC.Widget) initWidget();
-  else { const s = document.createElement('script'); s.src = 'https://w.soundcloud.com/player/api.js'; s.onload = initWidget; document.head.appendChild(s); }
+  widget = scWidget(iframe);
 }
 function unmountMusic(root) {
   try { widget?.pause(); } catch { /* — */ }

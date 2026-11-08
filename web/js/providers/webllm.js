@@ -33,7 +33,8 @@ export let ctxTokens = 4096;
 
 export async function load(onProgress = () => {}) {
   if (motor && cargadoKey === actual.key) return;
-  const webllm = await import('https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.85/+esm');
+  // WebLLM fijado y servido desde este origen (web/vendor/third-party/, PIN.json).
+  const webllm = await import('../../vendor/third-party/@mlc-ai/web-llm@0.2.85/lib/index.js');
   // La base puede apuntar a otro sitio para pruebas locales; por defecto, HF.
   const base = (window.__WEBLLM_BASE || actual.base);
   onProgress('Preparando el modelo…');

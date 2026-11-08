@@ -27,10 +27,52 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="apple-touch-icon" href="img/icon-192.png">
 <script type="importmap">
-{ "imports": {
-  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-}}
+{
+  "imports": {
+    "three": "./vendor/third-party/three@0.160.0/build/three.module.js",
+    "three/addons/": "./vendor/third-party/three@0.160.0/examples/jsm/"
+  },
+  "integrity": {
+    "./vendor/third-party/three@0.160.0/build/three.module.js": "sha384-61S/Nu32S3E5+n+KpCOTb2eRYps6fVKm+9Gz1QBvSePFthb46f063Aa/qe/lykFZ",
+    "./vendor/third-party/three@0.160.0/examples/jsm/controls/OrbitControls.js": "sha384-qlO/ZugKPxAQUAvTlQoo0QECzxJIJySZmCF/DHdb2Xn/hHndFwX/vfUAC9Hbk6LP",
+    "./vendor/third-party/three@0.160.0/examples/jsm/postprocessing/EffectComposer.js": "sha384-L+Ns9skCAqjab7aG8LH5VLknBCoENW7p37sOj39jnITwlWZFabWc29JwzgYf6ygy",
+    "./vendor/third-party/three@0.160.0/examples/jsm/postprocessing/MaskPass.js": "sha384-SDM80tiGflO8UDV/QzR/mASjcc/+wF7KfRVFNHJUIPcTctwoPI8GoWVTlccZw7V4",
+    "./vendor/third-party/three@0.160.0/examples/jsm/postprocessing/OutputPass.js": "sha384-RJJc+pg+Ue2ZwXlf8n78cPHMiHrqfr+AxxabF5vkXMXjNPF6nSUoqb20IQXkMo6c",
+    "./vendor/third-party/three@0.160.0/examples/jsm/postprocessing/Pass.js": "sha384-gSqIFh8vMmp1veyOysIS3KPVUl/A5JPefYvW4b89OeYeW0bwkrjN7qcC1h0XJK/K",
+    "./vendor/third-party/three@0.160.0/examples/jsm/postprocessing/RenderPass.js": "sha384-LwKrkOBAkmQ2KT4cv6P6q9Rb9L01GIFU34Zp16tGWZoBnrVuujfjpYZb7OxEMb0J",
+    "./vendor/third-party/three@0.160.0/examples/jsm/postprocessing/ShaderPass.js": "sha384-zetU6HhR/vTtgSvnS9DE+GQPZhVT/ZOSLa/1+DSM6rkM9hvBgQWr9bCEosZt93ch",
+    "./vendor/third-party/three@0.160.0/examples/jsm/postprocessing/UnrealBloomPass.js": "sha384-R734/7SvtqjjeteDKG4qcQA0adDCZ1ZcKfYUZsbVr9qqHGlgSXH9eNN4b3NIgwuc",
+    "./vendor/third-party/three@0.160.0/examples/jsm/shaders/CopyShader.js": "sha384-kzVlcj2amFaRNIWZ5zE0PmIN+QTNWWvrgKk31S8N/7w0nf7Qq3xqxHRLbD2UPPSl",
+    "./vendor/third-party/three@0.160.0/examples/jsm/shaders/LuminosityHighPassShader.js": "sha384-621kiA/kIdX8rtH6VU6+SwMVx+B8g7MQ6x0fei5dZVX3CQZSLkpOlglIk9sxE+/g",
+    "./vendor/third-party/three@0.160.0/examples/jsm/shaders/OutputShader.js": "sha384-fT4woAJJtXcAxElHG1cGfIZkiSxaj7u+24LHlfNVDZZ9aSjZvr2emMGPmcD9eF0V",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/cleanup.js": "sha384-UjFag/L8TOx6/mwWUhDN9ZfVKrelYd8DX+HjSScdY6h+uVHUg4WeLVAw7jJrXIHl",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/conversation.js": "sha384-XuKZxNjmOvIEveNS+ZIW2Ns1W247ff1G7aQO+CLdSlzhRAdhBfWqhjNpu+mzwpO5",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/conversation_config.js": "sha384-DweDJXF2bY77VRzmEfsWWkj8ogjYzq+RKO9buTbcteSo4er0MDS2qqzKw1sCz+/T",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/engine.js": "sha384-o+7K/V4MVgmUbpzJGBpHdYW4BDtO/7qSkfwcJ/6sZgykXhjqdlnb37hvnmVNXP1+",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/engine_settings.js": "sha384-HOQc3I9ztnchTamsqRI9Eqbq2sbF00BLFyJA5JmQp8F3sQAHw5nRgY9hEWRHRUa4",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/global_litertlm.js": "sha384-3ZosUJRxCMw/jBQn7xFWmcWvvLw1dhffAfZpgTAzebskTRXR3kVM5ECbz32xpf4/",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/index.js": "sha384-qVq+muRpbW1xlTrrEPYUVcZCdX/tStAgjgdXR2zNimNHb4lMWTvvvtzKG4NXtzKI",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/litertlm_web.js": "sha384-NFbU8KvT8BzO88k7e4J4xFhwGUU62HUztzAdlNlJlDQtsYyyyg7wHvjFGbagZHAg",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/load.js": "sha384-wRfTt9oOWAoozSG7dvOVAe3uDI0g3f+EzWVW+tZjynifGvNo2itzi1OFeFraIAQ5",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/load_litertlm.js": "sha384-SXIB/Pys8ypQmyUDaCO3+QL8JQkxJrDbuljfsK+kxmbELs3dYRG8KO0BkLkuIOC5",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/mutex.js": "sha384-B9ZQon9S1L9ieU0Ub5MiGs6qq7/cGTaBI4yexB8vdG4ydlznbNDq1EX3huUqwezn",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/orchestration/auto_tool_chat.js": "sha384-dmWSDAVhBEMe944CAKE5zbKmeOqHN2BeBqkxKLFMMsebUQ6GxlT0v9eh1uH901zq",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/orchestration/chat_interface.js": "sha384-8EC7rKm5AV8C3BNfP7ySsbDASvHkONJoKhjvsCdV+d5aRRD0FgM8oYBszc/P7dkc",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/orchestration/webmcp_tool.js": "sha384-Q4BewIeL+ahvUAqgVs951Wp1wE8GPuRgk3JpUiDtgCIRFr2gfSZPTMeEhIt8zwbY",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/readable_stream_data_stream_wrapper.js": "sha384-mI7iwdlOWUiMCvfuXbjmQHD+8ZjLFcr+PLk78olAZLg11YUtJluL7xQMuWG77LAU",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/session.js": "sha384-A4Xpbh3y/371DzmciCc6au1plYla0iGjNdKyPmNc5iB53FtssunGJXCQ/WZ1DhR8",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/session_config.js": "sha384-YFfrQn9EFaHmy4l8fVYBBkfNjf5TVwgKYnNR4Z0gR07KMPMd1mwSiuKGawNqTbjj",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/types.js": "sha384-/yZ5IHlFs5g852b4cMOf8h/YyhPdV2nS3XwsO94v3u51UGRKNcSk/V9l9E/Y0eFZ",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/url_path_utils.js": "sha384-2TC1CJAW7iJy7bTqM2IqODVpc7ZlhZ2yzTk+hJVTHR5xTrYaEne5E6WrAcJvoo+6",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/wasm_binding_types.js": "sha384-UShaPFady1bVG1zt5DxLlnhUuTjNaq0+SttO9OZOXifkTkT53U9jnSE8bsz7GRar",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/wasm_feature_detect.js": "sha384-QEW+LPGz6DemPhjaBBeZYAaEsiXLd3lb/RLufHO2jFIcvadHaC29ZP6qzeHC1Vtq",
+    "./vendor/third-party/@litert-lm/core@0.15.0/dist/wasm_utils.js": "sha384-BmayuME+B2IDT36ckG0ieeYOM19fBzycQFj6lxXtopK/uEG4/SZk8vGg9BqH+n6G",
+    "./vendor/third-party/@litertjs/wasm-utils@2.5.3/dist/index.js": "sha384-HIPwlWsctS5BRqrnvJKDVJ8SvqKB0QmiImdr6+hpP7+8UqeMJX/qrBkdfKQV2WZ/",
+    "./vendor/third-party/@mlc-ai/web-llm@0.2.85/lib/index.js": "sha384-rfElDdXnNkSgbLTTGiKHTrsetCVAYzzLZBD96/rZdD9XYvryEyShqz3ph8j+x7HH",
+    "./vendor/third-party/xlsx@0.20.3/xlsx.mjs": "sha384-Z4EKe5a5DXkOl0inZS9gbLhWC3oWGsUGEe39GJ62+77NMKyfNjPWtP1Ilgb1Jzzy",
+    "./vendor/third-party/@huggingface/transformers@4.3.2/dist/transformers.min.js": "sha384-xFDNfwR3J/vPYzGjMr1VSM8LHIcA+ii2Ha4x+6WAuISKpT9I0dxgF/mVQW+I0kSd"
+  }
+}
 </script>
 </head>
 <body>

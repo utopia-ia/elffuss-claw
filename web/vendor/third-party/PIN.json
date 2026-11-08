@@ -1,0 +1,479 @@
+{
+  "schema": 1,
+  "note": "Third-party code Claw runs, pinned by exact version and sha256 and served from this origin (third-party.mjs).",
+  "importMapPages": [
+    "index.html"
+  ],
+  "importMapBase": "./vendor/third-party/",
+  "packages": {
+    "three@0.160.0": {
+      "name": "three",
+      "version": "0.160.0",
+      "license": "MIT",
+      "source": "npm",
+      "tarball": "https://registry.npmjs.org/three/-/three-0.160.0.tgz",
+      "usedBy": "js/mind.js (the Mind's 3D view), through the import map in index.html",
+      "select": [
+        "build/three.module.js"
+      ],
+      "closure": [
+        "examples/jsm/controls/OrbitControls.js",
+        "examples/jsm/postprocessing/EffectComposer.js",
+        "examples/jsm/postprocessing/RenderPass.js",
+        "examples/jsm/postprocessing/UnrealBloomPass.js",
+        "examples/jsm/postprocessing/OutputPass.js"
+      ],
+      "licenses": {
+        "LICENSE": {
+          "from": "package"
+        }
+      },
+      "imports": {
+        "three": "build/three.module.js",
+        "three/addons/": "examples/jsm/"
+      },
+      "integrity": "sha512-DLU8lc0zNIPkM7rH5/e1Ks1Z8tWCGRq6g8mPowdDJpw1CFBJMU7UoJjC6PefXW7z//SSl0b2+GCw14LB+uDhng==",
+      "files": {
+        "LICENSE": {
+          "size": 1081,
+          "sha256": "852e0e8699169bf9f6fdc6bda3e682d078dcbc738b5d33e74df594721bff271d"
+        },
+        "build/three.module.js": {
+          "size": 1272972,
+          "sha256": "76dea8151bc9352aef3528b4262e249b2604f62543828328db978d060d61a495",
+          "sri": "sha384-61S/Nu32S3E5+n+KpCOTb2eRYps6fVKm+9Gz1QBvSePFthb46f063Aa/qe/lykFZ"
+        },
+        "examples/jsm/controls/OrbitControls.js": {
+          "size": 29868,
+          "sha256": "5a44a9e86a2a0fb11933eed69bc2cd33c76a496854c1aed6ed776efa87d7b064",
+          "sri": "sha384-qlO/ZugKPxAQUAvTlQoo0QECzxJIJySZmCF/DHdb2Xn/hHndFwX/vfUAC9Hbk6LP"
+        },
+        "examples/jsm/postprocessing/EffectComposer.js": {
+          "size": 4651,
+          "sha256": "d234e578618fa816955ebdc059c049c577e203e650e33cf22bde3f232c29e669",
+          "sri": "sha384-L+Ns9skCAqjab7aG8LH5VLknBCoENW7p37sOj39jnITwlWZFabWc29JwzgYf6ygy"
+        },
+        "examples/jsm/postprocessing/MaskPass.js": {
+          "size": 2231,
+          "sha256": "328cf7db0da5d9be83ffe39d54b01d5ac1fddf108cc98182ddbb056f5c8b537f",
+          "sri": "sha384-SDM80tiGflO8UDV/QzR/mASjcc/+wF7KfRVFNHJUIPcTctwoPI8GoWVTlccZw7V4"
+        },
+        "examples/jsm/postprocessing/OutputPass.js": {
+          "size": 2398,
+          "sha256": "13817fc7a87f662d29d2c5e00f44d3a4588c9afac4a372de0cacb0e44e368ffd",
+          "sri": "sha384-RJJc+pg+Ue2ZwXlf8n78cPHMiHrqfr+AxxabF5vkXMXjNPF6nSUoqb20IQXkMo6c"
+        },
+        "examples/jsm/postprocessing/Pass.js": {
+          "size": 1706,
+          "sha256": "b3c6128340eaa37e40a6a2f1b738e894c855239417d50959759b34a2b5e89f92",
+          "sri": "sha384-gSqIFh8vMmp1veyOysIS3KPVUl/A5JPefYvW4b89OeYeW0bwkrjN7qcC1h0XJK/K"
+        },
+        "examples/jsm/postprocessing/RenderPass.js": {
+          "size": 1915,
+          "sha256": "1c90c085312871c4bcdccfcf519499c6276dd503363fcf7cb7f703add45cf4a2",
+          "sri": "sha384-LwKrkOBAkmQ2KT4cv6P6q9Rb9L01GIFU34Zp16tGWZoBnrVuujfjpYZb7OxEMb0J"
+        },
+        "examples/jsm/postprocessing/ShaderPass.js": {
+          "size": 1576,
+          "sha256": "3b28a1ee27e0eb96c0eab137a1f442ccf127a926904eced2d51e125ec44af781",
+          "sri": "sha384-zetU6HhR/vTtgSvnS9DE+GQPZhVT/ZOSLa/1+DSM6rkM9hvBgQWr9bCEosZt93ch"
+        },
+        "examples/jsm/postprocessing/UnrealBloomPass.js": {
+          "size": 12406,
+          "sha256": "8f09315c0cec117a0ca2494d3e3586035b3c4323d6dcb037537cc51b04c3cdba",
+          "sri": "sha384-R734/7SvtqjjeteDKG4qcQA0adDCZ1ZcKfYUZsbVr9qqHGlgSXH9eNN4b3NIgwuc"
+        },
+        "examples/jsm/shaders/CopyShader.js": {
+          "size": 571,
+          "sha256": "4e3346db194db56a596cd074e9bdb39fb5eb52040c333e0d29dc4eb1324d3b1d",
+          "sri": "sha384-kzVlcj2amFaRNIWZ5zE0PmIN+QTNWWvrgKk31S8N/7w0nf7Qq3xqxHRLbD2UPPSl"
+        },
+        "examples/jsm/shaders/LuminosityHighPassShader.js": {
+          "size": 1192,
+          "sha256": "3d841cc594a0c1767d1b0185720b32761a0133c5f1b70b56658e28f2fb9b7900",
+          "sri": "sha384-621kiA/kIdX8rtH6VU6+SwMVx+B8g7MQ6x0fei5dZVX3CQZSLkpOlglIk9sxE+/g"
+        },
+        "examples/jsm/shaders/OutputShader.js": {
+          "size": 1393,
+          "sha256": "53a52e430c27bc36ceaab8ae90a2b4af7b02672d7ee4b29d6ba3c28e09c92c2a",
+          "sri": "sha384-fT4woAJJtXcAxElHG1cGfIZkiSxaj7u+24LHlfNVDZZ9aSjZvr2emMGPmcD9eF0V"
+        }
+      }
+    },
+    "@litert-lm/core@0.15.0": {
+      "name": "@litert-lm/core",
+      "version": "0.15.0",
+      "license": "Apache-2.0",
+      "source": "npm",
+      "tarball": "https://registry.npmjs.org/@litert-lm/core/-/core-0.15.0.tgz",
+      "usedBy": "js/providers/litert.js (Gemma through LiteRT-LM); its WebAssembly is loaded from wasm/ here instead of the package's default CDN path",
+      "closure": [
+        "dist/index.js"
+      ],
+      "select": [
+        "wasm/*.js",
+        "wasm/*.wasm"
+      ],
+      "licenses": {
+        "LICENSE": {
+          "from": "github",
+          "repo": "google-ai-edge/LiteRT-LM",
+          "commit": "2117fc4314670e00047bc8469783f02a68c33f0c",
+          "file": "LICENSE",
+          "note": "the package ships no licence file; LICENSE of the repository at tag v0.15.0",
+          "gitOid": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64"
+        }
+      },
+      "classic": [
+        "wasm/*"
+      ],
+      "integrity": "sha512-NWLgsQ7ktO2dCsx2z/KzX9r/1VL2Sfjl31zskCAzGwq8ujPRrBzJXz2IXCQJ1Kj29IaVa4b86SDR0aoAURuWJw==",
+      "files": {
+        "LICENSE": {
+          "size": 11357,
+          "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+        },
+        "dist/cleanup.js": {
+          "size": 1093,
+          "sha256": "73e9c4a02abce9f5bc971048ac209a297cb001230fc1c99de8df5ac1e9287cf1",
+          "sri": "sha384-UjFag/L8TOx6/mwWUhDN9ZfVKrelYd8DX+HjSScdY6h+uVHUg4WeLVAw7jJrXIHl"
+        },
+        "dist/conversation.js": {
+          "size": 6051,
+          "sha256": "8d2d3784e325f12b2544c8f63bbf09a6e5dab94fa6319ec7ca140aa7f0ab8397",
+          "sri": "sha384-XuKZxNjmOvIEveNS+ZIW2Ns1W247ff1G7aQO+CLdSlzhRAdhBfWqhjNpu+mzwpO5"
+        },
+        "dist/conversation_config.js": {
+          "size": 660,
+          "sha256": "39c5debaeafd9dc3f5a3fe64c711f0976a982dc9bd2b65a24ba9af010e9734ba",
+          "sri": "sha384-DweDJXF2bY77VRzmEfsWWkj8ogjYzq+RKO9buTbcteSo4er0MDS2qqzKw1sCz+/T"
+        },
+        "dist/engine.js": {
+          "size": 8127,
+          "sha256": "fdabce2282ec8bc2aab899068e788ac7dec28503375c4e035e82a48209e302a8",
+          "sri": "sha384-o+7K/V4MVgmUbpzJGBpHdYW4BDtO/7qSkfwcJ/6sZgykXhjqdlnb37hvnmVNXP1+"
+        },
+        "dist/engine_settings.js": {
+          "size": 5025,
+          "sha256": "4739aa3a749742ce4d1173d6738a8a72db6ea464a96b7747a2d1b70845af0202",
+          "sri": "sha384-HOQc3I9ztnchTamsqRI9Eqbq2sbF00BLFyJA5JmQp8F3sQAHw5nRgY9hEWRHRUa4"
+        },
+        "dist/global_litertlm.js": {
+          "size": 2521,
+          "sha256": "d33630e06cd8ac9c17129b9f8c05343d6e8bfa1a5a4717738004f974a54b8e91",
+          "sri": "sha384-3ZosUJRxCMw/jBQn7xFWmcWvvLw1dhffAfZpgTAzebskTRXR3kVM5ECbz32xpf4/"
+        },
+        "dist/index.js": {
+          "size": 1226,
+          "sha256": "47fedf7ce2403ab4f4a07fd5a3dff7b62975857d6fd50160f984c227cbe71b8b",
+          "sri": "sha384-qVq+muRpbW1xlTrrEPYUVcZCdX/tStAgjgdXR2zNimNHb4lMWTvvvtzKG4NXtzKI"
+        },
+        "dist/litertlm_web.js": {
+          "size": 2563,
+          "sha256": "c9b9164de14b0778b35b4bd35d11ed02002277641b0e3ab412394653773f5ec8",
+          "sri": "sha384-NFbU8KvT8BzO88k7e4J4xFhwGUU62HUztzAdlNlJlDQtsYyyyg7wHvjFGbagZHAg"
+        },
+        "dist/load.js": {
+          "size": 2097,
+          "sha256": "a083f7fb5f287b0fc4578de6dd25e02fd638285709193a001a74c464e5502f67",
+          "sri": "sha384-wRfTt9oOWAoozSG7dvOVAe3uDI0g3f+EzWVW+tZjynifGvNo2itzi1OFeFraIAQ5"
+        },
+        "dist/load_litertlm.js": {
+          "size": 3420,
+          "sha256": "8fadd413d19c2fb59ef77116ff3d79dddc8a03ddecc72e2b9126ff17f0a5e207",
+          "sri": "sha384-SXIB/Pys8ypQmyUDaCO3+QL8JQkxJrDbuljfsK+kxmbELs3dYRG8KO0BkLkuIOC5"
+        },
+        "dist/mutex.js": {
+          "size": 2262,
+          "sha256": "2a103f6f37d2077cbb7f24c3ce6d154bb227712a0bc633e253709a4241485833",
+          "sri": "sha384-B9ZQon9S1L9ieU0Ub5MiGs6qq7/cGTaBI4yexB8vdG4ydlznbNDq1EX3huUqwezn"
+        },
+        "dist/orchestration/auto_tool_chat.js": {
+          "size": 11988,
+          "sha256": "4ad20a6b97e026cec41e28dcaed3cf6d700c705e1d5385e419d44d15bc6abafa",
+          "sri": "sha384-dmWSDAVhBEMe944CAKE5zbKmeOqHN2BeBqkxKLFMMsebUQ6GxlT0v9eh1uH901zq"
+        },
+        "dist/orchestration/chat_interface.js": {
+          "size": 655,
+          "sha256": "6b1a17ce28d0985c7873a870dc719ea9e8ababa83c71a434df21034304703b79",
+          "sri": "sha384-8EC7rKm5AV8C3BNfP7ySsbDASvHkONJoKhjvsCdV+d5aRRD0FgM8oYBszc/P7dkc"
+        },
+        "dist/orchestration/webmcp_tool.js": {
+          "size": 1041,
+          "sha256": "1a6f875f77b4e3e5466b345a52d81e213c84578a72a8558ba5d9cddc3ef9fd9d",
+          "sri": "sha384-Q4BewIeL+ahvUAqgVs951Wp1wE8GPuRgk3JpUiDtgCIRFr2gfSZPTMeEhIt8zwbY"
+        },
+        "dist/readable_stream_data_stream_wrapper.js": {
+          "size": 12648,
+          "sha256": "23e7a7bb1473f883b60b2971f62f8207d8269956c3eceb541c4f469dfecb8273",
+          "sri": "sha384-mI7iwdlOWUiMCvfuXbjmQHD+8ZjLFcr+PLk78olAZLg11YUtJluL7xQMuWG77LAU"
+        },
+        "dist/session.js": {
+          "size": 3206,
+          "sha256": "972a543de2b5044cf822852987efdc179d3480b3949e4086e58d6cbcf50ae1c6",
+          "sri": "sha384-A4Xpbh3y/371DzmciCc6au1plYla0iGjNdKyPmNc5iB53FtssunGJXCQ/WZ1DhR8"
+        },
+        "dist/session_config.js": {
+          "size": 4990,
+          "sha256": "41f5ceb3174dab53802d1de6d2b35ba2fd8e63f2475bfb85a9a0607b1c4bd3b8",
+          "sri": "sha384-YFfrQn9EFaHmy4l8fVYBBkfNjf5TVwgKYnNR4Z0gR07KMPMd1mwSiuKGawNqTbjj"
+        },
+        "dist/types.js": {
+          "size": 639,
+          "sha256": "984a17083f524b1b2558c0505afb75772d3a7a526023a0f502f03c81e8c4b622",
+          "sri": "sha384-/yZ5IHlFs5g852b4cMOf8h/YyhPdV2nS3XwsO94v3u51UGRKNcSk/V9l9E/Y0eFZ"
+        },
+        "dist/url_path_utils.js": {
+          "size": 1153,
+          "sha256": "436630f0e789876c1804622611ef9b6368bdad3ba2d666141e17c5f496e98219",
+          "sri": "sha384-2TC1CJAW7iJy7bTqM2IqODVpc7ZlhZ2yzTk+hJVTHR5xTrYaEne5E6WrAcJvoo+6"
+        },
+        "dist/wasm_binding_types.js": {
+          "size": 1114,
+          "sha256": "61404ed6c3a89f05c541a4a8f42eae0cdfb28a3737ea747b24b23ad89fb6f37a",
+          "sri": "sha384-UShaPFady1bVG1zt5DxLlnhUuTjNaq0+SttO9OZOXifkTkT53U9jnSE8bsz7GRar"
+        },
+        "dist/wasm_feature_detect.js": {
+          "size": 4258,
+          "sha256": "4551f357a78bddb645430b0f6cb5d18f2b46fd55c3c57d756191ad4e3601161d",
+          "sri": "sha384-QEW+LPGz6DemPhjaBBeZYAaEsiXLd3lb/RLufHO2jFIcvadHaC29ZP6qzeHC1Vtq"
+        },
+        "dist/wasm_utils.js": {
+          "size": 1347,
+          "sha256": "926b9c21aff5cb80e399d39c0aa2c30a16a66d8dc00ecb653ff8e38b590c6e83",
+          "sri": "sha384-BmayuME+B2IDT36ckG0ieeYOM19fBzycQFj6lxXtopK/uEG4/SZk8vGg9BqH+n6G"
+        },
+        "wasm/litertlm_wasm_asyncify_internal.js": {
+          "size": 300292,
+          "sha256": "74e34511bf4337679d727e79831b6734830b54f1adc4549ebdb9b58b157491bb",
+          "sri": "sha384-gTVZ1dIZdeqihLlRX8ZZZIRa+EpnMsLD5MyMmbffH/jK9OE44n2vDdmAXEKu3BwG"
+        },
+        "wasm/litertlm_wasm_asyncify_internal.wasm": {
+          "size": 31991491,
+          "sha256": "6c0fe526030c02377c0b1c1bde3cbb308d9facd22345fef9d8be0443cfc75c73"
+        },
+        "wasm/litertlm_wasm_compat_asyncify_internal.js": {
+          "size": 300503,
+          "sha256": "9d92349ae22dcf3578d35cdf515d26cb22a3194c02945afa9c46dd025aac7320",
+          "sri": "sha384-ORd+H/MsES0CqjZ2AqyJIeuJpHNr8wIUt+xDY4eEq1ntLnD4zacUjqMsXIwGSbNM"
+        },
+        "wasm/litertlm_wasm_compat_asyncify_internal.wasm": {
+          "size": 31945985,
+          "sha256": "b16e2af3d7813f0289d3bd73f6c7b156a86f6a3afdd6b77e3a6338d611dc8a27"
+        },
+        "wasm/litertlm_wasm_compat_internal.js": {
+          "size": 292827,
+          "sha256": "a1a8c8abc9c3aa9115c2f9230299585791252c1940eaf30f6ea7ad4837d94940",
+          "sri": "sha384-fOU5wGj7xTOXygo0JO9vsiW0BkKe1TOZmVavPAPx1ifKqWSRxUHiwopB3LpRLV3w"
+        },
+        "wasm/litertlm_wasm_compat_internal.wasm": {
+          "size": 20360517,
+          "sha256": "b328b5448f188789fd371d54a2dd80be629082dd8176ecdbdfd68c0a4919f345"
+        },
+        "wasm/litertlm_wasm_internal.js": {
+          "size": 292587,
+          "sha256": "ba2d1d40099533291ad4cf7e26b660951681bc6b786cfc3ac673264293f532a6",
+          "sri": "sha384-4P16VMr91DPdzM1cQCMMKAX0In3mPEZ7031gPS1OHaefc4FvjB0pxKnXVA0VaKZh"
+        },
+        "wasm/litertlm_wasm_internal.wasm": {
+          "size": 20406004,
+          "sha256": "eec1ea586c547230e3198b30b876313bc51dddeec32425c9b981030827961a27"
+        }
+      },
+      "rewrite": [
+        {
+          "file": "dist/load.js",
+          "replace": [
+            [
+              "from '@litertjs/wasm-utils';",
+              "from '../../../@litertjs/wasm-utils@2.5.3/dist/index.js';"
+            ]
+          ],
+          "why": "the package imports its dependency by bare name; made relative to the pinned copy so the module needs no import map"
+        }
+      ]
+    },
+    "@litertjs/wasm-utils@2.5.3": {
+      "name": "@litertjs/wasm-utils",
+      "version": "2.5.3",
+      "license": "Apache-2.0",
+      "source": "npm",
+      "tarball": "https://registry.npmjs.org/@litertjs/wasm-utils/-/wasm-utils-2.5.3.tgz",
+      "usedBy": "@litert-lm/core (dist/load.js, rewritten to import it by relative path); 2.5.3 is the version the CDN build of @litert-lm/core@0.15.0 resolved",
+      "select": [
+        "dist/index.js"
+      ],
+      "licenses": {
+        "LICENSE": {
+          "from": "github",
+          "repo": "google-ai-edge/LiteRT",
+          "commit": "d30595a09f74b4c4c4f669eafeb26928a92deb5a",
+          "file": "LICENSE",
+          "note": "the package ships no licence file; LICENSE of its repository at tag v2.3.2",
+          "gitOid": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64"
+        }
+      },
+      "integrity": "sha512-4fJiw6tBQnIs+0jH/OQ16nYOiSl8/+zZnn5h2ul8aTKHi05sVqZW580Tmk78pC2kT39A9OYBVdFawteZ/sI1kQ==",
+      "files": {
+        "LICENSE": {
+          "size": 11357,
+          "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+        },
+        "dist/index.js": {
+          "size": 1494,
+          "sha256": "e0e20bc28ab001ac732cf40d15b6eebd24fb0deaeb95eeba5100f51eebf015f2",
+          "sri": "sha384-HIPwlWsctS5BRqrnvJKDVJ8SvqKB0QmiImdr6+hpP7+8UqeMJX/qrBkdfKQV2WZ/"
+        }
+      }
+    },
+    "@mlc-ai/web-llm@0.2.85": {
+      "name": "@mlc-ai/web-llm",
+      "version": "0.2.85",
+      "license": "Apache-2.0",
+      "source": "npm",
+      "tarball": "https://registry.npmjs.org/@mlc-ai/web-llm/-/web-llm-0.2.85.tgz",
+      "usedBy": "js/providers/webllm.js (MiniCPM5-2B through MLC)",
+      "select": [
+        "lib/index.js"
+      ],
+      "licenses": {
+        "LICENSE": {
+          "from": "package"
+        }
+      },
+      "integrity": "sha512-CwUiSAvDCYnmAZlpPMkurPHDfBLq6fvdRB3vRgoA894hRG/V/BSeY9bmMm6iIIU5VpjJxfb/dLPpJX2at0L9rw==",
+      "files": {
+        "LICENSE": {
+          "size": 11737,
+          "sha256": "d412ab9d5ac17e6931705aac01e5a0d323da5acd2e89a2c19aa8fc05becc59ad"
+        },
+        "lib/index.js": {
+          "size": 6586947,
+          "sha256": "341bae95822bfee1d0fd6a0e6cd2db8613bb8edf809390ac142fba36ec17792c",
+          "sri": "sha384-rfElDdXnNkSgbLTTGiKHTrsetCVAYzzLZBD96/rZdD9XYvryEyShqz3ph8j+x7HH"
+        }
+      }
+    },
+    "xlsx@0.20.3": {
+      "name": "xlsx",
+      "version": "0.20.3",
+      "license": "Apache-2.0",
+      "source": "url",
+      "tarball": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
+      "usedBy": "js/tools/fs.js (reading .xlsx); SheetJS publishes current releases on its own server, not on npm, so the tarball's sha512 is pinned here on first download",
+      "select": [
+        "xlsx.mjs"
+      ],
+      "licenses": {
+        "LICENSE": {
+          "from": "package"
+        }
+      },
+      "integrity": "sha512-oLDq3jw7AcLqKWH2AhCpVTZl8mf6X2YReP+Neh0SJUzV/BdZYjth94tG5toiMB1PPrYtxOCfaoUCkvtuH+3AJA==",
+      "files": {
+        "LICENSE": {
+          "size": 11355,
+          "sha256": "4d2a38ac35cda06a555c84074a819d413339cd3691b822cae50f8f322fe01f64"
+        },
+        "xlsx.mjs": {
+          "size": 1008308,
+          "sha256": "1a0fb062ee9781b13f6687371b202aaefc53b6ce55b530c027e01f9c087b77db",
+          "sri": "sha384-Z4EKe5a5DXkOl0inZS9gbLhWC3oWGsUGEe39GJ62+77NMKyfNjPWtP1Ilgb1Jzzy"
+        }
+      }
+    },
+    "@huggingface/transformers@4.3.2": {
+      "name": "@huggingface/transformers",
+      "version": "4.3.2",
+      "license": "Apache-2.0",
+      "source": "npm",
+      "tarball": "https://registry.npmjs.org/@huggingface/transformers/-/transformers-4.3.2.tgz",
+      "usedBy": "js/providers/onnx.js (the ONNX chat models) and js/embed.js (embeddings), through js/tf-runtime.js. 4.3.2 is what cdn.jsdelivr.net/npm/@huggingface/transformers@4 served (dist/transformers.min.js, ONNX Runtime's JavaScript bundled in); its WebAssembly is the ONNX Runtime entry below",
+      "select": [
+        "dist/transformers.min.js"
+      ],
+      "licenses": {
+        "LICENSE": {
+          "from": "package"
+        },
+        "bundled/@huggingface/jinja/LICENSE": {
+          "from": "github",
+          "repo": "huggingface/huggingface.js",
+          "commit": "6fca37c92522e9142c219ddb049c4112cebe0cd1",
+          "file": "LICENSE",
+          "license": "MIT",
+          "note": "bundled in dist/transformers.min.js (the same licence the media SDK ships for its copy)",
+          "gitOid": "a3ce68eb3a1d6900bebd200d107c47769642a3c1"
+        }
+      },
+      "integrity": "sha512-V3+dqf3iWlRYJ9I9GreM3zGQd0lAXnnoPeddmkOQYWAEE4l/+Fi6p7tx/qVUJlKQgLXGim2W76rTOzz+eC0i7g==",
+      "files": {
+        "LICENSE": {
+          "size": 11358,
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+        },
+        "bundled/@huggingface/jinja/LICENSE": {
+          "size": 1069,
+          "sha256": "d6e7b19451c1b3d1d66353bb4b1274138953b3bfd9ae60c56e77b1f548796982"
+        },
+        "dist/transformers.min.js": {
+          "size": 587917,
+          "sha256": "8b5a3171f8876bab2b1820a7d65eb87628e3d30bb5ea85b9dd398e76eb34decb",
+          "sri": "sha384-xFDNfwR3J/vPYzGjMr1VSM8LHIcA+ii2Ha4x+6WAuISKpT9I0dxgF/mVQW+I0kSd"
+        }
+      }
+    },
+    "onnxruntime-web@1.31.0-dev.20260914-8d85527a0": {
+      "name": "onnxruntime-web",
+      "version": "1.31.0-dev.20260914-8d85527a0",
+      "license": "MIT",
+      "source": "npm",
+      "tarball": "https://registry.npmjs.org/onnxruntime-web/-/onnxruntime-web-1.31.0-dev.20260914-8d85527a0.tgz",
+      "usedBy": "the WebAssembly (and its loader) of the ONNX Runtime bundled in @huggingface/transformers@4.3.2, the exact build it names (env.backends.onnx.versions.web); the CDN served it from onnxruntime-web@<that version>/dist/",
+      "select": [
+        "dist/ort-wasm-simd-threaded.asyncify.mjs",
+        "dist/ort-wasm-simd-threaded.asyncify.wasm"
+      ],
+      "classic": [
+        "dist/*"
+      ],
+      "licenses": {
+        "LICENSE": {
+          "from": "github",
+          "repo": "microsoft/onnxruntime",
+          "commit": "8d85527a010e294a26b274749f74294b2a32cec5",
+          "file": "LICENSE",
+          "note": "the package ships no licence file; LICENSE of the repository at the commit this build names",
+          "gitOid": "48bc6bb4996ac924359e8e28b9ae88970e5ed3fc"
+        },
+        "ThirdPartyNotices.txt": {
+          "from": "github",
+          "repo": "microsoft/onnxruntime",
+          "commit": "8d85527a010e294a26b274749f74294b2a32cec5",
+          "file": "ThirdPartyNotices.txt",
+          "gitOid": "75af6ad7e3db5c34e9ff923734ea49056c578d5f"
+        }
+      },
+      "integrity": "sha512-Iy7rtadoBgxS/LLvDr3QW38DB1PNXRnr0GJMcL0TAt7c9qjgVQl83UlGCVyeAnK2InpmW8Uc3PL8XIuqtDeF6g==",
+      "files": {
+        "LICENSE": {
+          "size": 1073,
+          "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c"
+        },
+        "ThirdPartyNotices.txt": {
+          "size": 338088,
+          "sha256": "143764b952fdb1a7c69ce653bfba74a7744d6a8a573bfb73e235fba356c83de3"
+        },
+        "dist/ort-wasm-simd-threaded.asyncify.mjs": {
+          "size": 53057,
+          "sha256": "0966b6105cd936744498aa60df7a22cbd47af3374dbc64a9ab561c08a71e3611",
+          "sri": "sha384-ik7L7J2uXfXmGuWHh3yOUDPpUslz/dJjcvZgdX5hcItLjxlkEpUF7mpCcATr3Dg8"
+        },
+        "dist/ort-wasm-simd-threaded.asyncify.wasm": {
+          "size": 26861777,
+          "sha256": "49871f5a4409519797e127440868a6d1923339d9185907f301a5b2a1d90af082"
+        }
+      }
+    }
+  }
+}

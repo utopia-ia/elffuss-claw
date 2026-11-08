@@ -72,9 +72,9 @@ const r = await p.evaluate(async () => {
     yaAbortada: await prueba(CorteLocal, { yaAbortada: true }),
     normal: await prueba(CorteLocal, { abortarTras: 0 }),
   };
-  // El de verdad, si el CDN responde (solo el módulo: ningún modelo).
+  // El de verdad: la copia fijada del SDK que usa onnx.js (js/tf-runtime.js; solo el módulo, ningún modelo).
   try {
-    const tf = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4');
+    const tf = await (await import('/js/tf-runtime.js')).loadTransformers();
     res.clase = typeof tf.InterruptableStoppingCriteria;
     if (res.clase === 'function') res.real = await prueba(tf.InterruptableStoppingCriteria);
   } catch (e) { res.cdn = String(e?.message || e).slice(0, 120); }

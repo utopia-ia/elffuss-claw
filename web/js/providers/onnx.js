@@ -21,7 +21,7 @@ export function models() { return Object.values(ONNX_MODELS); }
 
 export async function load(onProgress = () => {}) {
   if (generator) return; // un solo modelo: nunca recargar/duplicar la sesión
-  const tf = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4');
+  const tf = await (await import('../tf-runtime.js')).loadTransformers();
   TextStreamer = tf.TextStreamer;
   // Para PARAR la generación de verdad (ver chat). Se comprueba que exista en
   // vez de darlo por hecho: la URL sigue la última v4 publicada y, si una

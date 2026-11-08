@@ -54,8 +54,10 @@ await p.evaluate(async () => {
   await (await import('/js/db.js')).set('fs', 'proyecto', opfs);
 });
 
-const three = () => fuera.filter(u => /cdn\.jsdelivr\.net\/npm\/three/.test(u)).length;
-ok('cargar la página no pide three.js (la Mente se carga al abrirla)', three() === 0, fuera.filter(u => /jsdelivr/.test(u)).join(' | '));
+// three.js es de este origen (web/vendor/third-party/, por el import map): se cuentan las peticiones de la página.
+const three = () => p.evaluate(() => performance.getEntriesByType('resource').filter(e => /\/vendor\/third-party\/three@/.test(e.name)).length);
+ok('cargar la página no pide three.js (la Mente se carga al abrirla)', await three() === 0);
+ok('…ni nada de un CDN', !fuera.some(u => /jsdelivr|unpkg|esm\.sh|cdnjs/.test(u)), fuera.join(' | '));
 
 // ── lo que pasa con la Mente cerrada queda en el historial ──────────────────
 await p.evaluate(async () => { const ceo = await import('/js/ceo.js'); ceo.enable(); ceo.disable(); });

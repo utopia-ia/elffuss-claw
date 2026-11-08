@@ -1,5 +1,5 @@
 // Cambiar de cerebro con Gemma (LiteRT) cargado, sin GPU: la librería de LiteRT
-// (@litert-lm/core del CDN) es un doble que cuenta los motores que se crean y
+// (@litert-lm/core, la copia fijada de web/vendor/third-party/) es un doble que cuenta los motores que se crean y
 // los que se sueltan, y etiqueta cada conversación con su motor; el adaptador
 // WebGPU y los ficheros del modelo también son de mentira. Nada sale de la
 // máquina. Como en @litert-lm/core 0.15.0, el motor se suelta con delete() y no
@@ -13,10 +13,14 @@
 //   · «Liberar el modelo» (Ajustes) suelta el motor de verdad (delete()).
 //
 //   BASE=http://localhost:8743 node tests/litert-cambio.mjs
-import { navegador, contexto, pagina, ok, hasta, escribir, reposo, avisos, fin } from './ux-comun.mjs';
+import { navegador, contexto, pagina, ok, hasta, escribir, reposo, avisos, fin, BASE } from './ux-comun.mjs';
+import { sinIntegridad } from './lib/sin-integridad.mjs';
 
 const MOTOR_FALSO = `
 let n = 0;
+export const hasGlobalLiteRtLm = () => true;
+export const getGlobalLiteRtLmPromise = () => null;
+export const loadLiteRtLm = async () => ({});
 const L = () => (globalThis.__lit ||= { creados: [], intentos: 0, soltados: [], eventos: [], convs: [] });
 export const Engine = {
   async create(opts) {
@@ -49,15 +53,17 @@ const { ctx } = await contexto(b, {
   extraInit: { 'elffuss.providers': JSON.stringify({ openai: { enabled: true, baseURL: 'https://api.openai.com/v1', model: 'gpt-4o-mini', apiKey: '' } }) },
   rutas: async (url, route) => {
     const u = new URL(url);
-    if (u.hostname === 'cdn.jsdelivr.net' && u.pathname.startsWith('/npm/@litert-lm/core@')) {
-      await route.fulfill({ contentType: 'text/javascript', body: MOTOR_FALSO }); return true;
-    }
     if (u.hostname === 'huggingface.co' && u.pathname.endsWith('.litertlm')) {
       await route.fulfill({ contentType: 'application/octet-stream', body: Buffer.alloc(/E4B/.test(u.pathname) ? E4B : E2B, 7) }); return true;
     }
     return false;
   },
 });
+// La librería es de este origen (web/vendor/third-party/): la ruta se pone después de la de contexto(), que deja
+// pasar todo lo del servidor de pruebas; en Playwright gana la última ruta registrada.
+await ctx.route('**/vendor/third-party/@litert-lm/core@*/dist/index.js', (route) => route.fulfill({ contentType: 'text/javascript', body: MOTOR_FALSO }));
+// …y su hash fuera del import map: si no, el navegador rechaza el doble (es lo que hace la integridad).
+await sinIntegridad(ctx, BASE, /@litert-lm\/core@/);
 await ctx.addInitScript(() => {
   try { sessionStorage.setItem('elffuss.broker.down', '1'); } catch { /* — */ }   // sin almacén compartido en la prueba
   const adaptador = { limits: { maxBufferSize: 2 ** 32, maxStorageBufferBindingSize: 2 ** 31 }, features: new Set(), info: {},

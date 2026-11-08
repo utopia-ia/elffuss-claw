@@ -122,7 +122,7 @@ export let backend = null;   // {device, dtype, sizeMB} una vez resuelto
 function getPipe(onProgress) {
   if (!pipePromise) {
     pipePromise = (async () => {
-      const tf = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4');
+      const tf = await (await import('./tf-runtime.js')).loadTransformers();
       // navigator.gpu puede EXISTIR sin adaptador real (mismo cuidado que en
       // providers/onnx.js): comprobar el adaptador, no el objeto. Elegir mal
       // aquí significa descargar 235 MB para acabar corriendo en CPU.

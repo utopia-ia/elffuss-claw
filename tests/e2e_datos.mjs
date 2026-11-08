@@ -33,7 +33,7 @@ await page.waitForTimeout(800);
 
 // ---- sembrar carpetas OPFS y autorizarlas en Elffuss ----
 await page.evaluate(async () => {
-  const XLSX = await import('https://cdn.sheetjs.com/xlsx-latest/package/xlsx.mjs');
+  const XLSX = await import('/vendor/third-party/xlsx@0.20.3/xlsx.mjs');
   const db = await import('/js/db.js');
   const opfs = await navigator.storage.getDirectory();
   const mk = n => opfs.getDirectoryHandle(n, { create: true });
@@ -104,7 +104,7 @@ check('B1 · automatización creada', /Automatización w[a-z0-9]+ activa/.test(w
 
 // B.2 dejar un Excel en `entrada` DESPUÉS de crear la vigilancia
 await page.evaluate(async () => {
-  const XLSX = await import('https://cdn.sheetjs.com/xlsx-latest/package/xlsx.mjs');
+  const XLSX = await import('/vendor/third-party/xlsx@0.20.3/xlsx.mjs');
   const opfs = await navigator.storage.getDirectory();
   const entrada = await opfs.getDirectoryHandle('entrada');
   const ws = XLSX.utils.aoa_to_sheet([['producto', 'unidades'], ['drones', 7], ['baterías', 32]]);

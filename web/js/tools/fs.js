@@ -34,9 +34,11 @@ export async function root(folder) {
   return handle;
 }
 
-// Excel → CSV (SheetJS, lazy). Devuelve el CSV de la primera hoja.
+// Excel → CSV (SheetJS, lazy). Devuelve el CSV de la primera hoja. SheetJS va
+// fijado y servido desde este origen (web/vendor/third-party/, PIN.json); antes
+// venía de cdn.sheetjs.com «xlsx-latest», que cambiaba sin avisar.
 export async function xlsxToCsv(file) {
-  const XLSX = await import('https://cdn.sheetjs.com/xlsx-latest/package/xlsx.mjs');
+  const XLSX = await import('../../vendor/third-party/xlsx@0.20.3/xlsx.mjs');
   const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
   const sheet = wb.SheetNames[0];
   return { sheet, csv: XLSX.utils.sheet_to_csv(wb.Sheets[sheet]) };

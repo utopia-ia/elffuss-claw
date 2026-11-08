@@ -27,3 +27,6 @@ tests/*.tmp.mjs
 
 # media SDK runtimes: restored by ai-sync.mjs from web/vendor/elffuss-ai/PIN.json, checked byte for byte
 web/vendor/elffuss-ai/runtimes/
+
+# third-party code: restored by third-party.mjs from web/vendor/third-party/PIN.json, checked byte for byte
+web/vendor/third-party/*/

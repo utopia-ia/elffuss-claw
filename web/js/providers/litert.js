@@ -7,6 +7,10 @@
 // system prompt (agent.js), no por pesos.
 export let name = 'Gemma · LiteRT-LM';
 
+// LiteRT-LM fijado (web/vendor/third-party/PIN.json): el módulo y la carpeta de su WebAssembly, en este origen.
+const LITERT_CORE = new URL('../../vendor/third-party/@litert-lm/core@0.15.0/dist/index.js', import.meta.url).href;
+const LITERT_WASM = new URL('../../vendor/third-party/@litert-lm/core@0.15.0/wasm/', import.meta.url).href;
+
 // Builds .litertlm elegibles. Los «-web» OFICIALES de Google (litert-community)
 // están exportados en formato artisan → SÍ cargan en el navegador (son los que
 // usaba la demo original). El healed de Elffuss es prefill_decode → hoy no carga
@@ -97,12 +101,14 @@ export async function load(onProgress = () => {}) {
   let adapter = null;
   try { adapter = await navigator.gpu.requestAdapter(); } catch { /* sin adaptador */ }
   if (!adapter) throw new Error('No hay un adaptador WebGPU real disponible (la API existe pero no hay GPU accesible) — prueba con el modelo ligero, que corre en CPU/wasm.');
-  // VERSIÓN FIJADA a propósito. Sin fijarla, la URL apunta siempre a la última
-  // publicada: el 2026-08-11 salió 0.16.0, jsdelivr NO consigue construirle el
-  // bundle `+esm` (404) y el cerebro Gemma dejó de cargar en producción sin que
-  // nosotros tocáramos una línea. Al subir de versión hay que COMPROBAR que
-  // `https://cdn.jsdelivr.net/npm/@litert-lm/core@<v>/+esm` responde 200.
-  const litertlm = await import('https://cdn.jsdelivr.net/npm/@litert-lm/core@0.15.0/+esm');
+  // VERSIÓN FIJADA y servida desde este mismo origen (web/vendor/third-party/,
+  // PIN.json + third-party.mjs): nada se carga de un CDN. Antes venía de jsdelivr
+  // y el 2026-08-11 salió 0.16.0 sin bundle `+esm` (404): el cerebro Gemma dejó de
+  // cargar en producción sin tocar una línea. Subir de versión = nuevo pin.
+  // Su WebAssembly también va de aquí: sin loadLiteRtLm, Engine.create la pediría
+  // a su ruta por defecto, que es el CDN.
+  const litertlm = await import(LITERT_CORE);
+  if (!litertlm.hasGlobalLiteRtLm()) await (litertlm.getGlobalLiteRtLmPromise() || litertlm.loadLiteRtLm(LITERT_WASM));
   // El .litertlm lo descargamos NOSOTROS (cache-first en Cache Storage) y se lo
   // pasamos a Engine.create como Blob (la API acepta string|Blob|ReadableStream).
   // Motivo: el fetch interno de LiteRT baja el peso con XHR+Range desde un WORKER
